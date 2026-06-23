@@ -58,8 +58,6 @@ export default async function LoginPage({
                 placeholder="you@icestasyprojects.com"
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
               />
             </div>
             <div>
@@ -70,8 +68,6 @@ export default async function LoginPage({
                 placeholder="••••••••"
                 className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
                 style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
               />
             </div>
 
