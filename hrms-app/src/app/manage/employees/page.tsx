@@ -8,14 +8,14 @@ export default async function ManageEmployeesPage() {
   if (!user) redirect('/login')
 
   const { data: currentEmployee } = await supabase
-    .from('employees')
+    .from('users')
     .select('*')
-    .eq('email', user.email)
+    .eq('user_id', user.id)
     .single()
   if (!currentEmployee || currentEmployee.role !== 'super_admin') redirect('/dashboard')
 
   const { data: employees } = await supabase
-    .from('employees')
+    .from('users')
     .select('*, department:departments(name)')
     .order('full_name')
 

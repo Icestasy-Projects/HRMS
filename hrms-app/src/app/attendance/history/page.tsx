@@ -14,9 +14,9 @@ export default async function AttendanceHistoryPage({
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('employees')
+    .from('users')
     .select('*')
-    .eq('email', user.email)
+    .eq('user_id', user.id)
     .single()
   if (!employee) redirect('/login')
 
