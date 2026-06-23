@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const { data: employee } = await supabase
     .from('users')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('email', user.email)
     .single()
 
   if (!employee) redirect('/login')

@@ -15,7 +15,7 @@ export default async function ManageHolidaysPage({
   const { data: currentEmployee } = await supabase
     .from('users')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('email', user.email)
     .single()
   if (!currentEmployee || currentEmployee.role !== 'super_admin') redirect('/dashboard')
 
@@ -38,7 +38,7 @@ export default async function ManageHolidaysPage({
     const { data: currentEmployee } = await supabase
       .from('users')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('email', user.email)
       .single()
     if (!currentEmployee || currentEmployee.role !== 'super_admin') return
 
@@ -59,7 +59,7 @@ export default async function ManageHolidaysPage({
     const { data: currentEmployee } = await supabase
       .from('users')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('email', user.email)
       .single()
     if (!currentEmployee || currentEmployee.role !== 'super_admin') return
 
