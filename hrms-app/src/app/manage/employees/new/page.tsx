@@ -1,210 +1,168 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 
 export default async function NewEmployeePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: currentEmployee } = await supabase
-    .from('users')
-    .select('*')
-    .eq('email', user.email)
-    .single()
-  if (!currentEmployee || currentEmployee.role !== 'super_admin') redirect('/dashboard')
+  const { data: me } = await supabase.from('users').select('role').eq('email', user.email).single()
+  if (!me || me.role !== 'super_admin') redirect('/dashboard')
 
-  const { data: departments } = await supabase
-    .from('departments')
-    .select('id, name')
-    .order('name')
+  const { data: departments } = await supabase.from('departments').select('*').order('name')
 
   async function createEmployee(formData: FormData) {
     'use server'
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
 
-    const { data: currentEmployee } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', user.email)
-      .single()
-    if (!currentEmployee || currentEmployee.role !== 'super_admin') return
-
-    const full_name = formData.get('full_name') as string
+    const name = formData.get('name') as string
     const email = formData.get('email') as string
-    const initial_password = formData.get('initial_password') as string
-    const employee_type = formData.get('employee_type') as string
-    const department_id = formData.get('department_id') as string || null
+    const phone = formData.get('phone') as string
     const role = formData.get('role') as string
+    const departmentId = formData.get('department_id') as string
+    const employeeType = formData.get('employee_type') as string
 
-    // Create Supabase auth user using admin API
-    const adminClient = await createClient()
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+    await supabase.from('users').insert({
+      name,
       email,
-      password: initial_password,
-      email_confirm: true,
+      phone,
+      role,
+      department_id: departmentId || null,
+      employee_type: employeeType,
     })
 
-    if (authError || !authData.user) {
-      // Surface error via redirect with message
-      const msg = encodeURIComponent(authError?.message ?? 'Failed to create user account')
-      redirect(`/manage/employees/new?error=${msg}`)
-    }
-
-    const { error: empError } = await supabase
-      .from('users')
-      .insert({
-        user_id: authData.user.id,
-        full_name,
-        email,
-        employee_type,
-        department_id,
-        role,
-        is_active: true,
-      })
-
-    if (empError) {
-      // Attempt to clean up auth user on failure
-      await adminClient.auth.admin.deleteUser(authData.user.id)
-      const msg = encodeURIComponent('Employee record could not be created. The account was rolled back.')
-      redirect(`/manage/employees/new?error=${msg}`)
-    }
-
-    revalidatePath('/manage/employees')
     redirect('/manage/employees')
   }
 
   return (
-    <NewEmployeeForm
-      departments={departments ?? []}
-      createEmployee={createEmployee}
-    />
-  )
-}
+    <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.5rem' }}>
+        Add Employee
+      </h1>
+      <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+        After adding, the employee can use "Forgot Password" on the login page to set their password.
+      </p>
 
-async function NewEmployeeForm({
-  departments,
-  createEmployee,
-  searchParams,
-}: {
-  departments: { id: string; name: string }[]
-  createEmployee: (formData: FormData) => Promise<void>
-  searchParams?: Promise<{ error?: string }>
-}) {
-  const params = searchParams ? await searchParams : null
-  const errorMsg = params?.error
-
-  return (
-    <div className="max-w-lg mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Add New Employee</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Creates a login account and employee record. The employee will use the initial password to sign in.
-        </p>
-      </div>
-
-      {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 text-sm font-medium">
-          {decodeURIComponent(errorMsg)}
-        </div>
-      )}
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <form action={createEmployee} className="space-y-4">
-          <div>
-            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input
-              id="full_name"
-              name="full_name"
-              type="text"
-              required
-              placeholder="Jane Smith"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
-            />
-          </div>
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+        }}
+      >
+        <form action={createEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {[
+            { name: 'name', label: 'Full Name', type: 'text', required: true },
+            { name: 'email', label: 'Email', type: 'email', required: true },
+            { name: 'phone', label: 'Phone', type: 'tel', required: false },
+          ].map(field => (
+            <div key={field.name}>
+              <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+                {field.label}
+              </label>
+              <input
+                name={field.name}
+                type={field.type}
+                required={field.required}
+                style={{
+                  width: '100%',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  color: 'var(--text)',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          ))}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              placeholder="jane@icestasy.com"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="initial_password" className="block text-sm font-medium text-gray-700 mb-1">
-              Initial Password
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Role
             </label>
-            <input
-              id="initial_password"
-              name="initial_password"
-              type="text"
-              required
-              minLength={8}
-              placeholder="Temporary password (employee should change this)"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
-            />
-            <p className="text-xs text-gray-500 mt-1">Share this with the employee. They can change it after signing in.</p>
-          </div>
-
-          <div>
-            <label htmlFor="employee_type" className="block text-sm font-medium text-gray-700 mb-1">Employee Type</label>
             <select
-              id="employee_type"
-              name="employee_type"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
+              name="role"
+              required
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
             >
-              <option value="white_collar">White Collar (Mon–Fri, 9 hours/day)</option>
-              <option value="blue_collar">Blue Collar (Mon–Sat, 8 hours/day)</option>
+              <option value="employee">Employee</option>
+              <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
             </select>
           </div>
 
           <div>
-            <label htmlFor="department_id" className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Department
+            </label>
             <select
-              id="department_id"
               name="department_id"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
             >
-              <option value="">— No department —</option>
-              {departments.map((d) => (
+              <option value="">No Department</option>
+              {departments?.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Employee Type
+            </label>
             <select
-              id="role"
-              name="role"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
+              name="employee_type"
+              required
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
             >
-              <option value="employee">Employee</option>
-              <option value="admin">Admin (team manager)</option>
-              <option value="super_admin">Super Admin (HR / company-wide)</option>
+              <option value="white_collar">White Collar</option>
+              <option value="blue_collar">Blue Collar</option>
             </select>
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
             <button
               type="submit"
-              className="bg-blue-700 text-white rounded-lg px-5 py-3 font-semibold hover:bg-blue-800 min-h-[44px] text-sm flex-1"
+              style={{
+                flex: 1,
+                background: 'var(--primary)',
+                color: 'var(--text)',
+                border: 'none',
+                borderRadius: '0.75rem',
+                padding: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                minHeight: '44px',
+              }}
             >
               Create Employee
             </button>
-            <a
-              href="/manage/employees"
-              className="bg-gray-100 text-gray-700 rounded-lg px-5 py-3 font-semibold hover:bg-gray-200 min-h-[44px] text-sm flex items-center justify-center"
-            >
-              Cancel
-            </a>
           </div>
         </form>
       </div>

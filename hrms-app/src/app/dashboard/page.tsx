@@ -2,131 +2,215 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatTime } from '@/lib/attendance'
-import { balanceLabel } from '@/lib/leave'
-import { format } from 'date-fns'
-
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-2xl border p-5 ${className}`} style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-      {children}
-    </div>
-  )
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: employee } = await supabase.from('users').select('*').eq('email', user.email).single()
+  const { data: employee } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', user.email)
+    .single()
+
   if (!employee) redirect('/login')
 
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const year = new Date().getFullYear()
+  const today = new Date().toISOString().split('T')[0]
+  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+  const dateFull = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const firstName = employee.name.split(' ')[0]
 
-  const [{ data: attendance }, { data: balance }] = await Promise.all([
-    supabase.from('attendance_logs').select('*').eq('employee_id', employee.id).eq('date', today).maybeSingle(),
-    supabase.from('leave_balances').select('*').eq('employee_id', employee.id).eq('year', year).single(),
-  ])
+  const { data: todayLog } = await supabase
+    .from('attendance_logs')
+    .select('*')
+    .eq('employee_id', employee.id)
+    .eq('date', today)
+    .single()
 
-  let pendingCount = 0
-  if (employee.role === 'admin' || employee.role === 'super_admin') {
-    const query = supabase.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('leave_type', 'scheduled')
+  const { data: leaveBalance } = await supabase
+    .from('leave_balances')
+    .select('*')
+    .eq('employee_id', employee.id)
+    .single()
+
+  const isAdmin = employee.role === 'admin' || employee.role === 'super_admin'
+
+  let pendingLeaveCount = 0
+  if (isAdmin) {
+    let query = supabase
+      .from('leave_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+
     if (employee.role === 'admin' && employee.department_id) {
-      const { data: deptEmps } = await supabase.from('users').select('id').eq('department_id', employee.department_id)
-      const ids = (deptEmps ?? []).map((e: { id: string }) => e.id)
-      if (ids.length > 0) { const { count } = await query.in('employee_id', ids); pendingCount = count ?? 0 }
-    } else { const { count } = await query; pendingCount = count ?? 0 }
+      const { data: deptUsers } = await supabase
+        .from('users')
+        .select('id')
+        .eq('department_id', employee.department_id)
+      const ids = deptUsers?.map(u => u.id) ?? []
+      if (ids.length > 0) {
+        query = query.in('employee_id', ids)
+      }
+    }
+    const { count } = await query
+    pendingLeaveCount = count ?? 0
   }
 
-  const clockedIn = attendance?.clock_in && !attendance?.clock_out
-  const clockedOut = attendance?.clock_in && attendance?.clock_out
+  const attStatus = todayLog
+    ? todayLog.is_half_day
+      ? 'Half Day'
+      : todayLog.clock_out
+        ? 'Complete'
+        : 'Clocked In'
+    : 'Not clocked in'
+
+  const attColor = todayLog
+    ? todayLog.is_half_day
+      ? 'var(--warning)'
+      : todayLog.clock_out
+        ? 'var(--success)'
+        : 'var(--primary)'
+    : 'var(--muted)'
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {employee.name.split(' ')[0]}</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>{format(new Date(), 'EEEE, d MMMM yyyy')}</p>
+    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+          Good morning, {firstName}
+        </h1>
+        <p style={{ color: 'var(--muted)', marginTop: '0.25rem' }}>
+          {dayName}, {dateFull}
+        </p>
       </div>
 
-      {/* Attendance card */}
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold" style={{ color: 'var(--text)' }}>Today&apos;s Attendance</h2>
-        </div>
-        {!attendance && (
-          <div className="flex items-center gap-3">
-            <span className="rounded-full px-3 py-1 text-sm font-medium" style={{ background: 'var(--surface2)', color: 'var(--muted)' }}>Not clocked in</span>
-            <span className="text-sm" style={{ color: 'var(--muted)' }}>You haven&apos;t clocked in yet.</span>
-          </div>
-        )}
-        {clockedIn && (
-          <div className="flex items-center gap-3">
-            <span className="rounded-full px-3 py-1 text-sm font-medium" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--success)' }}>Clocked in</span>
-            <span className="text-sm" style={{ color: 'var(--text)' }}>Since {formatTime(attendance.clock_in)}</span>
-            {attendance.is_half_day && <span className="text-sm font-medium" style={{ color: 'var(--warning)' }}>Half day</span>}
-          </div>
-        )}
-        {clockedOut && (
-          <div className="flex items-center gap-3">
-            <span className="rounded-full px-3 py-1 text-sm font-medium"
-              style={{ background: attendance.is_half_day ? 'rgba(245,158,11,0.15)' : 'rgba(139,47,201,0.2)', color: attendance.is_half_day ? 'var(--warning)' : 'var(--primary-h)' }}>
-              {attendance.is_half_day ? 'Half day' : 'Full day'}
-            </span>
-            <span className="text-sm" style={{ color: 'var(--text)' }}>{formatTime(attendance.clock_in)} – {formatTime(attendance.clock_out)}</span>
-          </div>
-        )}
-      </Card>
-
-      {/* Leave balance */}
-      {balance && (
-        <Card>
-          <h2 className="font-semibold mb-4" style={{ color: 'var(--text)' }}>Leave Balance</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-xl p-4" style={{ background: 'var(--surface2)' }}>
-              <div className="text-3xl font-bold" style={{ color: 'var(--primary-h)' }}>{balance.scheduled_balance}</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{balanceLabel(balance.scheduled_balance, balance.scheduled_total, 'scheduled')}</div>
-            </div>
-            <div className="rounded-xl p-4" style={{ background: 'var(--surface2)' }}>
-              <div className="text-3xl font-bold" style={{ color: 'var(--primary-h)' }}>{balance.unscheduled_balance}</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{balanceLabel(balance.unscheduled_balance, balance.unscheduled_total, 'unscheduled')}</div>
-            </div>
-          </div>
-          {balance.scheduled_balance === 0 && (
-            <p className="text-sm font-medium mt-3 rounded-lg px-3 py-2" style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5' }}>
-              No leave balance remaining — further time off will be deducted at 1.5× daily pay.
+      <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '1.5rem' }}>
+        {/* Attendance card */}
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '1rem',
+            padding: '1.25rem',
+          }}
+        >
+          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Today
+          </p>
+          <p style={{ color: attColor, fontWeight: 600, fontSize: '1rem', margin: 0 }}>{attStatus}</p>
+          {todayLog && (
+            <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+              In: {formatTime(todayLog.clock_in)} {todayLog.clock_out ? `· Out: ${formatTime(todayLog.clock_out)}` : ''}
             </p>
           )}
-        </Card>
-      )}
-
-      {/* Pending for admin */}
-      {(employee.role === 'admin' || employee.role === 'super_admin') && pendingCount > 0 && (
-        <div className="rounded-2xl border p-5 flex items-center justify-between"
-          style={{ background: 'rgba(245,158,11,0.08)', borderColor: 'rgba(245,158,11,0.3)' }}>
-          <div>
-            <h2 className="font-semibold" style={{ color: 'var(--warning)' }}>Leave Requests Awaiting Decision</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>{pendingCount} request{pendingCount !== 1 ? 's' : ''} need{pendingCount === 1 ? 's' : ''} your approval</p>
-          </div>
-          <Link href="/team/leave" className="rounded-xl px-4 py-2.5 font-semibold text-sm flex items-center"
-            style={{ background: 'var(--warning)', color: '#000', minHeight: '44px' }}>Review</Link>
         </div>
-      )}
+
+        {/* Leave balance card */}
+        {leaveBalance && (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '1rem',
+              padding: '1.25rem',
+            }}
+          >
+            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Leave Balance
+            </p>
+            <p style={{ color: 'var(--text)', fontWeight: 600, fontSize: '1rem', margin: 0 }}>
+              {leaveBalance.scheduled_balance} scheduled
+            </p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+              {leaveBalance.unscheduled_balance} sick/emergency
+            </p>
+          </div>
+        )}
+
+        {/* Pending leaves (admin) */}
+        {isAdmin && (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: `1px solid ${pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--border)'}`,
+              borderRadius: '1rem',
+              padding: '1.25rem',
+            }}
+          >
+            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Pending Leaves
+            </p>
+            <p style={{ color: pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--text)', fontWeight: 600, fontSize: '1rem', margin: 0 }}>
+              {pendingLeaveCount} request{pendingLeaveCount !== 1 ? 's' : ''}
+            </p>
+            {pendingLeaveCount > 0 && (
+              <Link href="/team/leave" style={{ color: 'var(--primary-h)', fontSize: '0.85rem', textDecoration: 'none' }}>
+                Review →
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Quick actions */}
-      <Card>
-        <h2 className="font-semibold mb-3" style={{ color: 'var(--text)' }}>Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <Link href="/attendance" className="rounded-xl px-5 py-3 font-semibold text-sm flex items-center"
-            style={{ background: 'var(--primary)', color: '#fff', minHeight: '44px' }}>
-            {clockedIn ? '⏹ Clock Out' : '▶ Clock In'}
+      <div>
+        <h2 style={{ color: 'var(--text)', fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>Quick Actions</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <Link
+            href="/attendance"
+            style={{
+              background: 'var(--primary)',
+              color: 'var(--text)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1.25rem',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            Clock In/Out
           </Link>
-          <Link href="/leave/request" className="rounded-xl px-5 py-3 font-semibold text-sm flex items-center"
-            style={{ background: 'var(--surface2)', color: 'var(--text)', minHeight: '44px' }}>Request Leave</Link>
-          <Link href="/attendance/history" className="rounded-xl px-5 py-3 font-semibold text-sm flex items-center"
-            style={{ background: 'var(--surface2)', color: 'var(--text)', minHeight: '44px' }}>View History</Link>
+          <Link
+            href="/leave/request"
+            style={{
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1.25rem',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            Request Leave
+          </Link>
+          <Link
+            href="/attendance/history"
+            style={{
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1.25rem',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            View Attendance
+          </Link>
         </div>
-      </Card>
+      </div>
     </div>
   )
 }

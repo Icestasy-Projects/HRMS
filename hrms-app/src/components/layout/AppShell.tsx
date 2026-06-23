@@ -1,155 +1,263 @@
 'use client'
 
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { useState } from 'react'
 
-type Employee = { id: string; name: string; role: string; email: string }
+type NavItem = { label: string; href: string; badge?: number }
 
-const NAV = {
-  employee: [
-    { href: '/dashboard',          label: 'Home',           icon: '⌂' },
-    { href: '/attendance',         label: 'Clock In/Out',   icon: '◷' },
-    { href: '/attendance/history', label: 'Attendance',     icon: '📋' },
-    { href: '/leave',              label: 'My Leave',       icon: '🌿' },
-    { href: '/leave/request',      label: 'Request Leave',  icon: '+' },
-    { href: '/notifications',      label: 'Notifications',  icon: '🔔' },
-  ],
-  admin: [
-    { href: '/dashboard',          label: 'Home',           icon: '⌂' },
-    { href: '/attendance',         label: 'Clock In/Out',   icon: '◷' },
-    { href: '/team',               label: 'My Team',        icon: '👥' },
-    { href: '/team/leave',         label: 'Leave Requests', icon: '📝' },
-    { href: '/leave',              label: 'My Leave',       icon: '🌿' },
-    { href: '/notifications',      label: 'Notifications',  icon: '🔔' },
-  ],
-  super_admin: [
-    { href: '/dashboard',          label: 'Home',           icon: '⌂' },
-    { href: '/attendance',         label: 'Clock In/Out',   icon: '◷' },
-    { href: '/team',               label: 'Team',           icon: '👥' },
-    { href: '/team/leave',         label: 'Leave Requests', icon: '📝' },
-    { href: '/manage',             label: 'Manage',         icon: '⚙' },
-    { href: '/notifications',      label: 'Notifications',  icon: '🔔' },
-  ],
+function getNavItems(role: string, notifCount: number): NavItem[] {
+  const notif = { label: 'Notifications', href: '/notifications', badge: notifCount }
+  if (role === 'super_admin') {
+    return [
+      { label: 'Home', href: '/dashboard' },
+      { label: 'Clock In/Out', href: '/attendance' },
+      { label: 'Team', href: '/team' },
+      { label: 'Leave Requests', href: '/team/leave' },
+      { label: 'My Leave', href: '/leave' },
+      { label: 'Manage', href: '/manage' },
+      notif,
+    ]
+  }
+  if (role === 'admin') {
+    return [
+      { label: 'Home', href: '/dashboard' },
+      { label: 'Clock In/Out', href: '/attendance' },
+      { label: 'My Team', href: '/team' },
+      { label: 'Leave Requests', href: '/team/leave' },
+      { label: 'My Leave', href: '/leave' },
+      notif,
+    ]
+  }
+  return [
+    { label: 'Home', href: '/dashboard' },
+    { label: 'Clock In/Out', href: '/attendance' },
+    { label: 'Attendance', href: '/attendance/history' },
+    { label: 'My Leave', href: '/leave' },
+    { label: 'Request Leave', href: '/leave/request' },
+    notif,
+  ]
 }
 
-export default function AppShell({ employee, notificationCount, children }: {
-  employee: Employee; notificationCount: number; children: React.ReactNode
-}) {
-  const pathname = usePathname()
-  const [open, setOpen] = useState(false)
-  const role = (employee.role as keyof typeof NAV) in NAV ? employee.role as keyof typeof NAV : 'employee'
-  const navItems = NAV[role]
-  const initials = employee.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+interface AppShellProps {
+  children: React.ReactNode
+  role: string
+  userName: string
+  notifCount: number
+}
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+export default function AppShell({ children, role, userName, notifCount }: AppShellProps) {
+  const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const navItems = getNavItems(role, notifCount)
+
   async function signOut() {
+    const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
 
-  function NavLink({ item }: { item: typeof navItems[0] }) {
-    const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
-    return (
-      <Link href={item.href} onClick={() => setOpen(false)}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-        style={{ background: active ? 'var(--primary)' : 'transparent', color: active ? '#fff' : 'var(--muted)' }}>
-        <span className="w-5 text-center text-base">{item.icon}</span>
-        <span>{item.label}</span>
-        {item.href === '/notifications' && notificationCount > 0 && (
-          <span className="ml-auto text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center"
-            style={{ background: 'var(--warning)', color: '#000' }}>{notificationCount}</span>
-        )}
-      </Link>
-    )
-  }
-
-  const UserBlock = () => (
-    <div className="px-4 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-          style={{ background: 'var(--primary)' }}>{initials}</div>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{employee.name}</div>
-          <div className="text-xs truncate capitalize" style={{ color: 'var(--muted)' }}>{employee.role.replace('_', ' ')}</div>
-        </div>
-      </div>
-      <button onClick={signOut} className="w-full text-sm rounded-lg px-3 py-2 font-medium text-left transition-colors"
-        style={{ background: 'var(--surface2)', color: 'var(--muted)' }}>Sign out</button>
-    </div>
+  const NavLinks = ({ onClick }: { onClick?: () => void }) => (
+    <>
+      {navItems.map(item => (
+        <Link
+          key={item.href}
+          href={item.href}
+          onClick={onClick}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.625rem 0.875rem',
+            borderRadius: '0.75rem',
+            textDecoration: 'none',
+            color: pathname === item.href ? 'var(--text)' : 'var(--muted)',
+            background: pathname === item.href ? 'var(--surface2)' : 'transparent',
+            fontWeight: pathname === item.href ? 600 : 400,
+            fontSize: '0.9375rem',
+            transition: 'background 0.15s',
+          }}
+        >
+          {item.label}
+          {item.badge && item.badge > 0 ? (
+            <span
+              style={{
+                background: 'var(--primary)',
+                color: 'var(--text)',
+                borderRadius: '999px',
+                padding: '0.125rem 0.5rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+              }}
+            >
+              {item.badge}
+            </span>
+          ) : null}
+        </Link>
+      ))}
+    </>
   )
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: 'var(--bg)' }}>
-
+    <div style={{ display: 'flex', minHeight: '100dvh' }}>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-64 shrink-0 border-r"
-        style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-        <div className="flex items-center gap-3 px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-sm"
-            style={{ background: 'var(--primary)' }}>IC</div>
-          <div>
-            <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>Icestasy HRMS</div>
-            <div className="text-xs" style={{ color: 'var(--muted)' }}>Attendance & Leave</div>
-          </div>
+      <aside
+        style={{
+          width: '220px',
+          flexShrink: 0,
+          background: 'var(--surface)',
+          borderRight: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '1.25rem 1rem',
+          position: 'sticky',
+          top: 0,
+          height: '100dvh',
+        }}
+        className="hidden-mobile"
+      >
+        <div style={{ marginBottom: '1.5rem' }}>
+          <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text)' }}>Icestasy HRMS</span>
         </div>
-        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(item => <NavLink key={item.href} item={item} />)}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
+          <NavLinks />
         </nav>
-        <UserBlock />
-      </aside>
-
-      {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-30"
-        style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs"
-            style={{ background: 'var(--primary)' }}>IC</div>
-          <span className="font-bold text-sm" style={{ color: 'var(--text)' }}>Icestasy HRMS</span>
-        </div>
-        <div className="flex items-center gap-1">
-          {notificationCount > 0 && (
-            <Link href="/notifications" className="relative flex items-center justify-center w-10 h-10">
-              <span>🔔</span>
-              <span className="absolute -top-0.5 -right-0.5 text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center"
-                style={{ background: 'var(--warning)', color: '#000' }}>{notificationCount}</span>
-            </Link>
-          )}
-          <button onClick={() => setOpen(o => !o)} className="w-10 h-10 flex flex-col items-center justify-center gap-1.5">
-            <span className="block w-5 h-0.5 rounded" style={{ background: 'var(--text)' }}></span>
-            <span className="block w-5 h-0.5 rounded" style={{ background: 'var(--text)' }}></span>
-            <span className="block w-5 h-0.5 rounded" style={{ background: 'var(--text)' }}></span>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
+          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{userName}</p>
+          <button
+            onClick={signOut}
+            style={{
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              borderRadius: '0.75rem',
+              padding: '0.5rem 1rem',
+              color: 'var(--text)',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              width: '100%',
+            }}
+          >
+            Sign Out
           </button>
         </div>
+      </aside>
+
+      {/* Mobile header */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '56px',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 1rem',
+          zIndex: 100,
+        }}
+        className="show-mobile"
+      >
+        <span style={{ fontWeight: 700, color: 'var(--text)' }}>Icestasy HRMS</span>
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text)',
+            cursor: 'pointer',
+            fontSize: '1.5rem',
+            lineHeight: 1,
+            minWidth: '44px',
+            minHeight: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          aria-label="Menu"
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
       </div>
 
       {/* Mobile drawer */}
-      {open && (
-        <div className="md:hidden fixed inset-0 z-40" onClick={() => setOpen(false)}>
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)' }} />
-          <div className="absolute left-0 top-0 bottom-0 w-72 flex flex-col" style={{ background: 'var(--surface)' }}
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                style={{ background: 'var(--primary)' }}>{initials}</div>
-              <div>
-                <div className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{employee.name}</div>
-                <div className="text-xs capitalize" style={{ color: 'var(--muted)' }}>{employee.role.replace('_', ' ')}</div>
-              </div>
-            </div>
-            <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-              {navItems.map(item => <NavLink key={item.href} item={item} />)}
+      {menuOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99,
+            background: 'rgba(0,0,0,0.5)',
+          }}
+          onClick={() => setMenuOpen(false)}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '280px',
+              height: '100%',
+              background: 'var(--surface)',
+              borderLeft: '1px solid var(--border)',
+              padding: '4.5rem 1rem 1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
+              <NavLinks onClick={() => setMenuOpen(false)} />
             </nav>
-            <UserBlock />
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+              <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{userName}</p>
+              <button
+                onClick={signOut}
+                style={{
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  width: '100%',
+                }}
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <main className="flex-1 min-w-0 p-4 md:p-6 pb-8">{children}</main>
+      {/* Main content */}
+      <main
+        style={{
+          flex: 1,
+          padding: '1.5rem',
+          paddingTop: 'calc(56px + 1.5rem)',
+          overflowY: 'auto',
+        }}
+        className="main-content"
+      >
+        {children}
+      </main>
+
+      <style>{`
+        @media (min-width: 768px) {
+          .hidden-mobile { display: flex !important; }
+          .show-mobile { display: none !important; }
+          .main-content { padding-top: 1.5rem !important; }
+        }
+        @media (max-width: 767px) {
+          .hidden-mobile { display: none !important; }
+          .show-mobile { display: flex !important; }
+        }
+      `}</style>
     </div>
   )
 }

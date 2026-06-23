@@ -12,134 +12,129 @@ export default async function LeaveRequestPage() {
     .select('*')
     .eq('email', user.email)
     .single()
+
   if (!employee) redirect('/login')
 
-  const year = new Date().getFullYear()
   const { data: balance } = await supabase
     .from('leave_balances')
     .select('*')
     .eq('employee_id', employee.id)
-    .eq('year', year)
     .single()
 
-  async function submitLeaveRequest(formData: FormData) {
+  async function submitLeave(formData: FormData) {
     'use server'
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data: employee } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', user.email)
-      .single()
-    if (!employee) return
+    const { data: emp } = await supabase.from('users').select('*').eq('email', user.email).single()
+    if (!emp) return
 
     const leaveType = formData.get('leave_type') as string
     const startDate = formData.get('start_date') as string
     const endDate = formData.get('end_date') as string
-    const isHalfDay = formData.get('is_half_day') === 'true'
+    const isHalfDay = formData.get('is_half_day') === 'on'
     const reason = formData.get('reason') as string
 
-    if (!leaveType || !startDate || !endDate) return
-
-    // Calculate working days
     const start = new Date(startDate)
     const end = new Date(endDate)
-    let days = 0
-    const current = new Date(start)
-    while (current <= end) {
-      const dow = current.getDay()
-      if (dow !== 0 && dow !== 6) days++
-      current.setDate(current.getDate() + 1)
-    }
-    if (isHalfDay) days = 0.5
-
-    const deduction = isHalfDay
-      ? (leaveType === 'scheduled' ? 0.5 : 0.75)
-      : days
+    const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+    const daysCount = isHalfDay ? 0.5 : diffDays
 
     const isUnscheduled = leaveType === 'unscheduled'
-    const status = isUnscheduled ? 'approved' : 'pending'
 
-    const { error } = await supabase.from('leave_requests').insert({
-      employee_id: employee.id,
-      leave_type: leaveType,
-      start_date: startDate,
-      end_date: endDate,
-      is_half_day: isHalfDay,
-      status,
-      reason,
-      days_requested: days,
-      days_deducted: isUnscheduled ? deduction : null,
-    })
+    const { data: newRequest } = await supabase
+      .from('leave_requests')
+      .insert({
+        employee_id: emp.id,
+        leave_type: leaveType,
+        start_date: startDate,
+        end_date: endDate,
+        is_half_day: isHalfDay,
+        days_count: daysCount,
+        reason,
+        status: isUnscheduled ? 'approved' : 'pending',
+      })
+      .select()
+      .single()
 
-    if (error) return
-
-    // Deduct immediately for unscheduled leave
-    if (isUnscheduled) {
-      const year = new Date().getFullYear()
+    if (isUnscheduled && newRequest) {
+      // Deduct balance
       const { data: bal } = await supabase
         .from('leave_balances')
         .select('*')
-        .eq('employee_id', employee.id)
-        .eq('year', year)
+        .eq('employee_id', emp.id)
         .single()
 
       if (bal) {
         await supabase
           .from('leave_balances')
-          .update({
-            unscheduled_used: bal.unscheduled_used + deduction,
-            unscheduled_balance: Math.max(0, bal.unscheduled_balance - deduction),
-          })
-          .eq('id', bal.id)
+          .update({ unscheduled_balance: bal.unscheduled_balance - daysCount })
+          .eq('employee_id', emp.id)
       }
 
-      // FYI notification to manager
-      if (employee.department_id) {
+      // Notify manager (FYI)
+      if (emp.department_id) {
         const { data: dept } = await supabase
           .from('departments')
           .select('manager_id')
-          .eq('id', employee.department_id)
+          .eq('id', emp.department_id)
           .single()
 
-        if (dept?.manager_id) {
-          const { data: mgr } = await supabase
-            .from('users')
-            .select('id')
-            .eq('id', dept.manager_id)
-            .single()
+        if (dept?.manager_id && dept.manager_id !== emp.id) {
+          await supabase.from('notifications').insert({
+            recipient_id: dept.manager_id,
+            type: 'fyi',
+            title: 'Unscheduled Leave Taken',
+            message: `${emp.name} has taken ${daysCount} day(s) of unscheduled leave from ${startDate} to ${endDate}.`,
+            related_id: newRequest.id,
+          })
+        }
+      }
+    } else if (!isUnscheduled && newRequest) {
+      // Notify manager for approval
+      if (emp.department_id) {
+        const { data: dept } = await supabase
+          .from('departments')
+          .select('manager_id')
+          .eq('id', emp.department_id)
+          .single()
 
-          if (mgr) {
-            await supabase.from('notifications').insert({
-              recipient_id: mgr.id,
-              sender_id: employee.id,
-              message: `${employee.full_name} has taken unscheduled leave from ${startDate} to ${endDate}. No action needed.`,
-              requires_action: false,
-              is_read: false,
-            })
-          }
+        if (dept?.manager_id && dept.manager_id !== emp.id) {
+          await supabase.from('notifications').insert({
+            recipient_id: dept.manager_id,
+            type: 'action_needed',
+            title: 'Leave Request Pending Approval',
+            message: `${emp.name} has requested ${daysCount} day(s) of scheduled leave from ${startDate} to ${endDate}.`,
+            related_id: newRequest.id,
+          })
         }
       }
     }
 
-    redirect('/leave')
+    redirect('/leave/history')
   }
 
   return (
-    <div className="max-w-lg mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Request Leave</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Fill in the details below to request time off.
-        </p>
-      </div>
+    <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Request Leave
+      </h1>
 
-      <LeaveRequestForm
-        balance={balance}
-        submitAction={submitLeaveRequest}
-      />
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+        }}
+      >
+        <LeaveRequestForm
+          scheduledBalance={balance?.scheduled_balance ?? 0}
+          unscheduledBalance={balance?.unscheduled_balance ?? 0}
+          onSubmit={submitLeave}
+        />
+      </div>
     </div>
   )
 }

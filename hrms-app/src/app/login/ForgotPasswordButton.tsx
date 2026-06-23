@@ -1,27 +1,57 @@
 'use client'
+
+import { createClient } from '@/lib/supabase/client'
 import { useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
 
 export default function ForgotPasswordButton() {
-  const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-  async function handleForgot() {
-    const email = (document.getElementById('email') as HTMLInputElement)?.value
-    if (!email) { alert('Enter your email address first, then click Forgot password.'); return }
-    setLoading(true)
-    await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback` })
-    setLoading(false)
-    setSent(true)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
+  const [msg, setMsg] = useState('')
+
+  async function handleForgotPassword() {
+    const emailInput = document.getElementById('email') as HTMLInputElement
+    const email = emailInput?.value?.trim()
+    if (!email) {
+      setMsg('Please enter your email address first.')
+      setStatus('error')
+      return
+    }
+    setStatus('loading')
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/auth/callback',
+    })
+    if (error) {
+      setMsg(error.message)
+      setStatus('error')
+    } else {
+      setMsg('Password reset email sent! Check your inbox.')
+      setStatus('sent')
+    }
   }
-  if (sent) return <p className="text-sm font-medium" style={{ color: 'var(--success)' }}>Reset link sent — check your email.</p>
+
   return (
-    <button type="button" onClick={handleForgot} disabled={loading}
-      className="text-sm hover:underline disabled:opacity-50" style={{ color: 'var(--primary)' }}>
-      {loading ? 'Sending...' : 'Forgot password?'}
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={handleForgotPassword}
+        disabled={status === 'loading'}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'var(--primary-h)',
+          cursor: 'pointer',
+          fontSize: '0.875rem',
+          padding: '0',
+          textDecoration: 'underline',
+        }}
+      >
+        {status === 'loading' ? 'Sending...' : 'Forgot password?'}
+      </button>
+      {msg && (
+        <p style={{ color: status === 'sent' ? 'var(--success)' : 'var(--danger)', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+          {msg}
+        </p>
+      )}
+    </div>
   )
 }

@@ -2,38 +2,49 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+const tiles = [
+  { label: 'Employees', href: '/manage/employees', desc: 'View and manage all staff' },
+  { label: 'Add Employee', href: '/manage/employees/new', desc: 'Onboard a new team member' },
+  { label: 'Departments', href: '/manage/departments', desc: 'Manage departments and managers' },
+  { label: 'Leave Policy', href: '/manage/policy', desc: 'Configure leave entitlements' },
+  { label: 'Holidays', href: '/manage/holidays', desc: 'Manage public holidays' },
+]
+
 export default async function ManagePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: me } = await supabase.from('users').select('role').eq('email', user.email).single()
-  if (!me || me.role !== 'super_admin') redirect('/dashboard')
+  const { data: employee } = await supabase
+    .from('users')
+    .select('role')
+    .eq('email', user.email)
+    .single()
 
-  const tiles = [
-    { href: '/manage/employees', label: 'Employees', desc: 'View and manage all staff accounts', icon: '👤' },
-    { href: '/manage/employees/new', label: 'Add Employee', desc: 'Create a new staff account', icon: '+' },
-    { href: '/manage/departments', label: 'Departments', desc: 'Manage teams and assign managers', icon: '🏢' },
-    { href: '/manage/policy', label: 'Leave Policy', desc: 'Adjust annual leave rules and deductions', icon: '📋' },
-    { href: '/manage/holidays', label: 'Holidays', desc: 'Set public holidays for this year', icon: '📅' },
-  ]
+  if (!employee || employee.role !== 'super_admin') redirect('/dashboard')
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Manage</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Company-wide settings and employee management.</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {tiles.map(t => (
-          <Link key={t.href} href={t.href} className="rounded-2xl border p-5 flex items-start gap-4 transition-colors"
-            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-              style={{ background: 'rgba(139,47,201,0.15)', color: 'var(--primary-h)' }}>{t.icon}</div>
-            <div>
-              <div className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{t.label}</div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{t.desc}</div>
-            </div>
+    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Manage
+      </h1>
+
+      <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+        {tiles.map(tile => (
+          <Link
+            key={tile.href}
+            href={tile.href}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '1rem',
+              padding: '1.25rem',
+              textDecoration: 'none',
+              display: 'block',
+            }}
+          >
+            <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '1rem' }}>{tile.label}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.375rem 0 0' }}>{tile.desc}</p>
           </Link>
         ))}
       </div>

@@ -1,64 +1,100 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { format } from 'date-fns'
 
 export default async function LeaveHistoryPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: employee } = await supabase.from('users').select('*').eq('email', user.email).single()
+  const { data: employee } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', user.email)
+    .single()
+
   if (!employee) redirect('/login')
 
   const { data: requests } = await supabase
-    .from('leave_requests').select('*').eq('employee_id', employee.id).order('created_at', { ascending: false })
+    .from('leave_requests')
+    .select('*')
+    .eq('employee_id', employee.id)
+    .order('created_at', { ascending: false })
 
-  function StatusBadge({ status }: { status: string }) {
-    const styles: Record<string, { bg: string; color: string }> = {
-      approved: { bg: 'rgba(34,197,94,0.15)', color: 'var(--success)' },
-      pending:  { bg: 'rgba(245,158,11,0.15)', color: 'var(--warning)' },
-      rejected: { bg: 'rgba(239,68,68,0.15)', color: 'var(--danger)' },
-    }
-    const s = styles[status] ?? { bg: 'var(--surface2)', color: 'var(--muted)' }
-    return <span className="rounded-full px-3 py-1 text-sm font-medium" style={{ background: s.bg, color: s.color }}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+  function statusColor(status: string) {
+    if (status === 'approved') return 'var(--success)'
+    if (status === 'pending') return 'var(--warning)'
+    if (status === 'rejected') return 'var(--danger)'
+    return 'var(--muted)'
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Leave History</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>All your leave requests, past and present.</p>
-      </div>
+    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Leave History
+      </h1>
 
       {(!requests || requests.length === 0) ? (
-        <div className="rounded-2xl border p-10 text-center" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>No leave requests yet.</p>
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '1rem',
+            padding: '2rem',
+            textAlign: 'center',
+            color: 'var(--muted)',
+          }}
+        >
+          No leave requests found.
         </div>
       ) : (
-        <div className="space-y-3">
-          {requests.map(req => (
-            <div key={req.id} className="rounded-2xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div>
-                  <div className="font-semibold text-sm" style={{ color: 'var(--text)' }}>
-                    {req.leave_type === 'scheduled' ? 'Scheduled Leave' : 'Unscheduled Leave'}
-                    {req.is_half_day && ' (half day)'}
-                  </div>
-                  <div className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
-                    {format(new Date(req.start_date), 'd MMM yyyy')}
-                    {req.start_date !== req.end_date && ` – ${format(new Date(req.end_date), 'd MMM yyyy')}`}
-                  </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          {requests.map(req => {
+            const sc = statusColor(req.status)
+            return (
+              <div
+                key={req.id}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '1rem',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, textTransform: 'capitalize' }}>
+                    {req.leave_type} Leave {req.is_half_day ? '(Half Day)' : ''}
+                  </p>
+                  <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
+                    {req.start_date} → {req.end_date} · {req.days_count} day{req.days_count !== 1 ? 's' : ''}
+                  </p>
+                  {req.reason && (
+                    <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.25rem 0 0', fontStyle: 'italic' }}>
+                      {req.reason}
+                    </p>
+                  )}
                 </div>
-                <StatusBadge status={req.status} />
+                <span
+                  style={{
+                    background: `${sc}20`,
+                    color: sc,
+                    border: `1px solid ${sc}`,
+                    borderRadius: '0.5rem',
+                    padding: '0.25rem 0.75rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {req.status}
+                </span>
               </div>
-              <div className="text-sm space-y-1" style={{ color: 'var(--muted)' }}>
-                <div>Days: <strong style={{ color: 'var(--text)' }}>{req.days_requested}</strong>
-                  {req.days_deducted != null && <span> · Deducted: <strong style={{ color: 'var(--text)' }}>{req.days_deducted}</strong></span>}
-                </div>
-                {req.reason && <div className="italic">&ldquo;{req.reason}&rdquo;</div>}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

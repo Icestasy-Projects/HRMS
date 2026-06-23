@@ -1,12 +1,15 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import ForgotPasswordButton from './ForgotPasswordButton'
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; message?: string }>
+  searchParams: Promise<{ error?: string }>
 }) {
+  const params = await searchParams
+  const errorMsg = params?.error
+
   async function signIn(formData: FormData) {
     'use server'
     const email = formData.get('email') as string
@@ -14,78 +17,128 @@ export default async function LoginPage({
     const supabase = await createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      redirect(`/login?error=${encodeURIComponent('Invalid email or password. Please try again.')}`)
+      redirect(`/login?error=${encodeURIComponent(error.message)}`)
     }
     redirect('/dashboard')
   }
 
-  const params = await searchParams
-  const errorMsg = params?.error
-  const message = params?.message
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg)' }}>
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl font-bold text-white text-2xl mb-4"
-            style={{ background: 'var(--primary)' }}>IC</div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Welcome to Icestasy HRMS</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Sign in to manage attendance and leave</p>
+    <div
+      style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg)',
+        padding: '1rem',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '400px',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '1rem',
+          padding: '2rem',
+        }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+            Icestasy HRMS
+          </h1>
+          <p style={{ color: 'var(--muted)', marginTop: '0.5rem' }}>Sign in to your account</p>
         </div>
 
-        {/* Card */}
-        <div className="rounded-2xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-          {errorMsg && (
-            <div className="rounded-lg px-4 py-3 mb-4 text-sm font-medium border"
-              style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.3)', color: '#fca5a5' }}>
-              {decodeURIComponent(errorMsg)}
-            </div>
-          )}
-          {message && (
-            <div className="rounded-lg px-4 py-3 mb-4 text-sm font-medium border"
-              style={{ background: 'rgba(34,197,94,0.1)', borderColor: 'rgba(34,197,94,0.3)', color: '#86efac' }}>
-              {decodeURIComponent(message)}
-            </div>
-          )}
-
-          <form action={signIn} className="flex flex-col gap-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text)' }}>
-                Email address
-              </label>
-              <input id="email" name="email" type="email" required autoComplete="email"
-                placeholder="you@icestasyprojects.com"
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold mb-1.5" style={{ color: 'var(--text)' }}>
-                Password
-              </label>
-              <input id="password" name="password" type="password" required autoComplete="current-password"
-                placeholder="••••••••"
-                className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              />
-            </div>
-
-            <button type="submit"
-              className="w-full rounded-xl py-3 font-bold text-white text-base transition-colors mt-1"
-              style={{ background: 'var(--primary)', minHeight: '48px' }}>
-              Sign In
-            </button>
-          </form>
-
-          <div className="mt-4 text-center">
-            <ForgotPasswordButton />
+        {errorMsg && (
+          <div
+            style={{
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid var(--danger)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1rem',
+              color: 'var(--danger)',
+              fontSize: '0.875rem',
+              marginBottom: '1rem',
+            }}
+          >
+            {errorMsg}
           </div>
-        </div>
+        )}
 
-        <p className="text-center text-xs mt-6" style={{ color: 'var(--muted)' }}>
-          Icestasy HRMS · Attendance &amp; Leave Management
-        </p>
+        <form action={signIn} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label
+              htmlFor="email"
+              style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}
+            >
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              background: 'var(--primary)',
+              color: 'var(--text)',
+              border: 'none',
+              borderRadius: '0.75rem',
+              padding: '0.875rem',
+              fontWeight: 600,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              minHeight: '44px',
+            }}
+          >
+            Sign In
+          </button>
+        </form>
+
+        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+          <ForgotPasswordButton />
+        </div>
       </div>
     </div>
   )

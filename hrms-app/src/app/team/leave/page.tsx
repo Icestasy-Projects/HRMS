@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
-import { format } from 'date-fns'
 
 export default async function TeamLeavePage() {
   const supabase = await createClient()
@@ -13,252 +11,296 @@ export default async function TeamLeavePage() {
     .select('*')
     .eq('email', user.email)
     .single()
-  if (!employee) redirect('/login')
 
-  if (employee.role !== 'admin' && employee.role !== 'super_admin') redirect('/dashboard')
+  if (!employee || (employee.role !== 'admin' && employee.role !== 'super_admin')) {
+    redirect('/dashboard')
+  }
 
   // Get relevant employee IDs
-  let employeeIds: string[] = []
+  let empIds: string[] = []
   if (employee.role === 'admin' && employee.department_id) {
-    const { data } = await supabase
+    const { data: deptUsers } = await supabase
       .from('users')
       .select('id')
       .eq('department_id', employee.department_id)
-    employeeIds = (data ?? []).map((e: { id: string }) => e.id)
+    empIds = deptUsers?.map(u => u.id) ?? []
   } else {
-    const { data } = await supabase.from('users').select('id')
-    employeeIds = (data ?? []).map((e: { id: string }) => e.id)
+    const { data: allUsers } = await supabase.from('users').select('id')
+    empIds = allUsers?.map(u => u.id) ?? []
   }
 
-  // Pending scheduled leave
-  const { data: pendingRequests } = employeeIds.length > 0
+  const { data: allRequests } = empIds.length > 0
     ? await supabase
         .from('leave_requests')
-        .select('*, employee:employees(id, full_name, department_id, department:departments(name))')
-        .eq('status', 'pending')
-        .eq('leave_type', 'scheduled')
-        .in('employee_id', employeeIds)
-        .order('created_at', { ascending: true })
-    : { data: [] }
-
-  // Recent unscheduled leave (last 30 days)
-  const thirtyDaysAgo = format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
-  const { data: unscheduledRequests } = employeeIds.length > 0
-    ? await supabase
-        .from('leave_requests')
-        .select('*, employee:employees(id, full_name, department_id, department:departments(name))')
-        .eq('leave_type', 'unscheduled')
-        .eq('status', 'approved')
-        .in('employee_id', employeeIds)
-        .gte('created_at', thirtyDaysAgo)
+        .select('*, users(name, email)')
+        .in('employee_id', empIds)
         .order('created_at', { ascending: false })
     : { data: [] }
 
+  const pending = allRequests?.filter(r => r.status === 'pending' && r.leave_type === 'scheduled') ?? []
+  const others = allRequests?.filter(r => !(r.status === 'pending' && r.leave_type === 'scheduled')) ?? []
+
   async function approveLeave(formData: FormData) {
     'use server'
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: approver } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', user.email)
-      .single()
-    if (!approver || (approver.role !== 'admin' && approver.role !== 'super_admin')) return
-
     const requestId = formData.get('request_id') as string
+    const supabase = await createClient()
+
     const { data: req } = await supabase
       .from('leave_requests')
-      .select('*, employee:employees(*)')
+      .select('*')
       .eq('id', requestId)
       .single()
-    if (!req) return
 
-    const year = new Date(req.start_date).getFullYear()
-    const deduction = req.is_half_day ? 0.5 : req.days_requested
+    if (!req) return
 
     await supabase
       .from('leave_requests')
-      .update({ status: 'approved', approved_by: approver.id, days_deducted: deduction })
+      .update({ status: 'approved' })
       .eq('id', requestId)
 
-    // Deduct from balance
+    // Deduct balance
     const { data: bal } = await supabase
       .from('leave_balances')
       .select('*')
       .eq('employee_id', req.employee_id)
-      .eq('year', year)
       .single()
+
     if (bal) {
       await supabase
         .from('leave_balances')
-        .update({
-          scheduled_used: bal.scheduled_used + deduction,
-          scheduled_balance: Math.max(0, bal.scheduled_balance - deduction),
-        })
-        .eq('id', bal.id)
+        .update({ scheduled_balance: bal.scheduled_balance - req.days_count })
+        .eq('employee_id', req.employee_id)
     }
 
     // Notify employee
     await supabase.from('notifications').insert({
       recipient_id: req.employee_id,
-      sender_id: approver.id,
-      message: `Your scheduled leave request from ${req.start_date} to ${req.end_date} has been approved by ${approver.full_name}.`,
-      requires_action: false,
-      is_read: false,
-      leave_request_id: requestId,
+      type: 'fyi',
+      title: 'Leave Approved',
+      message: `Your leave request from ${req.start_date} to ${req.end_date} has been approved.`,
+      related_id: requestId,
     })
 
-    revalidatePath('/team/leave')
+    redirect('/team/leave')
   }
 
   async function rejectLeave(formData: FormData) {
     'use server'
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: approver } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', user.email)
-      .single()
-    if (!approver || (approver.role !== 'admin' && approver.role !== 'super_admin')) return
-
     const requestId = formData.get('request_id') as string
+    const supabase = await createClient()
+
     const { data: req } = await supabase
       .from('leave_requests')
       .select('*')
       .eq('id', requestId)
       .single()
+
     if (!req) return
 
     await supabase
       .from('leave_requests')
-      .update({ status: 'rejected', approved_by: approver.id })
+      .update({ status: 'rejected' })
       .eq('id', requestId)
 
     await supabase.from('notifications').insert({
       recipient_id: req.employee_id,
-      sender_id: approver.id,
-      message: `Your scheduled leave request from ${req.start_date} to ${req.end_date} has been rejected by ${approver.full_name}.`,
-      requires_action: false,
-      is_read: false,
-      leave_request_id: requestId,
+      type: 'fyi',
+      title: 'Leave Rejected',
+      message: `Your leave request from ${req.start_date} to ${req.end_date} has been rejected.`,
+      related_id: requestId,
     })
 
-    revalidatePath('/team/leave')
+    redirect('/team/leave')
+  }
+
+  function statusColor(status: string) {
+    if (status === 'approved') return 'var(--success)'
+    if (status === 'pending') return 'var(--warning)'
+    if (status === 'rejected') return 'var(--danger)'
+    return 'var(--muted)'
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Leave Requests</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Review leave requests from your team. Scheduled Leave requests need your approval.
-          Unscheduled Leave is already recorded — these are just for your awareness.
-        </p>
-      </div>
+    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Leave Requests
+      </h1>
 
-      {/* Pending Approval */}
-      <section>
-        <h2 className="font-semibold text-gray-800 text-base mb-3 flex items-center gap-2">
-          Pending Approval
-          {pendingRequests && pendingRequests.length > 0 && (
-            <span className="bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold">
-              {pendingRequests.length}
+      {/* Needs decision */}
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--warning)', margin: 0 }}>
+            Needs Your Decision
+          </h2>
+          {pending.length > 0 && (
+            <span
+              style={{
+                background: 'rgba(245,158,11,0.2)',
+                color: 'var(--warning)',
+                borderRadius: '999px',
+                padding: '0.125rem 0.5rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+              }}
+            >
+              {pending.length}
             </span>
           )}
+        </div>
+
+        {pending.length === 0 ? (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '1rem',
+              padding: '1.25rem',
+              color: 'var(--muted)',
+              fontSize: '0.9rem',
+            }}
+          >
+            No pending requests.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+            {pending.map(req => (
+              <div
+                key={req.id}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--warning)',
+                  borderRadius: '1rem',
+                  padding: '1rem 1.25rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>
+                      {req.users?.name}
+                    </p>
+                    <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
+                      {req.start_date} → {req.end_date} · {req.days_count} day{req.days_count !== 1 ? 's' : ''}
+                      {req.is_half_day ? ' (Half Day)' : ''}
+                    </p>
+                    {req.reason && (
+                      <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.25rem 0 0', fontStyle: 'italic' }}>
+                        {req.reason}
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                    <form action={approveLeave}>
+                      <input type="hidden" name="request_id" value={req.id} />
+                      <button
+                        type="submit"
+                        style={{
+                          background: 'rgba(34,197,94,0.15)',
+                          border: '1px solid var(--success)',
+                          color: 'var(--success)',
+                          borderRadius: '0.5rem',
+                          padding: '0.375rem 0.75rem',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          minHeight: '44px',
+                        }}
+                      >
+                        Approve
+                      </button>
+                    </form>
+                    <form action={rejectLeave}>
+                      <input type="hidden" name="request_id" value={req.id} />
+                      <button
+                        type="submit"
+                        style={{
+                          background: 'rgba(239,68,68,0.15)',
+                          border: '1px solid var(--danger)',
+                          color: 'var(--danger)',
+                          borderRadius: '0.5rem',
+                          padding: '0.375rem 0.75rem',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          minHeight: '44px',
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* No action needed */}
+      <div>
+        <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '0.75rem' }}>
+          No Action Needed
         </h2>
-
-        {(!pendingRequests || pendingRequests.length === 0) ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center text-gray-500 text-sm">
-            No pending leave requests. You&apos;re all caught up.
+        {others.length === 0 ? (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '1rem',
+              padding: '1.25rem',
+              color: 'var(--muted)',
+              fontSize: '0.9rem',
+            }}
+          >
+            No other requests.
           </div>
         ) : (
-          <div className="space-y-3">
-            {pendingRequests.map((req) => (
-              <div key={req.id} className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+            {others.map(req => {
+              const sc = statusColor(req.status)
+              return (
+                <div
+                  key={req.id}
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '1rem',
+                    padding: '1rem 1.25rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
+                  }}
+                >
                   <div>
-                    <span className="bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold">Needs your decision</span>
-                    <div className="font-semibold text-gray-900 mt-1">{(req.employee as { full_name?: string })?.full_name ?? 'Unknown'}</div>
-                    <div className="text-sm text-gray-600">
-                      {format(new Date(req.start_date), 'd MMM yyyy')}
-                      {req.start_date !== req.end_date && ` – ${format(new Date(req.end_date), 'd MMM yyyy')}`}
-                      {req.is_half_day && ' (half day)'}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {req.days_requested} working day{req.days_requested !== 1 ? 's' : ''}
-                    </div>
-                    {req.reason && (
-                      <div className="text-sm text-gray-500 italic mt-1">&ldquo;{req.reason}&rdquo;</div>
-                    )}
-                    <div className="text-xs text-gray-400 mt-1">
-                      Requested {format(new Date(req.created_at), 'd MMM yyyy, HH:mm')}
-                    </div>
+                    <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>
+                      {req.users?.name}
+                    </p>
+                    <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0', textTransform: 'capitalize' }}>
+                      {req.leave_type} · {req.start_date} → {req.end_date} · {req.days_count} day{req.days_count !== 1 ? 's' : ''}
+                    </p>
                   </div>
+                  <span
+                    style={{
+                      background: `${sc}20`,
+                      color: sc,
+                      border: `1px solid ${sc}`,
+                      borderRadius: '0.5rem',
+                      padding: '0.25rem 0.75rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      textTransform: 'capitalize',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {req.status}
+                  </span>
                 </div>
-                <div className="flex gap-2 mt-3">
-                  <form action={approveLeave}>
-                    <input type="hidden" name="request_id" value={req.id} />
-                    <button
-                      type="submit"
-                      className="bg-blue-700 text-white rounded-lg px-4 py-2.5 font-semibold hover:bg-blue-800 text-sm min-h-[44px]"
-                    >
-                      Approve
-                    </button>
-                  </form>
-                  <form action={rejectLeave}>
-                    <input type="hidden" name="request_id" value={req.id} />
-                    <button
-                      type="submit"
-                      className="bg-red-700 text-white rounded-lg px-4 py-2.5 font-semibold hover:bg-red-800 text-sm min-h-[44px]"
-                    >
-                      Reject
-                    </button>
-                  </form>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
-      </section>
-
-      {/* Recent Unscheduled Leave (FYI) */}
-      <section>
-        <h2 className="font-semibold text-gray-800 text-base mb-3">Recent Unscheduled Leave <span className="text-gray-400 font-normal text-sm">(last 30 days)</span></h2>
-        <p className="text-sm text-gray-500 mb-3">These are already recorded. No action needed from you.</p>
-
-        {(!unscheduledRequests || unscheduledRequests.length === 0) ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center text-gray-500 text-sm">
-            No unscheduled leave in the past 30 days.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {unscheduledRequests.map((req) => (
-              <div key={req.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5 text-xs font-semibold">No action needed</span>
-                    <div className="font-medium text-gray-900 mt-1">{(req.employee as { full_name?: string })?.full_name ?? 'Unknown'}</div>
-                    <div className="text-sm text-gray-600">
-                      {format(new Date(req.start_date), 'd MMM yyyy')}
-                      {req.start_date !== req.end_date && ` – ${format(new Date(req.end_date), 'd MMM yyyy')}`}
-                      {req.is_half_day && ' (half day)'}
-                    </div>
-                    {req.reason && (
-                      <div className="text-sm text-gray-500 italic mt-1">&ldquo;{req.reason}&rdquo;</div>
-                    )}
-                  </div>
-                  <span className="bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm font-medium shrink-0">Recorded</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      </div>
     </div>
   )
 }

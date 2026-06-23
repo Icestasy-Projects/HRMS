@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { format } from 'date-fns'
 import { formatTime } from '@/lib/attendance'
 
 export default async function AttendanceHistoryPage() {
@@ -8,42 +7,89 @@ export default async function AttendanceHistoryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: employee } = await supabase.from('users').select('*').eq('email', user.email).single()
+  const { data: employee } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', user.email)
+    .single()
+
   if (!employee) redirect('/login')
 
   const { data: logs } = await supabase
-    .from('attendance_logs').select('*').eq('employee_id', employee.id).order('date', { ascending: false }).limit(60)
+    .from('attendance_logs')
+    .select('*')
+    .eq('employee_id', employee.id)
+    .order('date', { ascending: false })
+    .limit(60)
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Attendance History</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Your last 60 days of attendance records.</p>
-      </div>
+    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Attendance History
+      </h1>
 
       {(!logs || logs.length === 0) ? (
-        <div className="rounded-2xl border p-10 text-center" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>No attendance records yet.</p>
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '1rem',
+            padding: '2rem',
+            textAlign: 'center',
+            color: 'var(--muted)',
+          }}
+        >
+          No attendance records found.
         </div>
       ) : (
-        <div className="space-y-2">
-          {logs.map(log => (
-            <div key={log.id} className="rounded-2xl border p-4 flex items-center justify-between" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-              <div>
-                <div className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{format(new Date(log.date), 'EEEE, d MMM yyyy')}</div>
-                <div className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>
-                  {log.clock_in ? formatTime(log.clock_in) : '--:--'} – {log.clock_out ? formatTime(log.clock_out) : 'ongoing'}
-                </div>
-              </div>
-              <span className="rounded-full px-3 py-1 text-sm font-medium"
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          {logs.map(log => {
+            const badgeColor = log.is_half_day
+              ? 'var(--warning)'
+              : log.clock_out
+                ? 'var(--success)'
+                : 'var(--primary)'
+            const badgeLabel = log.is_half_day ? 'Half Day' : log.clock_out ? 'Present' : 'In Progress'
+
+            return (
+              <div
+                key={log.id}
                 style={{
-                  background: log.is_half_day ? 'rgba(245,158,11,0.15)' : log.status === 'absent' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
-                  color: log.is_half_day ? 'var(--warning)' : log.status === 'absent' ? 'var(--danger)' : 'var(--success)',
-                }}>
-                {log.is_half_day ? 'Half day' : log.status === 'absent' ? 'Absent' : 'Present'}
-              </span>
-            </div>
-          ))}
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '1rem',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                }}
+              >
+                <div>
+                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>
+                    {new Date(log.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </p>
+                  <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
+                    {formatTime(log.clock_in)} → {formatTime(log.clock_out)}
+                  </p>
+                </div>
+                <span
+                  style={{
+                    background: `${badgeColor}20`,
+                    color: badgeColor,
+                    border: `1px solid ${badgeColor}`,
+                    borderRadius: '0.5rem',
+                    padding: '0.25rem 0.75rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {badgeLabel}
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

@@ -1,14 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
-import { format } from 'date-fns'
+import Link from 'next/link'
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: employee } = await supabase.from('users').select('*').eq('email', user.email).single()
+  const { data: employee } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', user.email)
+    .single()
+
   if (!employee) redirect('/login')
 
   const { data: notifications } = await supabase
@@ -22,26 +26,41 @@ export default async function NotificationsPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+
     const { data: emp } = await supabase.from('users').select('id').eq('email', user.email).single()
     if (!emp) return
-    await supabase.from('notifications').update({ is_read: true }).eq('recipient_id', emp.id).eq('is_read', false)
-    revalidatePath('/notifications')
+
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('recipient_id', emp.id)
+      .eq('is_read', false)
+
+    redirect('/notifications')
   }
 
   const unreadCount = notifications?.filter(n => !n.is_read).length ?? 0
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Notifications</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>
-            {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-          </p>
-        </div>
+    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+          Notifications
+        </h1>
         {unreadCount > 0 && (
           <form action={markAllRead}>
-            <button type="submit" className="text-sm font-medium hover:underline" style={{ color: 'var(--primary-h)' }}>
+            <button
+              type="submit"
+              style={{
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.5rem 1rem',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
               Mark all read
             </button>
           </form>
@@ -49,43 +68,73 @@ export default async function NotificationsPage() {
       </div>
 
       {(!notifications || notifications.length === 0) ? (
-        <div className="rounded-2xl border p-10 text-center" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-          <div className="text-4xl mb-3">🔔</div>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>No notifications yet.</p>
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '1rem',
+            padding: '2rem',
+            textAlign: 'center',
+            color: 'var(--muted)',
+          }}
+        >
+          No notifications.
         </div>
       ) : (
-        <div className="space-y-2">
-          {notifications.map(n => {
-            const isActionNeeded = n.type === 'leave_request_pending'
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          {notifications.map(notif => {
+            const isAction = notif.type === 'action_needed'
+            const borderColor = isAction ? 'var(--warning)' : 'var(--border)'
+            const badgeColor = isAction ? 'var(--warning)' : 'var(--muted)'
+
             return (
-              <div key={n.id} className="rounded-2xl border p-4"
+              <div
+                key={notif.id}
                 style={{
-                  background: !n.is_read ? (isActionNeeded ? 'rgba(245,158,11,0.08)' : 'var(--surface)') : 'var(--surface)',
-                  borderColor: !n.is_read ? (isActionNeeded ? 'rgba(245,158,11,0.4)' : 'var(--primary)') : 'var(--border)',
-                  opacity: n.is_read ? 0.6 : 1,
-                }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {isActionNeeded && !n.is_read && (
-                        <span className="text-xs font-bold rounded-full px-2 py-0.5" style={{ background: 'var(--warning)', color: '#000' }}>Action needed</span>
-                      )}
-                      {!isActionNeeded && !n.is_read && (
-                        <span className="text-xs font-medium rounded-full px-2 py-0.5" style={{ background: 'var(--surface2)', color: 'var(--muted)' }}>FYI</span>
-                      )}
-                    </div>
-                    <p className="text-sm" style={{ color: 'var(--text)' }}>{n.message}</p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
-                      {format(new Date(n.created_at), 'd MMM yyyy, HH:mm')}
-                    </p>
-                  </div>
-                  {!n.is_read && (
-                    <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: isActionNeeded ? 'var(--warning)' : 'var(--primary)' }}></div>
-                  )}
+                  background: 'var(--surface)',
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: '1rem',
+                  padding: '1rem 1.25rem',
+                  opacity: notif.is_read ? 0.65 : 1,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.375rem' }}>
+                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>{notif.title}</p>
+                  <span
+                    style={{
+                      background: `${badgeColor}20`,
+                      color: badgeColor,
+                      border: `1px solid ${badgeColor}`,
+                      borderRadius: '0.5rem',
+                      padding: '0.2rem 0.6rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isAction ? 'Action Needed' : 'FYI'}
+                  </span>
                 </div>
-                {isActionNeeded && !n.is_read && (
-                  <a href="/team/leave" className="inline-block mt-3 rounded-lg px-4 py-2 text-sm font-semibold"
-                    style={{ background: 'var(--warning)', color: '#000' }}>Review Requests</a>
+                <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: 0 }}>{notif.message}</p>
+                {isAction && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <Link
+                      href="/team/leave"
+                      style={{
+                        background: 'rgba(245,158,11,0.15)',
+                        color: 'var(--warning)',
+                        border: '1px solid var(--warning)',
+                        borderRadius: '0.5rem',
+                        padding: '0.375rem 0.875rem',
+                        textDecoration: 'none',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Review Requests
+                    </Link>
+                  </div>
                 )}
               </div>
             )

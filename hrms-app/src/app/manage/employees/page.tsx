@@ -7,101 +7,105 @@ export default async function ManageEmployeesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: currentEmployee } = await supabase
-    .from('users')
-    .select('*')
-    .eq('email', user.email)
-    .single()
-  if (!currentEmployee || currentEmployee.role !== 'super_admin') redirect('/dashboard')
+  const { data: me } = await supabase.from('users').select('role').eq('email', user.email).single()
+  if (!me || me.role !== 'super_admin') redirect('/dashboard')
 
   const { data: employees } = await supabase
     .from('users')
-    .select('*, department:departments(name)')
-    .order('full_name')
+    .select('*, departments(name)')
+    .order('name')
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Employees</h1>
-          <p className="text-gray-500 text-sm mt-1">All employee accounts in the system.</p>
-        </div>
+    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+          Employees
+        </h1>
         <Link
           href="/manage/employees/new"
-          className="bg-blue-700 text-white rounded-lg px-5 py-3 font-semibold hover:bg-blue-800 text-sm min-h-[44px] flex items-center shrink-0"
+          style={{
+            background: 'var(--primary)',
+            color: 'var(--text)',
+            borderRadius: '0.75rem',
+            padding: '0.625rem 1.125rem',
+            textDecoration: 'none',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            minHeight: '44px',
+            display: 'flex',
+            alignItems: 'center',
+          }}
         >
           + Add Employee
         </Link>
       </div>
 
       {(!employees || employees.length === 0) ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-500">
-          No employees yet. Add the first one above.
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '1rem',
+            padding: '2rem',
+            textAlign: 'center',
+            color: 'var(--muted)',
+          }}
+        >
+          No employees found.
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Desktop */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Name</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Email</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Type</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Department</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Role</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Status</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {employees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{emp.full_name}</td>
-                    <td className="px-4 py-3 text-gray-600">{emp.email}</td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">
-                      {emp.employee_type === 'white_collar' ? 'White Collar' : 'Blue Collar'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{(emp.department as { name?: string })?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">{emp.role.replace('_', ' ')}</td>
-                    <td className="px-4 py-3">
-                      {emp.is_active
-                        ? <span className="bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm font-medium">Active</span>
-                        : <span className="bg-red-100 text-red-800 rounded-full px-3 py-1 text-sm font-medium">Inactive</span>
-                      }
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/manage/employees/${emp.id}`} className="text-blue-700 hover:underline font-medium text-sm">
-                        Edit
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Mobile */}
-          <div className="md:hidden divide-y divide-gray-100">
-            {employees.map((emp) => (
-              <div key={emp.id} className="px-4 py-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-gray-900">{emp.full_name}</span>
-                  {emp.is_active
-                    ? <span className="bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm font-medium">Active</span>
-                    : <span className="bg-red-100 text-red-800 rounded-full px-3 py-1 text-sm font-medium">Inactive</span>
-                  }
-                </div>
-                <div className="text-sm text-gray-500 space-y-0.5">
-                  <div>{emp.email}</div>
-                  <div>{emp.employee_type === 'white_collar' ? 'White Collar' : 'Blue Collar'} · {emp.role.replace('_', ' ')}</div>
-                  <div>{(emp.department as { name?: string })?.name ?? 'No department'}</div>
-                </div>
-                <Link href={`/manage/employees/${emp.id}`} className="text-blue-700 hover:underline font-medium text-sm mt-1 inline-block">
-                  Edit →
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {employees.map((emp: { id: string; name: string; email: string; role: string; employee_type: string; departments?: { name: string } }) => (
+            <div
+              key={emp.id}
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '1rem',
+                padding: '0.875rem 1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.75rem',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>{emp.name}</p>
+                <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>
+                  {emp.email} · {emp.departments ? (emp.departments as { name: string }).name : 'No dept'} · {emp.employee_type?.replace('_', ' ')}
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                <span
+                  style={{
+                    background: 'rgba(139,47,201,0.15)',
+                    color: 'var(--primary-h)',
+                    borderRadius: '0.4rem',
+                    padding: '0.2rem 0.5rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {emp.role?.replace('_', ' ')}
+                </span>
+                <Link
+                  href={`/manage/employees/${emp.id}`}
+                  style={{
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '0.5rem',
+                    padding: '0.375rem 0.75rem',
+                    color: 'var(--text)',
+                    textDecoration: 'none',
+                    fontSize: '0.8rem',
+                  }}
+                >
+                  Edit
                 </Link>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
