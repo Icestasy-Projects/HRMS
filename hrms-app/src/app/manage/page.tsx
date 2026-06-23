@@ -8,7 +8,7 @@ export default async function ManagePage() {
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('employees')
+    .from('users')
     .select('*')
     .eq('user_id', user.id)
     .single()

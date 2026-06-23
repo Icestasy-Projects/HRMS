@@ -10,7 +10,7 @@ export default async function LeavePage() {
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('employees')
+    .from('users')
     .select('*')
     .eq('user_id', user.id)
     .single()

@@ -12,7 +12,7 @@ export default async function EditEmployeePage({
   if (!user) redirect('/login')
 
   const { data: currentEmployee } = await supabase
-    .from('employees')
+    .from('users')
     .select('*')
     .eq('user_id', user.id)
     .single()
@@ -20,7 +20,7 @@ export default async function EditEmployeePage({
 
   const { id } = await params
   const { data: emp, error } = await supabase
-    .from('employees')
+    .from('users')
     .select('*')
     .eq('id', id)
     .single()
@@ -47,7 +47,7 @@ export default async function EditEmployeePage({
     if (!user) return
 
     const { data: currentEmployee } = await supabase
-      .from('employees')
+      .from('users')
       .select('*')
       .eq('user_id', user.id)
       .single()
@@ -61,7 +61,7 @@ export default async function EditEmployeePage({
     const is_active = formData.get('is_active') === 'true'
 
     const { error } = await supabase
-      .from('employees')
+      .from('users')
       .update({ full_name, employee_type, department_id, role, is_active })
       .eq('id', empId)
 

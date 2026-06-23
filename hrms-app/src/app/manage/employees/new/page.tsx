@@ -8,7 +8,7 @@ export default async function NewEmployeePage() {
   if (!user) redirect('/login')
 
   const { data: currentEmployee } = await supabase
-    .from('employees')
+    .from('users')
     .select('*')
     .eq('user_id', user.id)
     .single()
@@ -26,7 +26,7 @@ export default async function NewEmployeePage() {
     if (!user) return
 
     const { data: currentEmployee } = await supabase
-      .from('employees')
+      .from('users')
       .select('*')
       .eq('user_id', user.id)
       .single()
@@ -54,7 +54,7 @@ export default async function NewEmployeePage() {
     }
 
     const { error: empError } = await supabase
-      .from('employees')
+      .from('users')
       .insert({
         user_id: authData.user.id,
         full_name,

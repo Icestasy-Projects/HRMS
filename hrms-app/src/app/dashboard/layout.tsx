@@ -10,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   if (!user) redirect('/login')
 
   const { data: employee, error } = await supabase
-    .from('employees')
+    .from('users')
     .select('*, department:departments(id, name, manager_id, created_at)')
     .eq('user_id', user.id)
     .single()
