@@ -1,204 +1,155 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import type { ReactNode } from 'react'
-import type { Employee } from '@/lib/supabase/types'
-import { Bell, Home, Clock, Calendar, Users, Settings, LogOut, Menu, X, ClockCheck } from 'lucide-react'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { createBrowserClient } from '@supabase/ssr'
 
-interface NavItem {
-  href: string
-  label: string
-  icon: ReactNode
+type Employee = { id: string; name: string; role: string; email: string }
+
+const NAV = {
+  employee: [
+    { href: '/dashboard',          label: 'Home',           icon: '⌂' },
+    { href: '/attendance',         label: 'Clock In/Out',   icon: '◷' },
+    { href: '/attendance/history', label: 'Attendance',     icon: '📋' },
+    { href: '/leave',              label: 'My Leave',       icon: '🌿' },
+    { href: '/leave/request',      label: 'Request Leave',  icon: '+' },
+    { href: '/notifications',      label: 'Notifications',  icon: '🔔' },
+  ],
+  admin: [
+    { href: '/dashboard',          label: 'Home',           icon: '⌂' },
+    { href: '/attendance',         label: 'Clock In/Out',   icon: '◷' },
+    { href: '/team',               label: 'My Team',        icon: '👥' },
+    { href: '/team/leave',         label: 'Leave Requests', icon: '📝' },
+    { href: '/leave',              label: 'My Leave',       icon: '🌿' },
+    { href: '/notifications',      label: 'Notifications',  icon: '🔔' },
+  ],
+  super_admin: [
+    { href: '/dashboard',          label: 'Home',           icon: '⌂' },
+    { href: '/attendance',         label: 'Clock In/Out',   icon: '◷' },
+    { href: '/team',               label: 'Team',           icon: '👥' },
+    { href: '/team/leave',         label: 'Leave Requests', icon: '📝' },
+    { href: '/manage',             label: 'Manage',         icon: '⚙' },
+    { href: '/notifications',      label: 'Notifications',  icon: '🔔' },
+  ],
 }
 
-function navItems(role: string): NavItem[] {
-  const base: NavItem[] = [
-    { href: '/dashboard',          label: 'Dashboard',    icon: <Home size={20} /> },
-    { href: '/attendance',         label: 'Clock In/Out', icon: <Clock size={20} /> },
-    { href: '/attendance/history', label: 'My Attendance',icon: <ClockCheck size={20} /> },
-    { href: '/leave',              label: 'My Leave',     icon: <Calendar size={20} /> },
-    { href: '/notifications',      label: 'Notifications',icon: <Bell size={20} /> },
-  ]
-  const adminExtra: NavItem[] = [
-    { href: '/team',       label: 'Team',           icon: <Users size={20} /> },
-    { href: '/team/leave', label: 'Leave Requests', icon: <Calendar size={20} /> },
-  ]
-  const superAdminExtra: NavItem[] = [
-    { href: '/manage', label: 'Manage', icon: <Settings size={20} /> },
-  ]
-
-  if (role === 'super_admin') return [...base, ...adminExtra, ...superAdminExtra]
-  if (role === 'admin')       return [...base, ...adminExtra]
-  return base
-}
-
-export default function AppShell({
-  employee,
-  notificationCount,
-  children,
-}: {
-  employee: Employee
-  notificationCount: number
-  children: ReactNode
+export default function AppShell({ employee, notificationCount, children }: {
+  employee: Employee; notificationCount: number; children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const router = useRouter()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const items = navItems(employee.role)
+  const [open, setOpen] = useState(false)
+  const role = (employee.role as keyof typeof NAV) in NAV ? employee.role as keyof typeof NAV : 'employee'
+  const navItems = NAV[role]
+  const initials = employee.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
   async function signOut() {
-    const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    window.location.href = '/login'
   }
 
-  function NavLink({ item }: { item: NavItem }) {
+  function NavLink({ item }: { item: typeof navItems[0] }) {
     const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
     return (
-      <Link
-        href={item.href}
-        onClick={() => setMobileMenuOpen(false)}
-        className={`flex items-center gap-3 px-3 py-3 rounded-lg font-medium text-sm min-h-[44px] transition-colors ${
-          active
-            ? 'bg-blue-700 text-white'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-        }`}
-      >
-        {item.icon}
+      <Link href={item.href} onClick={() => setOpen(false)}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+        style={{ background: active ? 'var(--primary)' : 'transparent', color: active ? '#fff' : 'var(--muted)' }}>
+        <span className="w-5 text-center text-base">{item.icon}</span>
         <span>{item.label}</span>
         {item.href === '/notifications' && notificationCount > 0 && (
-          <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
-            {notificationCount > 99 ? '99+' : notificationCount}
-          </span>
+          <span className="ml-auto text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center"
+            style={{ background: 'var(--warning)', color: '#000' }}>{notificationCount}</span>
         )}
       </Link>
     )
   }
 
+  const UserBlock = () => (
+    <div className="px-4 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+          style={{ background: 'var(--primary)' }}>{initials}</div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold truncate" style={{ color: 'var(--text)' }}>{employee.name}</div>
+          <div className="text-xs truncate capitalize" style={{ color: 'var(--muted)' }}>{employee.role.replace('_', ' ')}</div>
+        </div>
+      </div>
+      <button onClick={signOut} className="w-full text-sm rounded-lg px-3 py-2 font-medium text-left transition-colors"
+        style={{ background: 'var(--surface2)', color: 'var(--muted)' }}>Sign out</button>
+    </div>
+  )
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top navbar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="flex items-center justify-between px-4 h-14">
-          {/* Mobile menu toggle */}
-          <button
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: 'var(--bg)' }}>
 
-          {/* Company name */}
-          <span className="text-blue-700 font-bold text-lg tracking-tight md:block hidden">
-            Icestasy HRMS
-          </span>
-          <span className="text-blue-700 font-bold text-base tracking-tight md:hidden">
-            Icestasy
-          </span>
-
-          <div className="flex items-center gap-2">
-            {/* Notification bell */}
-            <Link
-              href="/notifications"
-              className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
-            >
-              <Bell size={20} />
-              {notificationCount > 0 && (
-                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full px-1 py-0.5 min-w-[16px] text-center leading-none">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Employee name */}
-            <span className="hidden sm:block text-sm text-gray-700 font-medium max-w-[120px] truncate">
-              {employee.full_name}
-            </span>
-
-            {/* Sign out */}
-            <button
-              onClick={signOut}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 text-sm font-medium min-h-[44px] transition-colors"
-              aria-label="Sign out"
-            >
-              <LogOut size={18} />
-              <span className="hidden sm:inline">Sign out</span>
-            </button>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex flex-col w-64 shrink-0 border-r"
+        style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-3 px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-sm"
+            style={{ background: 'var(--primary)' }}>IC</div>
+          <div>
+            <div className="font-bold text-sm" style={{ color: 'var(--text)' }}>Icestasy HRMS</div>
+            <div className="text-xs" style={{ color: 'var(--muted)' }}>Attendance & Leave</div>
           </div>
         </div>
-      </header>
-
-      <div className="flex">
-        {/* Desktop sidebar */}
-        <nav className="hidden md:flex flex-col w-56 shrink-0 bg-white border-r border-gray-200 min-h-[calc(100vh-3.5rem)] sticky top-14 p-3 gap-1">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 mt-1">
-            Navigation
-          </div>
-          {items.map(item => <NavLink key={item.href} item={item} />)}
-          <div className="mt-auto border-t border-gray-100 pt-3">
-            <div className="px-3 py-2 text-xs text-gray-500">
-              <div className="font-medium text-gray-700 truncate">{employee.full_name}</div>
-              <div className="mt-0.5 capitalize">{employee.role.replace('_', ' ')}</div>
-            </div>
-          </div>
+        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+          {navItems.map(item => <NavLink key={item.href} item={item} />)}
         </nav>
+        <UserBlock />
+      </aside>
 
-        {/* Mobile overlay menu */}
-        {mobileMenuOpen && (
-          <>
-            <div
-              className="md:hidden fixed inset-0 bg-black/40 z-30"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <nav className="md:hidden fixed top-14 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-40 p-3 flex flex-col gap-1 overflow-y-auto">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2">
-                Navigation
-              </div>
-              {items.map(item => <NavLink key={item.href} item={item} />)}
-              <div className="mt-auto border-t border-gray-100 pt-3">
-                <div className="px-3 py-2 text-xs text-gray-500">
-                  <div className="font-medium text-gray-700 truncate">{employee.full_name}</div>
-                  <div className="mt-0.5 capitalize">{employee.role.replace('_', ' ')}</div>
-                </div>
-              </div>
-            </nav>
-          </>
-        )}
-
-        {/* Main content */}
-        <main className="flex-1 min-w-0 p-4 md:p-6 pb-24 md:pb-6">
-          {children}
-        </main>
+      {/* Mobile top bar */}
+      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-30"
+        style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs"
+            style={{ background: 'var(--primary)' }}>IC</div>
+          <span className="font-bold text-sm" style={{ color: 'var(--text)' }}>Icestasy HRMS</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {notificationCount > 0 && (
+            <Link href="/notifications" className="relative flex items-center justify-center w-10 h-10">
+              <span>🔔</span>
+              <span className="absolute -top-0.5 -right-0.5 text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center"
+                style={{ background: 'var(--warning)', color: '#000' }}>{notificationCount}</span>
+            </Link>
+          )}
+          <button onClick={() => setOpen(o => !o)} className="w-10 h-10 flex flex-col items-center justify-center gap-1.5">
+            <span className="block w-5 h-0.5 rounded" style={{ background: 'var(--text)' }}></span>
+            <span className="block w-5 h-0.5 rounded" style={{ background: 'var(--text)' }}></span>
+            <span className="block w-5 h-0.5 rounded" style={{ background: 'var(--text)' }}></span>
+          </button>
+        </div>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 flex">
-        {items.slice(0, 5).map(item => {
-          const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] text-xs font-medium transition-colors relative ${
-                active ? 'text-blue-700' : 'text-gray-500'
-              }`}
-            >
-              {item.icon}
-              <span className="text-[10px] leading-none">{item.label.split(' ')[0]}</span>
-              {item.href === '/notifications' && notificationCount > 0 && (
-                <span className="absolute top-1 right-2 bg-red-500 text-white text-[9px] rounded-full px-1 py-0.5 leading-none">
-                  {notificationCount}
-                </span>
-              )}
-            </Link>
-          )
-        })}
-      </nav>
+      {/* Mobile drawer */}
+      {open && (
+        <div className="md:hidden fixed inset-0 z-40" onClick={() => setOpen(false)}>
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.7)' }} />
+          <div className="absolute left-0 top-0 bottom-0 w-72 flex flex-col" style={{ background: 'var(--surface)' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                style={{ background: 'var(--primary)' }}>{initials}</div>
+              <div>
+                <div className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{employee.name}</div>
+                <div className="text-xs capitalize" style={{ color: 'var(--muted)' }}>{employee.role.replace('_', ' ')}</div>
+              </div>
+            </div>
+            <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+              {navItems.map(item => <NavLink key={item.href} item={item} />)}
+            </nav>
+            <UserBlock />
+          </div>
+        </div>
+      )}
+
+      <main className="flex-1 min-w-0 p-4 md:p-6 pb-8">{children}</main>
     </div>
   )
 }
