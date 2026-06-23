@@ -12,7 +12,7 @@ export default async function NotificationsPage() {
   const { data: employee } = await supabase
     .from('employees')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('email', user.email)
     .single()
   if (!employee) redirect('/login')
 
@@ -35,7 +35,7 @@ export default async function NotificationsPage() {
     const { data: employee } = await supabase
       .from('employees')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('email', user.email)
       .single()
     if (!employee) return
 

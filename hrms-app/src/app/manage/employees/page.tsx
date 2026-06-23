@@ -10,7 +10,7 @@ export default async function ManageEmployeesPage() {
   const { data: currentEmployee } = await supabase
     .from('employees')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('email', user.email)
     .single()
   if (!currentEmployee || currentEmployee.role !== 'super_admin') redirect('/dashboard')
 

@@ -12,7 +12,7 @@ export default async function AttendancePage() {
   const { data: employee } = await supabase
     .from('employees')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('email', user.email)
     .single()
   if (!employee) redirect('/login')
 
@@ -51,7 +51,7 @@ export default async function AttendancePage() {
     const { data: employee } = await supabase
       .from('employees')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('email', user.email)
       .single()
     if (!employee) return
 
