@@ -8,7 +8,7 @@ export default async function LeaveHistoryPage() {
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('users')
+    .from('employees')
     .select('*')
     .eq('user_id', user.id)
     .single()

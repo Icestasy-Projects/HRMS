@@ -13,7 +13,7 @@ export default async function ManageHolidaysPage({
   if (!user) redirect('/login')
 
   const { data: currentEmployee } = await supabase
-    .from('users')
+    .from('employees')
     .select('*')
     .eq('user_id', user.id)
     .single()
@@ -36,7 +36,7 @@ export default async function ManageHolidaysPage({
     if (!user) return
 
     const { data: currentEmployee } = await supabase
-      .from('users')
+      .from('employees')
       .select('*')
       .eq('user_id', user.id)
       .single()
@@ -57,7 +57,7 @@ export default async function ManageHolidaysPage({
     if (!user) return
 
     const { data: currentEmployee } = await supabase
-      .from('users')
+      .from('employees')
       .select('*')
       .eq('user_id', user.id)
       .single()

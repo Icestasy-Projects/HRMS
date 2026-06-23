@@ -9,7 +9,7 @@ export default async function TeamLeavePage() {
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('users')
+    .from('employees')
     .select('*')
     .eq('user_id', user.id)
     .single()
@@ -21,12 +21,12 @@ export default async function TeamLeavePage() {
   let employeeIds: string[] = []
   if (employee.role === 'admin' && employee.department_id) {
     const { data } = await supabase
-      .from('users')
+      .from('employees')
       .select('id')
       .eq('department_id', employee.department_id)
     employeeIds = (data ?? []).map((e: { id: string }) => e.id)
   } else {
-    const { data } = await supabase.from('users').select('id')
+    const { data } = await supabase.from('employees').select('id')
     employeeIds = (data ?? []).map((e: { id: string }) => e.id)
   }
 
@@ -61,7 +61,7 @@ export default async function TeamLeavePage() {
     if (!user) return
 
     const { data: approver } = await supabase
-      .from('users')
+      .from('employees')
       .select('*')
       .eq('user_id', user.id)
       .single()
@@ -120,7 +120,7 @@ export default async function TeamLeavePage() {
     if (!user) return
 
     const { data: approver } = await supabase
-      .from('users')
+      .from('employees')
       .select('*')
       .eq('user_id', user.id)
       .single()

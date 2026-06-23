@@ -7,7 +7,7 @@ export default async function LeavePolicyPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: me } = await supabase.from('users').select('role').eq('user_id', user.id).single()
+  const { data: me } = await supabase.from('employees').select('role').eq('user_id', user.id).single()
   if (!me || me.role !== 'super_admin') redirect('/dashboard')
 
   const { data: policy } = await supabase.from('leave_policy').select('*').single()
@@ -17,7 +17,7 @@ export default async function LeavePolicyPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data: me } = await supabase.from('users').select('role').eq('user_id', user.id).single()
+    const { data: me } = await supabase.from('employees').select('role').eq('user_id', user.id).single()
     if (!me || me.role !== 'super_admin') return
 
     const vals = {

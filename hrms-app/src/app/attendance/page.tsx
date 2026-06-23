@@ -10,7 +10,7 @@ export default async function AttendancePage() {
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('users')
+    .from('employees')
     .select('*')
     .eq('user_id', user.id)
     .single()
@@ -18,7 +18,7 @@ export default async function AttendancePage() {
 
   const today = format(new Date(), 'yyyy-MM-dd')
   const { data: attendance } = await supabase
-    .from('attendance_logs')
+    .from('attendance')
     .select('*')
     .eq('employee_id', employee.id)
     .eq('date', today)
@@ -49,7 +49,7 @@ export default async function AttendancePage() {
     if (!user) return
 
     const { data: employee } = await supabase
-      .from('users')
+      .from('employees')
       .select('*')
       .eq('user_id', user.id)
       .single()
@@ -60,7 +60,7 @@ export default async function AttendancePage() {
     const timeStr = format(now, 'HH:mm:ss')
 
     const { data: existing } = await supabase
-      .from('attendance_logs')
+      .from('attendance')
       .select('*')
       .eq('employee_id', employee.id)
       .eq('date', today)
@@ -69,7 +69,7 @@ export default async function AttendancePage() {
     if (!existing) {
       // Clock in
       const { isHalfDay } = computeAttendanceStatus(timeStr, null)
-      await supabase.from('attendance_logs').insert({
+      await supabase.from('attendance').insert({
         employee_id: employee.id,
         date: today,
         clock_in: timeStr,
@@ -81,7 +81,7 @@ export default async function AttendancePage() {
       const clockInTime = existing.clock_in.includes('T') ? existing.clock_in.split('T')[1].slice(0, 8) : existing.clock_in.slice(0, 8)
       const { isHalfDay } = computeAttendanceStatus(clockInTime, timeStr)
       await supabase
-        .from('attendance_logs')
+        .from('attendance')
         .update({
           clock_out: timeStr,
           is_half_day: isHalfDay,

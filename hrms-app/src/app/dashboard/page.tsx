@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('users')
+    .from('employees')
     .select('*')
     .eq('user_id', user.id)
     .single()
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
 
   // Today's attendance
   const { data: attendance } = await supabase
-    .from('attendance_logs')
+    .from('attendance')
     .select('*')
     .eq('employee_id', employee.id)
     .eq('date', today)
@@ -49,7 +49,7 @@ export default async function DashboardPage() {
     if (employee.role === 'admin' && employee.department_id) {
       // Get employees in same department
       const { data: deptEmployees } = await supabase
-        .from('users')
+        .from('employees')
         .select('id')
         .eq('department_id', employee.department_id)
       const ids = (deptEmployees ?? []).map((e: { id: string }) => e.id)

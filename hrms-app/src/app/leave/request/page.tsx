@@ -8,7 +8,7 @@ export default async function LeaveRequestPage() {
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('users')
+    .from('employees')
     .select('*')
     .eq('user_id', user.id)
     .single()
@@ -29,7 +29,7 @@ export default async function LeaveRequestPage() {
     if (!user) return
 
     const { data: employee } = await supabase
-      .from('users')
+      .from('employees')
       .select('*')
       .eq('user_id', user.id)
       .single()
@@ -106,7 +106,7 @@ export default async function LeaveRequestPage() {
 
         if (dept?.manager_id) {
           const { data: mgr } = await supabase
-            .from('users')
+            .from('employees')
             .select('id')
             .eq('id', dept.manager_id)
             .single()
