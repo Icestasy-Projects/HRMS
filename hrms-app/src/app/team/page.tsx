@@ -13,9 +13,9 @@ export default async function TeamPage({
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
-    .from('employees')
+    .from('users')
     .select('*')
-    .eq('email', user.email)
+    .eq('user_id', user.id)
     .single()
   if (!employee) redirect('/login')
 
@@ -42,7 +42,7 @@ export default async function TeamPage({
   if (selectedDept) {
     // Get employees in that department first
     const { data: deptEmployees } = await supabase
-      .from('employees')
+      .from('users')
       .select('id')
       .eq('department_id', selectedDept)
     const ids = (deptEmployees ?? []).map((e: { id: string }) => e.id)
@@ -51,7 +51,7 @@ export default async function TeamPage({
     }
   } else if (employee.role === 'admin' && employee.department_id) {
     const { data: deptEmployees } = await supabase
-      .from('employees')
+      .from('users')
       .select('id')
       .eq('department_id', employee.department_id)
     const ids = (deptEmployees ?? []).map((e: { id: string }) => e.id)
