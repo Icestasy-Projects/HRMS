@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import ForgotPasswordButton from './ForgotPasswordButton'
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; message?: string }>
 }) {
   async function signIn(formData: FormData) {
     'use server'
@@ -22,25 +23,13 @@ export default function LoginPage({
     redirect('/dashboard')
   }
 
-  return (
-    <LoginForm signIn={signIn} searchParams={searchParams} />
-  )
-}
-
-async function LoginForm({
-  signIn,
-  searchParams,
-}: {
-  signIn: (formData: FormData) => Promise<void>
-  searchParams: Promise<{ error?: string }>
-}) {
   const params = await searchParams
   const errorMsg = params?.error
+  const message = params?.message
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-700 rounded-xl mb-4">
             <span className="text-white font-bold text-xl">IC</span>
@@ -49,11 +38,15 @@ async function LoginForm({
           <p className="text-gray-500 mt-2 text-sm">Sign in to manage your attendance and leave</p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           {errorMsg && (
             <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3 mb-4 text-sm font-medium">
               {decodeURIComponent(errorMsg)}
+            </div>
+          )}
+          {message && (
+            <div className="bg-green-50 border border-green-200 text-green-800 rounded-lg px-4 py-3 mb-4 text-sm font-medium">
+              {decodeURIComponent(message)}
             </div>
           )}
 
@@ -95,6 +88,10 @@ async function LoginForm({
               Sign In
             </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <ForgotPasswordButton />
+          </div>
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
