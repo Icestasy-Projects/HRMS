@@ -73,143 +73,152 @@ export default async function DashboardPage() {
         : 'var(--primary)'
     : 'var(--muted)'
 
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  const attStatusLabel = todayLog
+    ? todayLog.is_half_day ? 'Half Day'
+      : todayLog.clock_out ? 'Complete' : 'Clocked In'
+    : 'Not clocked in'
+
+  const attBadgeBg = todayLog
+    ? todayLog.is_half_day ? '#fef3c7'
+      : todayLog.clock_out ? '#dcfce7' : 'var(--primary-l)'
+    : 'var(--surface2)'
+
+  const attBadgeColor = todayLog
+    ? todayLog.is_half_day ? 'var(--warning)'
+      : todayLog.clock_out ? 'var(--success)' : 'var(--primary)'
+    : 'var(--muted)'
+
+  type Worklet = { label: string; href: string; icon: string; badge?: number; show?: boolean }
+  const worklets: Worklet[] = [
+    { label: 'Time & Attendance', href: '/attendance', icon: '◷', show: true },
+    { label: 'My Leave', href: '/leave', icon: '🌿', show: true },
+    { label: 'Leave History', href: '/leave/history', icon: '📋', show: true },
+    { label: 'My Attendance Log', href: '/attendance/history', icon: '📅', show: true },
+    { label: 'Notifications', href: '/notifications', icon: '🔔', show: true },
+    { label: 'Team', href: '/team', icon: '👥', show: isAdmin },
+    { label: 'Leave Requests', href: '/team/leave', icon: '✅', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
+    { label: 'Manage', href: '/manage', icon: '⚙', show: employee.role === 'super_admin' },
+  ].filter(w => w.show)
+
   return (
-    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
-          Good morning, {firstName}
-        </h1>
-        <p style={{ color: 'var(--muted)', marginTop: '0.25rem' }}>
-          {dayName}, {dateFull}
-        </p>
+    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+
+      {/* Hero banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, #5b1fa8 0%, #7c2fc9 55%, #9b4de0 100%)',
+        borderRadius: '0.75rem',
+        padding: '1.75rem 1.5rem',
+        marginBottom: '1.5rem',
+        boxShadow: 'var(--shadow-md)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
+      }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+            {greeting}, {firstName} 👋
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.75)', marginTop: '0.25rem', fontSize: '0.9rem' }}>
+            {dayName}, {dateFull}
+          </p>
+        </div>
+        <span style={{
+          background: attBadgeBg, color: attBadgeColor,
+          borderRadius: '999px', padding: '0.375rem 1rem',
+          fontSize: '0.8rem', fontWeight: 700,
+          whiteSpace: 'nowrap', alignSelf: 'flex-start',
+        }}>
+          {attStatusLabel}
+          {todayLog && !todayLog.clock_out && ` · ${formatTime(todayLog.clock_in)}`}
+        </span>
       </div>
 
-      <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '1.5rem' }}>
-        {/* Attendance card */}
-        <div
-          style={{
+      {/* Worklets grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: '0.875rem',
+        marginBottom: '1.5rem',
+      }}>
+        {worklets.map(w => (
+          <Link key={w.href} href={w.href} style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
-            borderRadius: '1rem',
-            padding: '1.25rem',
-          }}
-        >
-          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Today
-          </p>
-          <p style={{ color: attColor, fontWeight: 600, fontSize: '1rem', margin: 0 }}>{attStatus}</p>
+            borderRadius: '0.75rem',
+            padding: '1.125rem 1rem',
+            minHeight: '96px',
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between',
+            textDecoration: 'none',
+            boxShadow: 'var(--shadow)',
+            position: 'relative',
+          }}>
+            <span style={{ fontSize: '28px', lineHeight: 1 }}>{w.icon}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.8rem', lineHeight: 1.3 }}>{w.label}</span>
+              {w.badge && w.badge > 0 && (
+                <span style={{
+                  background: '#f59e0b', color: '#fff', fontSize: '10px', fontWeight: 700,
+                  borderRadius: '999px', padding: '1px 6px', minWidth: '18px', textAlign: 'center',
+                }}>{w.badge}</span>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Quick stats row */}
+      <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+        }}>
+          <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Today</p>
+          <p style={{ color: attColor, fontWeight: 700, fontSize: '1rem', margin: 0 }}>{attStatus}</p>
           {todayLog && (
-            <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-              In: {formatTime(todayLog.clock_in)} {todayLog.clock_out ? `· Out: ${formatTime(todayLog.clock_out)}` : ''}
+            <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>
+              {formatTime(todayLog.clock_in)}{todayLog.clock_out ? ` → ${formatTime(todayLog.clock_out)}` : ' · Active'}
             </p>
           )}
         </div>
 
-        {/* Leave balance card */}
         {leaveBalance && (
-          <div
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '1rem',
-              padding: '1.25rem',
-            }}
-          >
-            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Leave Balance
-            </p>
-            <p style={{ color: 'var(--text)', fontWeight: 600, fontSize: '1rem', margin: 0 }}>
-              {leaveBalance.scheduled_balance} scheduled
-            </p>
-            <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-              {leaveBalance.unscheduled_balance} sick/emergency
-            </p>
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+          }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Scheduled Leave</p>
+            <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{leaveBalance.scheduled_balance}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>days remaining</p>
           </div>
         )}
 
-        {/* Pending leaves (admin) */}
+        {leaveBalance && (
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+          }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Sick / Emergency</p>
+            <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{leaveBalance.unscheduled_balance}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>days remaining</p>
+          </div>
+        )}
+
         {isAdmin && (
-          <div
-            style={{
-              background: 'var(--surface)',
-              border: `1px solid ${pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--border)'}`,
-              borderRadius: '1rem',
-              padding: '1.25rem',
-            }}
-          >
-            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Pending Leaves
-            </p>
-            <p style={{ color: pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--text)', fontWeight: 600, fontSize: '1rem', margin: 0 }}>
-              {pendingLeaveCount} request{pendingLeaveCount !== 1 ? 's' : ''}
-            </p>
-            {pendingLeaveCount > 0 && (
-              <Link href="/team/leave" style={{ color: 'var(--primary-h)', fontSize: '0.85rem', textDecoration: 'none' }}>
-                Review →
-              </Link>
+          <div style={{
+            background: pendingLeaveCount > 0 ? 'var(--warning-l)' : 'var(--surface)',
+            border: `1px solid ${pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--border)'}`,
+            borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+          }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Pending Leaves</p>
+            <p style={{ color: pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--text)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{pendingLeaveCount}</p>
+            {pendingLeaveCount > 0 ? (
+              <Link href="/team/leave" style={{ color: 'var(--warning)', fontSize: '0.78rem', fontWeight: 600, marginTop: '0.25rem', display: 'block' }}>Review now →</Link>
+            ) : (
+              <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>all clear</p>
             )}
           </div>
         )}
-      </div>
-
-      {/* Quick actions */}
-      <div>
-        <h2 style={{ color: 'var(--text)', fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>Quick Actions</h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <Link
-            href="/attendance"
-            style={{
-              background: 'var(--primary)',
-              color: 'var(--text)',
-              borderRadius: '0.75rem',
-              padding: '0.75rem 1.25rem',
-              textDecoration: 'none',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            Clock In/Out
-          </Link>
-          <Link
-            href="/leave/request"
-            style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-              borderRadius: '0.75rem',
-              padding: '0.75rem 1.25rem',
-              textDecoration: 'none',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            Request Leave
-          </Link>
-          <Link
-            href="/attendance/history"
-            style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-              borderRadius: '0.75rem',
-              padding: '0.75rem 1.25rem',
-              textDecoration: 'none',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            View Attendance
-          </Link>
-        </div>
       </div>
     </div>
   )

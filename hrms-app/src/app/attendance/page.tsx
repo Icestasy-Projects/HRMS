@@ -74,105 +74,101 @@ export default async function AttendancePage() {
     redirect('/attendance')
   }
 
-  const btnLabel = isDone ? 'Already Complete' : isClockedIn ? 'Clock Out' : 'Clock In'
-  const btnColor = isDone ? 'var(--muted)' : isClockedIn ? 'var(--danger)' : 'var(--primary)'
+  const btnLabel = isDone ? 'Day Complete ✓' : isClockedIn ? 'Clock Out' : 'Clock In'
+  const btnBg = isDone ? 'var(--success)' : isClockedIn ? 'var(--danger)' : 'var(--primary)'
+  const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
   return (
-    <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
-        Clock In / Out
-      </h1>
-
-      {/* Half-day rules */}
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '1rem',
-          padding: '1rem 1.25rem',
-          marginBottom: '1rem',
-        }}
-      >
-        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-          Half-Day Rules
-        </p>
-        <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: '0.25rem 0' }}>
-          • Clock in after {HALF_DAY_LATE_CUTOFF} → counted as half day
-        </p>
-        <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: '0.25rem 0' }}>
-          • Clock out before {HALF_DAY_EARLY_CUTOFF} → counted as half day
-        </p>
+    <div style={{ maxWidth: '540px', margin: '0 auto' }}>
+      {/* Page header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Attendance</p>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
+          Time & Attendance
+        </h1>
+        <p style={{ color: 'var(--muted)', marginTop: '0.25rem', fontSize: '0.9rem' }}>{todayFormatted}</p>
       </div>
 
-      {/* Schedule info */}
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '1rem',
-          padding: '1rem 1.25rem',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-          Your Schedule ({scheduleType.replace('_', ' ')})
+      {/* Today status card */}
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '1rem', boxShadow: 'var(--shadow)',
+      }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 1rem' }}>
+          Today&apos;s Status
         </p>
-        <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: 0 }}>
-          {schedule.days.join(', ')} · {schedule.hours_per_day}h/day
-        </p>
+        {todayLog ? (
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div>
+              <p style={{ color: 'var(--muted)', fontSize: '0.75rem', margin: '0 0 0.25rem' }}>Clocked In</p>
+              <p style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem', margin: 0 }}>{formatTime(todayLog.clock_in)}</p>
+            </div>
+            {todayLog.clock_out && (
+              <div>
+                <p style={{ color: 'var(--muted)', fontSize: '0.75rem', margin: '0 0 0.25rem' }}>Clocked Out</p>
+                <p style={{ color: 'var(--success)', fontWeight: 700, fontSize: '1.25rem', margin: 0 }}>{formatTime(todayLog.clock_out)}</p>
+              </div>
+            )}
+            {todayLog.is_half_day && (
+              <span style={{
+                background: 'var(--warning-l)', border: '1px solid var(--warning)',
+                borderRadius: '999px', padding: '0.25rem 0.75rem',
+                color: 'var(--warning)', fontWeight: 600, fontSize: '0.8rem',
+              }}>Half Day</span>
+            )}
+          </div>
+        ) : (
+          <p style={{ color: 'var(--muted)', fontSize: '0.9rem', margin: 0 }}>Not yet clocked in today</p>
+        )}
       </div>
-
-      {/* Current status */}
-      {todayLog && (
-        <div
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '1rem',
-            padding: '1rem 1.25rem',
-            marginBottom: '1.5rem',
-          }}
-        >
-          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-            Today
-          </p>
-          <p style={{ color: 'var(--text)', fontSize: '0.9rem' }}>
-            Clocked in: <strong>{formatTime(todayLog.clock_in)}</strong>
-          </p>
-          {todayLog.clock_out && (
-            <p style={{ color: 'var(--text)', fontSize: '0.9rem' }}>
-              Clocked out: <strong>{formatTime(todayLog.clock_out)}</strong>
-            </p>
-          )}
-          {todayLog.is_half_day && (
-            <p style={{ color: 'var(--warning)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-              Marked as half day
-            </p>
-          )}
-        </div>
-      )}
 
       {/* Clock button */}
-      <form action={clockInOut}>
+      <form action={clockInOut} style={{ marginBottom: '1.25rem' }}>
         <button
           type="submit"
           disabled={!!isDone}
           style={{
-            width: '100%',
-            height: '80px',
-            background: btnColor,
-            color: 'var(--text)',
-            border: 'none',
-            borderRadius: '1rem',
-            fontSize: '1.25rem',
-            fontWeight: 700,
-            cursor: isDone ? 'not-allowed' : 'pointer',
-            opacity: isDone ? 0.6 : 1,
+            width: '100%', height: '72px',
+            background: btnBg, color: '#fff',
+            border: 'none', borderRadius: '0.75rem',
+            fontSize: '1.25rem', fontWeight: 700,
+            cursor: isDone ? 'default' : 'pointer',
+            boxShadow: isDone ? 'none' : 'var(--shadow-md)',
+            letterSpacing: '-0.01em',
           }}
         >
           {btnLabel}
         </button>
       </form>
+
+      {/* Rules card */}
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: '0.75rem', padding: '1.25rem', boxShadow: 'var(--shadow)',
+      }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.875rem' }}>
+          Half-Day Rules
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+            <span style={{ color: 'var(--warning)', fontWeight: 700, flexShrink: 0 }}>→</span>
+            <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: 0 }}>
+              Arrive after <strong>{HALF_DAY_LATE_CUTOFF}</strong> = half day
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+            <span style={{ color: 'var(--warning)', fontWeight: 700, flexShrink: 0 }}>→</span>
+            <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: 0 }}>
+              Leave before <strong>{HALF_DAY_EARLY_CUTOFF}</strong> = half day
+            </p>
+          </div>
+          <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0 }}>
+              Schedule: {schedule.days.join(', ')} · {schedule.hours_per_day}h/day ({scheduleType.replace('_', ' ')})
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
