@@ -24,10 +24,15 @@ export default async function ManagePage() {
   if (!employee || employee.role !== 'super_admin') redirect('/dashboard')
 
   return (
-    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', marginBottom: '1.75rem', letterSpacing: '-0.02em' }}>
-        Manage
-      </h1>
+    <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      {/* Page header */}
+      <div style={{ marginBottom: '1.75rem' }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Manage</p>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
+          Manage
+        </h1>
+        <p style={{ color: 'var(--muted)', marginTop: '0.25rem', fontSize: '0.9rem' }}>System configuration and HR administration</p>
+      </div>
 
       <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
         {tiles.map(tile => (
@@ -35,14 +40,10 @@ export default async function ManagePage() {
             key={tile.href}
             href={tile.href}
             style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '1.125rem',
-              padding: '1.375rem',
-              textDecoration: 'none',
-              display: 'block',
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: '0.75rem', padding: '1.375rem',
+              textDecoration: 'none', display: 'block',
               boxShadow: 'var(--shadow)',
-              transition: 'box-shadow 0.15s',
             }}
           >
             <span style={{ fontSize: '1.5rem', display: 'block', marginBottom: '0.625rem' }}>{tile.icon}</span>

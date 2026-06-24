@@ -28,40 +28,40 @@ export default async function LeaveHistoryPage() {
   }
 
   return (
-    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
-        Leave History
-      </h1>
+    <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      {/* Page header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Leave / History</p>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
+          Leave History
+        </h1>
+      </div>
 
       {(!requests || requests.length === 0) ? (
-        <div
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '1rem',
-            padding: '2rem',
-            textAlign: 'center',
-            color: 'var(--muted)',
-          }}
-        >
-          No leave requests found.
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', padding: '2.5rem', textAlign: 'center',
+          color: 'var(--muted)', boxShadow: 'var(--shadow)',
+        }}>
+          <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>📋</p>
+          <p style={{ fontWeight: 600, color: 'var(--text)', margin: '0 0 0.25rem' }}>No leave requests found</p>
+          <p style={{ fontSize: '0.875rem', margin: 0 }}>Your leave history will appear here.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-          {requests.map(req => {
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', overflow: 'hidden', boxShadow: 'var(--shadow)',
+        }}>
+          {requests.map((req, idx) => {
             const sc = statusColor(req.status)
             return (
               <div
                 key={req.id}
                 style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '1rem',
                   padding: '1rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
+                  display: 'flex', alignItems: 'flex-start',
+                  justifyContent: 'space-between', gap: '1rem',
+                  borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
                 }}
               >
                 <div style={{ flex: 1 }}>
@@ -77,19 +77,13 @@ export default async function LeaveHistoryPage() {
                     </p>
                   )}
                 </div>
-                <span
-                  style={{
-                    background: `${sc}20`,
-                    color: sc,
-                    border: `1px solid ${sc}`,
-                    borderRadius: '0.5rem',
-                    padding: '0.25rem 0.75rem',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                    textTransform: 'capitalize',
-                  }}
-                >
+                <span style={{
+                  background: `${sc}18`, color: sc,
+                  border: `1px solid ${sc}`,
+                  borderRadius: '999px', padding: '0.25rem 0.75rem',
+                  fontSize: '0.78rem', fontWeight: 600,
+                  whiteSpace: 'nowrap', textTransform: 'capitalize',
+                }}>
                   {req.status}
                 </span>
               </div>
