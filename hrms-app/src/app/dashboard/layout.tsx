@@ -38,5 +38,5 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from('notifications').select('*', { count:'exact', head:true })
     .eq('recipient_id', employee.id).eq('is_read', false)
 
-  return <AppShell employee={employee} notifCount={notifCount ?? 0}>{children}</AppShell>
+  return <AppShell role={employee.role} userName={employee.name} notifCount={notifCount ?? 0}>{children}</AppShell>
 }
