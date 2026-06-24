@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { SubmitButton } from '@/components/SubmitButton'
 
 export default async function PolicyPage() {
   const supabase = await createClient()
@@ -77,8 +78,8 @@ export default async function PolicyPage() {
             </div>
           ))}
 
-          <button
-            type="submit"
+          <SubmitButton
+            loadingText="Saving..."
             style={{
               background: 'var(--primary)',
               color: '#fff',
@@ -86,13 +87,13 @@ export default async function PolicyPage() {
               borderRadius: '0.75rem',
               padding: '0.875rem',
               fontWeight: 600,
-              cursor: 'pointer',
               minHeight: '44px',
               marginTop: '0.5rem',
+              width: '100%',
             }}
           >
             Save Policy
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </div>

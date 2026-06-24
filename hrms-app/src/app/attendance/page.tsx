@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus } from '@/lib/attendance'
+import { SubmitButton } from '@/components/SubmitButton'
 
 export default async function AttendancePage() {
   const supabase = await createClient()
@@ -125,9 +126,8 @@ export default async function AttendancePage() {
 
       {/* Clock button */}
       <form action={clockInOut} style={{ marginBottom: '1.25rem' }}>
-        <button
-          type="submit"
-          disabled={!!isDone}
+        <SubmitButton
+          loadingText={isClockedIn ? 'Clocking out...' : 'Clocking in...'}
           style={{
             width: '100%',
             height: '72px',
@@ -137,14 +137,12 @@ export default async function AttendancePage() {
             borderRadius: '1.125rem',
             fontSize: '1.25rem',
             fontWeight: 700,
-            cursor: isDone ? 'default' : 'pointer',
-            opacity: isDone ? 0.75 : 1,
             boxShadow: isDone ? 'none' : 'var(--shadow-md)',
             letterSpacing: '-0.01em',
           }}
         >
           {btnLabel}
-        </button>
+        </SubmitButton>
       </form>
 
       {/* Rules */}

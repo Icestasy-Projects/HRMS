@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
@@ -36,6 +36,81 @@ function getNavItems(role: string, notifCount: number): NavItem[] {
   ]
 }
 
+function NavLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
+  const pathname = usePathname()
+  const { pending } = useLinkStatus()
+  const active = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      prefetch={false}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '0.625rem',
+        padding: '0.5rem 0.75rem', borderRadius: '0.625rem', marginBottom: '2px',
+        background: active ? 'var(--primary-l)' : 'transparent',
+        color: active ? 'var(--primary)' : 'var(--muted)',
+        fontWeight: active ? 600 : 400, fontSize: '14px', transition: 'background 0.15s',
+        textDecoration: 'none',
+      }}
+    >
+      <span style={{ fontSize: '16px', width: '20px', textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+      <span style={{ flex: 1 }}>{item.label}</span>
+      {pending && (
+        <span style={{
+          width: '14px', height: '14px', border: '2px solid var(--border)',
+          borderTopColor: 'var(--primary)', borderRadius: '50%', flexShrink: 0,
+          display: 'inline-block',
+          animation: 'spin 0.6s linear infinite',
+        }} />
+      )}
+      {!pending && item.badge && item.badge > 0 && (
+        <span style={{
+          background: 'var(--warning)', color: '#fff', fontSize: '11px',
+          fontWeight: 700, borderRadius: '10px', padding: '1px 6px', minWidth: '20px', textAlign: 'center',
+        }}>{item.badge}</span>
+      )}
+    </Link>
+  )
+}
+
+function MobileNavLink({ item, onClose }: { item: NavItem; onClose: () => void }) {
+  const pathname = usePathname()
+  const { pending } = useLinkStatus()
+  const active = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      prefetch={false}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '0.75rem',
+        padding: '0.75rem', borderRadius: '0.75rem', marginBottom: '2px',
+        background: active ? 'var(--primary-l)' : 'transparent',
+        color: active ? 'var(--primary)' : 'var(--muted)',
+        fontWeight: active ? 600 : 400, fontSize: '15px',
+        textDecoration: 'none',
+      }}
+    >
+      <span style={{ fontSize: '18px', width: '24px', textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+      <span style={{ flex: 1 }}>{item.label}</span>
+      {pending && (
+        <span style={{
+          width: '16px', height: '16px', border: '2px solid var(--border)',
+          borderTopColor: 'var(--primary)', borderRadius: '50%', flexShrink: 0,
+          display: 'inline-block',
+          animation: 'spin 0.6s linear infinite',
+        }} />
+      )}
+      {!pending && item.badge && item.badge > 0 && (
+        <span style={{ background: 'var(--warning)', color: '#fff', fontSize: '12px', fontWeight: 700, borderRadius: '10px', padding: '2px 7px' }}>{item.badge}</span>
+      )}
+    </Link>
+  )
+}
+
 export default function AppShell({ employee, notifCount, children }: {
   employee: { id: string; name: string; role: string; email: string }
   notifCount: number
@@ -51,8 +126,6 @@ export default function AppShell({ employee, notifCount, children }: {
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
-
-  const isActive = (href: string) => href === '/dashboard' ? pathname === href : pathname.startsWith(href)
 
   return (
     <div style={{ display: 'flex', minHeight: '100dvh', background: 'var(--bg)' }}>
@@ -81,27 +154,9 @@ export default function AppShell({ employee, notifCount, children }: {
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto' }}>
-          {navItems.map(item => {
-            const active = isActive(item.href)
-            return (
-              <Link key={item.href} href={item.href} style={{
-                display: 'flex', alignItems: 'center', gap: '0.625rem',
-                padding: '0.5rem 0.75rem', borderRadius: '0.625rem', marginBottom: '2px',
-                background: active ? 'var(--primary-l)' : 'transparent',
-                color: active ? 'var(--primary)' : 'var(--muted)',
-                fontWeight: active ? 600 : 400, fontSize: '14px', transition: 'all 0.15s',
-              }}>
-                <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>{item.icon}</span>
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {item.badge && item.badge > 0 && (
-                  <span style={{
-                    background: 'var(--warning)', color: '#fff', fontSize: '11px',
-                    fontWeight: 700, borderRadius: '10px', padding: '1px 6px', minWidth: '20px', textAlign: 'center',
-                  }}>{item.badge}</span>
-                )}
-              </Link>
-            )
-          })}
+          {navItems.map(item => (
+            <NavLink key={item.href} item={item} />
+          ))}
         </nav>
 
         {/* User */}
@@ -143,7 +198,7 @@ export default function AppShell({ employee, notifCount, children }: {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {notifCount > 0 && (
-            <Link href="/notifications" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px' }}>
+            <Link href="/notifications" prefetch={false} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px' }}>
               <span style={{ fontSize: '20px' }}>🔔</span>
               <span style={{
                 position: 'absolute', top: 4, right: 4, background: 'var(--warning)', color: '#fff',
@@ -182,24 +237,9 @@ export default function AppShell({ employee, notifCount, children }: {
               </div>
             </div>
             <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto' }}>
-              {navItems.map(item => {
-                const active = isActive(item.href)
-                return (
-                  <Link key={item.href} href={item.href} onClick={() => setOpen(false)} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.75rem',
-                    padding: '0.75rem', borderRadius: '0.75rem', marginBottom: '2px',
-                    background: active ? 'var(--primary-l)' : 'transparent',
-                    color: active ? 'var(--primary)' : 'var(--muted)',
-                    fontWeight: active ? 600 : 400, fontSize: '15px',
-                  }}>
-                    <span style={{ fontSize: '18px', width: '24px', textAlign: 'center' }}>{item.icon}</span>
-                    <span style={{ flex: 1 }}>{item.label}</span>
-                    {item.badge && item.badge > 0 && (
-                      <span style={{ background: 'var(--warning)', color: '#fff', fontSize: '12px', fontWeight: 700, borderRadius: '10px', padding: '2px 7px' }}>{item.badge}</span>
-                    )}
-                  </Link>
-                )
-              })}
+              {navItems.map(item => (
+                <MobileNavLink key={item.href} item={item} onClose={() => setOpen(false)} />
+              ))}
             </nav>
             <div style={{ padding: '1rem', borderTop: '1px solid var(--border)' }}>
               <button onClick={signOut} style={{
@@ -218,6 +258,7 @@ export default function AppShell({ employee, notifCount, children }: {
       </main>
 
       <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
         @media (min-width: 768px) {
           .md-sidebar { display: flex !important; }
           .mobile-header { display: none !important; }
