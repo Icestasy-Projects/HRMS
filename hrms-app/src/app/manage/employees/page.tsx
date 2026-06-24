@@ -25,7 +25,7 @@ export default async function ManageEmployeesPage() {
           href="/manage/employees/new"
           style={{
             background: 'var(--primary)',
-            color: 'var(--text)',
+            color: '#fff',
             borderRadius: '0.75rem',
             padding: '0.625rem 1.125rem',
             textDecoration: 'none',

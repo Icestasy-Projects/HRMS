@@ -39,15 +39,23 @@ export default async function LoginPage({
           maxWidth: '400px',
           background: 'var(--surface)',
           border: '1px solid var(--border)',
-          borderRadius: '1rem',
+          borderRadius: '1.25rem',
           padding: '2rem',
+          boxShadow: 'var(--shadow-md)',
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+          <div style={{
+            width: '52px', height: '52px', borderRadius: '14px',
+            background: 'linear-gradient(135deg, var(--primary), #a855f7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontWeight: 800, fontSize: '18px',
+            margin: '0 auto 1rem',
+          }}>IC</div>
+          <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
             Icestasy HRMS
           </h1>
-          <p style={{ color: 'var(--muted)', marginTop: '0.5rem' }}>Sign in to your account</p>
+          <p style={{ color: 'var(--muted)', marginTop: '0.375rem', fontSize: '0.9rem' }}>Sign in to your account</p>
         </div>
 
         {errorMsg && (
@@ -122,14 +130,16 @@ export default async function LoginPage({
             style={{
               width: '100%',
               background: 'var(--primary)',
-              color: 'var(--text)',
+              color: '#fff',
               border: 'none',
               borderRadius: '0.75rem',
               padding: '0.875rem',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: '1rem',
               cursor: 'pointer',
               minHeight: '44px',
+              boxShadow: 'var(--shadow)',
+              letterSpacing: '-0.01em',
             }}
           >
             Sign In

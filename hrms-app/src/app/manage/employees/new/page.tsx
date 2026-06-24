@@ -152,7 +152,7 @@ export default async function NewEmployeePage() {
               style={{
                 flex: 1,
                 background: 'var(--primary)',
-                color: 'var(--text)',
+                color: '#fff',
                 border: 'none',
                 borderRadius: '0.75rem',
                 padding: '0.875rem',

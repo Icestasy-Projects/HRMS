@@ -16,6 +16,7 @@ export default async function AttendancePage() {
   if (!employee) redirect('/login')
 
   const today = new Date().toISOString().split('T')[0]
+  const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
   const { data: todayLog } = await supabase
     .from('attendance_logs')
@@ -63,116 +64,120 @@ export default async function AttendancePage() {
       const { isHalfDay } = computeAttendanceStatus(existing.clock_in, timeStr)
       await supabase
         .from('attendance_logs')
-        .update({
-          clock_out: timeStr,
-          is_half_day: isHalfDay,
-          status: isHalfDay ? 'half_day' : 'present',
-        })
+        .update({ clock_out: timeStr, is_half_day: isHalfDay, status: isHalfDay ? 'half_day' : 'present' })
         .eq('id', existing.id)
     }
 
     redirect('/attendance')
   }
 
-  const btnLabel = isDone ? 'Already Complete' : isClockedIn ? 'Clock Out' : 'Clock In'
-  const btnColor = isDone ? 'var(--muted)' : isClockedIn ? 'var(--danger)' : 'var(--primary)'
+  const btnLabel = isDone ? 'Day Complete ✓' : isClockedIn ? 'Clock Out' : 'Clock In'
+  const btnBg = isDone ? 'var(--success)' : isClockedIn ? 'var(--danger)' : 'var(--primary)'
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
-        Clock In / Out
+      <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>
+        Attendance
       </h1>
+      <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '1.75rem' }}>{todayFormatted}</p>
 
-      {/* Half-day rules */}
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '1rem',
-          padding: '1rem 1.25rem',
-          marginBottom: '1rem',
-        }}
-      >
-        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-          Half-Day Rules
+      {/* Today status */}
+      <div style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: '1.125rem',
+        padding: '1.5rem',
+        marginBottom: '1rem',
+        boxShadow: 'var(--shadow)',
+      }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
+          Today's Status
         </p>
-        <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: '0.25rem 0' }}>
-          • Clock in after {HALF_DAY_LATE_CUTOFF} → counted as half day
-        </p>
-        <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: '0.25rem 0' }}>
-          • Clock out before {HALF_DAY_EARLY_CUTOFF} → counted as half day
-        </p>
+
+        {todayLog ? (
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+            <div>
+              <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Clocked In</p>
+              <p style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.25rem', margin: 0 }}>{formatTime(todayLog.clock_in)}</p>
+            </div>
+            {todayLog.clock_out && (
+              <div>
+                <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Clocked Out</p>
+                <p style={{ color: 'var(--success)', fontWeight: 700, fontSize: '1.25rem', margin: 0 }}>{formatTime(todayLog.clock_out)}</p>
+              </div>
+            )}
+            {todayLog.is_half_day && (
+              <div style={{
+                background: 'var(--warning-l)',
+                border: '1px solid var(--warning)',
+                borderRadius: '0.625rem',
+                padding: '0.375rem 0.75rem',
+                alignSelf: 'center',
+              }}>
+                <p style={{ color: 'var(--warning)', fontWeight: 600, fontSize: '0.8rem', margin: 0 }}>Half Day</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p style={{ color: 'var(--muted)', fontSize: '0.9rem', margin: 0 }}>Not yet clocked in today</p>
+        )}
       </div>
-
-      {/* Schedule info */}
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '1rem',
-          padding: '1rem 1.25rem',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-          Your Schedule ({scheduleType.replace('_', ' ')})
-        </p>
-        <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: 0 }}>
-          {schedule.days.join(', ')} · {schedule.hours_per_day}h/day
-        </p>
-      </div>
-
-      {/* Current status */}
-      {todayLog && (
-        <div
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '1rem',
-            padding: '1rem 1.25rem',
-            marginBottom: '1.5rem',
-          }}
-        >
-          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-            Today
-          </p>
-          <p style={{ color: 'var(--text)', fontSize: '0.9rem' }}>
-            Clocked in: <strong>{formatTime(todayLog.clock_in)}</strong>
-          </p>
-          {todayLog.clock_out && (
-            <p style={{ color: 'var(--text)', fontSize: '0.9rem' }}>
-              Clocked out: <strong>{formatTime(todayLog.clock_out)}</strong>
-            </p>
-          )}
-          {todayLog.is_half_day && (
-            <p style={{ color: 'var(--warning)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-              Marked as half day
-            </p>
-          )}
-        </div>
-      )}
 
       {/* Clock button */}
-      <form action={clockInOut}>
+      <form action={clockInOut} style={{ marginBottom: '1.25rem' }}>
         <button
           type="submit"
           disabled={!!isDone}
           style={{
             width: '100%',
-            height: '80px',
-            background: btnColor,
-            color: 'var(--text)',
+            height: '72px',
+            background: btnBg,
+            color: '#fff',
             border: 'none',
-            borderRadius: '1rem',
+            borderRadius: '1.125rem',
             fontSize: '1.25rem',
             fontWeight: 700,
-            cursor: isDone ? 'not-allowed' : 'pointer',
-            opacity: isDone ? 0.6 : 1,
+            cursor: isDone ? 'default' : 'pointer',
+            opacity: isDone ? 0.75 : 1,
+            boxShadow: isDone ? 'none' : 'var(--shadow-md)',
+            letterSpacing: '-0.01em',
           }}
         >
           {btnLabel}
         </button>
       </form>
+
+      {/* Rules */}
+      <div style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: '1.125rem',
+        padding: '1.25rem',
+        boxShadow: 'var(--shadow)',
+      }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.875rem' }}>
+          Half-Day Rules
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+            <span style={{ color: 'var(--warning)', fontWeight: 700, flexShrink: 0 }}>→</span>
+            <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: 0 }}>
+              Arrive after <strong>{HALF_DAY_LATE_CUTOFF}</strong> = half day
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem' }}>
+            <span style={{ color: 'var(--warning)', fontWeight: 700, flexShrink: 0 }}>→</span>
+            <p style={{ color: 'var(--text)', fontSize: '0.875rem', margin: 0 }}>
+              Leave before <strong>{HALF_DAY_EARLY_CUTOFF}</strong> = half day
+            </p>
+          </div>
+          <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: 0 }}>
+              Schedule: {schedule.days.join(', ')} · {schedule.hours_per_day}h/day ({scheduleType.replace('_', ' ')})
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

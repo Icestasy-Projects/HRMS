@@ -149,7 +149,7 @@ export default async function HolidaysPage() {
             type="submit"
             style={{
               background: 'var(--primary)',
-              color: 'var(--text)',
+              color: '#fff',
               border: 'none',
               borderRadius: '0.75rem',
               padding: '0.875rem',

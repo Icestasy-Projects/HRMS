@@ -5,257 +5,223 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
-type NavItem = { label: string; href: string; badge?: number }
+type NavItem = { label: string; href: string; icon: string; badge?: number }
 
 function getNavItems(role: string, notifCount: number): NavItem[] {
-  const notif = { label: 'Notifications', href: '/notifications', badge: notifCount }
-  if (role === 'super_admin') {
-    return [
-      { label: 'Home', href: '/dashboard' },
-      { label: 'Clock In/Out', href: '/attendance' },
-      { label: 'Team', href: '/team' },
-      { label: 'Leave Requests', href: '/team/leave' },
-      { label: 'My Leave', href: '/leave' },
-      { label: 'Manage', href: '/manage' },
-      notif,
-    ]
-  }
-  if (role === 'admin') {
-    return [
-      { label: 'Home', href: '/dashboard' },
-      { label: 'Clock In/Out', href: '/attendance' },
-      { label: 'My Team', href: '/team' },
-      { label: 'Leave Requests', href: '/team/leave' },
-      { label: 'My Leave', href: '/leave' },
-      notif,
-    ]
-  }
+  const notif = { label: 'Notifications', href: '/notifications', icon: '🔔', badge: notifCount }
+  if (role === 'super_admin') return [
+    { label: 'Home', href: '/dashboard', icon: '⊞' },
+    { label: 'Clock In/Out', href: '/attendance', icon: '◷' },
+    { label: 'Team', href: '/team', icon: '👥' },
+    { label: 'Leave Requests', href: '/team/leave', icon: '📋' },
+    { label: 'My Leave', href: '/leave', icon: '🌿' },
+    { label: 'Manage', href: '/manage', icon: '⚙' },
+    notif,
+  ]
+  if (role === 'admin') return [
+    { label: 'Home', href: '/dashboard', icon: '⊞' },
+    { label: 'Clock In/Out', href: '/attendance', icon: '◷' },
+    { label: 'Team', href: '/team', icon: '👥' },
+    { label: 'Leave Requests', href: '/team/leave', icon: '📋' },
+    { label: 'My Leave', href: '/leave', icon: '🌿' },
+    notif,
+  ]
   return [
-    { label: 'Home', href: '/dashboard' },
-    { label: 'Clock In/Out', href: '/attendance' },
-    { label: 'Attendance', href: '/attendance/history' },
-    { label: 'My Leave', href: '/leave' },
-    { label: 'Request Leave', href: '/leave/request' },
+    { label: 'Home', href: '/dashboard', icon: '⊞' },
+    { label: 'Clock In/Out', href: '/attendance', icon: '◷' },
+    { label: 'My Attendance', href: '/attendance/history', icon: '📅' },
+    { label: 'My Leave', href: '/leave', icon: '🌿' },
+    { label: 'Request Leave', href: '/leave/request', icon: '+' },
     notif,
   ]
 }
 
-interface AppShellProps {
-  children: React.ReactNode
-  role: string
-  userName: string
+export default function AppShell({ employee, notifCount, children }: {
+  employee: { id: string; name: string; role: string; email: string }
   notifCount: number
-}
-
-export default function AppShell({ children, role, userName, notifCount }: AppShellProps) {
+  children: React.ReactNode
+}) {
   const pathname = usePathname()
-  const [menuOpen, setMenuOpen] = useState(false)
-  const navItems = getNavItems(role, notifCount)
+  const [open, setOpen] = useState(false)
+  const navItems = getNavItems(employee.role, notifCount)
+  const initials = employee.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
+  const supabase = createClient()
   async function signOut() {
-    const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = '/login'
   }
 
-  const NavLinks = ({ onClick }: { onClick?: () => void }) => (
-    <>
-      {navItems.map(item => (
-        <Link
-          key={item.href}
-          href={item.href}
-          onClick={onClick}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0.625rem 0.875rem',
-            borderRadius: '0.75rem',
-            textDecoration: 'none',
-            color: pathname === item.href ? 'var(--text)' : 'var(--muted)',
-            background: pathname === item.href ? 'var(--surface2)' : 'transparent',
-            fontWeight: pathname === item.href ? 600 : 400,
-            fontSize: '0.9375rem',
-            transition: 'background 0.15s',
-          }}
-        >
-          {item.label}
-          {item.badge && item.badge > 0 ? (
-            <span
-              style={{
-                background: 'var(--primary)',
-                color: 'var(--text)',
-                borderRadius: '999px',
-                padding: '0.125rem 0.5rem',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-              }}
-            >
-              {item.badge}
-            </span>
-          ) : null}
-        </Link>
-      ))}
-    </>
-  )
+  const isActive = (href: string) => href === '/dashboard' ? pathname === href : pathname.startsWith(href)
 
   return (
-    <div style={{ display: 'flex', minHeight: '100dvh' }}>
-      {/* Desktop sidebar */}
-      <aside
-        style={{
-          width: '220px',
-          flexShrink: 0,
-          background: 'var(--surface)',
-          borderRight: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '1.25rem 1rem',
-          position: 'sticky',
-          top: 0,
-          height: '100dvh',
-        }}
-        className="hidden-mobile"
-      >
-        <div style={{ marginBottom: '1.5rem' }}>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text)' }}>Icestasy HRMS</span>
+    <div style={{ display: 'flex', minHeight: '100dvh', background: 'var(--bg)' }}>
+
+      {/* Desktop Sidebar */}
+      <aside style={{
+        width: '240px', flexShrink: 0, display: 'none',
+        flexDirection: 'column', background: 'var(--surface)',
+        borderRight: '1px solid var(--border)', position: 'sticky', top: 0, height: '100dvh',
+      }} className="md-sidebar">
+        {/* Logo */}
+        <div style={{ padding: '1.25rem 1.25rem 1rem', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, var(--primary), #a855f7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: 800, fontSize: '14px', flexShrink: 0,
+            }}>IC</div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', lineHeight: 1.2 }}>Icestasy HRMS</div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Attendance & Leave</div>
+            </div>
+          </div>
         </div>
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
-          <NavLinks />
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto' }}>
+          {navItems.map(item => {
+            const active = isActive(item.href)
+            return (
+              <Link key={item.href} href={item.href} style={{
+                display: 'flex', alignItems: 'center', gap: '0.625rem',
+                padding: '0.5rem 0.75rem', borderRadius: '0.625rem', marginBottom: '2px',
+                background: active ? 'var(--primary-l)' : 'transparent',
+                color: active ? 'var(--primary)' : 'var(--muted)',
+                fontWeight: active ? 600 : 400, fontSize: '14px', transition: 'all 0.15s',
+              }}>
+                <span style={{ fontSize: '16px', width: '20px', textAlign: 'center' }}>{item.icon}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.badge && item.badge > 0 && (
+                  <span style={{
+                    background: 'var(--warning)', color: '#fff', fontSize: '11px',
+                    fontWeight: 700, borderRadius: '10px', padding: '1px 6px', minWidth: '20px', textAlign: 'center',
+                  }}>{item.badge}</span>
+                )}
+              </Link>
+            )
+          })}
         </nav>
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '1rem' }}>
-          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{userName}</p>
-          <button
-            onClick={signOut}
-            style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: '0.75rem',
-              padding: '0.5rem 1rem',
-              color: 'var(--text)',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              width: '100%',
-            }}
-          >
-            Sign Out
-          </button>
+
+        {/* User */}
+        <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem', borderRadius: '0.625rem', background: 'var(--surface2)', marginBottom: '0.5rem' }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+              background: 'linear-gradient(135deg, var(--primary), #a855f7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: '12px', fontWeight: 700,
+            }}>{initials}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{employee.name}</div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'capitalize' }}>{employee.role.replace('_', ' ')}</div>
+            </div>
+          </div>
+          <button onClick={signOut} style={{
+            width: '100%', padding: '0.5rem', borderRadius: '0.5rem', border: '1px solid var(--border)',
+            background: 'transparent', color: 'var(--muted)', fontSize: '13px', cursor: 'pointer',
+          }}>Sign out</button>
         </div>
       </aside>
 
       {/* Mobile header */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '56px',
-          background: 'var(--surface)',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 1rem',
-          zIndex: 100,
-        }}
-        className="show-mobile"
-      >
-        <span style={{ fontWeight: 700, color: 'var(--text)' }}>Icestasy HRMS</span>
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text)',
-            cursor: 'pointer',
-            fontSize: '1.5rem',
-            lineHeight: 1,
-            minWidth: '44px',
-            minHeight: '44px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          aria-label="Menu"
-        >
-          {menuOpen ? '✕' : '☰'}
-        </button>
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40,
+        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 1rem', height: '56px', boxShadow: 'var(--shadow)',
+      }} className="mobile-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{
+            width: '32px', height: '32px', borderRadius: '8px',
+            background: 'linear-gradient(135deg, var(--primary), #a855f7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontWeight: 800, fontSize: '12px',
+          }}>IC</div>
+          <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>Icestasy HRMS</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {notifCount > 0 && (
+            <Link href="/notifications" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px' }}>
+              <span style={{ fontSize: '20px' }}>🔔</span>
+              <span style={{
+                position: 'absolute', top: 4, right: 4, background: 'var(--warning)', color: '#fff',
+                fontSize: '10px', fontWeight: 700, borderRadius: '10px', padding: '0 4px', minWidth: '16px', textAlign: 'center',
+              }}>{notifCount}</span>
+            </Link>
+          )}
+          <button onClick={() => setOpen(o => !o)} style={{
+            width: '40px', height: '40px', background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
+          }}>
+            {[0,1,2].map(i => <span key={i} style={{ display: 'block', width: '20px', height: '2px', background: 'var(--text)', borderRadius: '2px' }} />)}
+          </button>
+        </div>
       </div>
 
       {/* Mobile drawer */}
-      {menuOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99,
-            background: 'rgba(0,0,0,0.5)',
-          }}
-          onClick={() => setMenuOpen(false)}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              width: '280px',
-              height: '100%',
-              background: 'var(--surface)',
-              borderLeft: '1px solid var(--border)',
-              padding: '4.5rem 1rem 1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
-              <NavLinks onClick={() => setMenuOpen(false)} />
+      {open && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setOpen(false)}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,13,46,0.4)', backdropFilter: 'blur(4px)' }} />
+          <div style={{
+            position: 'absolute', left: 0, top: 0, bottom: 0, width: '280px',
+            background: 'var(--surface)', display: 'flex', flexDirection: 'column',
+            boxShadow: 'var(--shadow-md)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, var(--primary), #a855f7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: '14px', fontWeight: 700,
+              }}>{initials}</div>
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--text)' }}>{employee.name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--muted)', textTransform: 'capitalize' }}>{employee.role.replace('_', ' ')}</div>
+              </div>
+            </div>
+            <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto' }}>
+              {navItems.map(item => {
+                const active = isActive(item.href)
+                return (
+                  <Link key={item.href} href={item.href} onClick={() => setOpen(false)} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '0.75rem', borderRadius: '0.75rem', marginBottom: '2px',
+                    background: active ? 'var(--primary-l)' : 'transparent',
+                    color: active ? 'var(--primary)' : 'var(--muted)',
+                    fontWeight: active ? 600 : 400, fontSize: '15px',
+                  }}>
+                    <span style={{ fontSize: '18px', width: '24px', textAlign: 'center' }}>{item.icon}</span>
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    {item.badge && item.badge > 0 && (
+                      <span style={{ background: 'var(--warning)', color: '#fff', fontSize: '12px', fontWeight: 700, borderRadius: '10px', padding: '2px 7px' }}>{item.badge}</span>
+                    )}
+                  </Link>
+                )
+              })}
             </nav>
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-              <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{userName}</p>
-              <button
-                onClick={signOut}
-                style={{
-                  background: 'var(--surface2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  width: '100%',
-                }}
-              >
-                Sign Out
-              </button>
+            <div style={{ padding: '1rem', borderTop: '1px solid var(--border)' }}>
+              <button onClick={signOut} style={{
+                width: '100%', padding: '0.75rem', borderRadius: '0.75rem',
+                border: '1px solid var(--border)', background: 'transparent',
+                color: 'var(--muted)', fontSize: '14px', cursor: 'pointer',
+              }}>Sign out</button>
             </div>
           </div>
         </div>
       )}
 
       {/* Main content */}
-      <main
-        style={{
-          flex: 1,
-          padding: '1.5rem',
-          paddingTop: 'calc(56px + 1.5rem)',
-          overflowY: 'auto',
-        }}
-        className="main-content"
-      >
+      <main style={{ flex: 1, minWidth: 0, padding: '1rem', paddingTop: 'calc(56px + 1rem)' }} className="main-content">
         {children}
       </main>
 
       <style>{`
         @media (min-width: 768px) {
-          .hidden-mobile { display: flex !important; }
-          .show-mobile { display: none !important; }
-          .main-content { padding-top: 1.5rem !important; }
-        }
-        @media (max-width: 767px) {
-          .hidden-mobile { display: none !important; }
-          .show-mobile { display: flex !important; }
+          .md-sidebar { display: flex !important; }
+          .mobile-header { display: none !important; }
+          .main-content { padding-top: 1.5rem !important; padding-left: 1.5rem; padding-right: 1.5rem; }
         }
       `}</style>
     </div>
