@@ -2,7 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import LeaveRequestForm from './LeaveRequestForm'
 
-export default async function LeaveRequestPage() {
+export default async function LeaveRequestPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const params = await searchParams
+  const errorMsg = params?.error
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -43,7 +50,7 @@ export default async function LeaveRequestPage() {
 
     const isUnscheduled = leaveType === 'unscheduled'
 
-    const { data: newRequest } = await supabase
+    const { data: newRequest, error: insertError } = await supabase
       .from('leave_requests')
       .insert({
         employee_id: emp.id,
@@ -58,7 +65,11 @@ export default async function LeaveRequestPage() {
       .select()
       .single()
 
-    if (isUnscheduled && newRequest) {
+    if (insertError || !newRequest) {
+      redirect(`/leave/request?error=${encodeURIComponent(insertError?.message ?? 'Failed to submit leave request')}`)
+    }
+
+    if (isUnscheduled) {
       // Deduct balance
       const { data: bal } = await supabase
         .from('leave_balances')
@@ -117,9 +128,22 @@ export default async function LeaveRequestPage() {
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
-        Request Leave
-      </h1>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Leave / Request</p>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
+          Request Leave
+        </h1>
+      </div>
+
+      {errorMsg && (
+        <div style={{
+          background: 'var(--danger-l)', border: '1px solid var(--danger)',
+          borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
+          color: 'var(--danger)', marginBottom: '1rem', fontSize: '0.875rem',
+        }}>
+          ⚠️ {errorMsg}
+        </div>
+      )}
 
       <div
         style={{
