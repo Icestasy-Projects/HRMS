@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus } from '@/lib/attendance'
 import Link from 'next/link'
+import Breadcrumb from '@/components/Breadcrumb'
 
 export default async function AttendancePage({
   searchParams,
@@ -104,7 +105,7 @@ export default async function AttendancePage({
     <div style={{ maxWidth: '540px', margin: '0 auto' }}>
       {/* Page header */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Attendance</p>
+        <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Attendance' }]} />
         <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
           Time &amp; Attendance
         </h1>

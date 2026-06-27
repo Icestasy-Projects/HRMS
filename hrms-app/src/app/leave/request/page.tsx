@@ -1,3 +1,4 @@
+import Breadcrumb from '@/components/Breadcrumb'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import LeaveRequestForm from './LeaveRequestForm'
@@ -129,7 +130,7 @@ export default async function LeaveRequestPage({
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Leave / Request</p>
+        <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Leave', href: '/leave' }, { label: 'Request' }]} />
         <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
           Request Leave
         </h1>

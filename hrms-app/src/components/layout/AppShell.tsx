@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import NavProgress from '@/components/NavProgress'
 
 type NavItem = { label: string; href: string; badge?: number }
 
@@ -146,6 +147,7 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
+      <NavProgress />
 
       {/* Fixed top header */}
       <header style={{

@@ -1,3 +1,4 @@
+import Breadcrumb from '@/components/Breadcrumb'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TeamFilter from './TeamFilter'
@@ -60,7 +61,7 @@ export default async function TeamPage({
         marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem',
       }}>
         <div>
-          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Team</p>
+          <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Team' }]} />
           <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
             {employee.role === 'admin' ? 'My Team' : 'Team'}
           </h1>
