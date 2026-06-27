@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { formatTime } from '@/lib/attendance'
-import { format } from 'date-fns'
+import TeamFilter from './TeamFilter'
 
 export default async function TeamPage({
   searchParams,
@@ -15,145 +14,145 @@ export default async function TeamPage({
   const { data: employee } = await supabase
     .from('users')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('email', user.email)
     .single()
-  if (!employee) redirect('/login')
 
-  if (employee.role !== 'admin' && employee.role !== 'super_admin') redirect('/dashboard')
+  if (!employee || (employee.role !== 'admin' && employee.role !== 'super_admin')) {
+    redirect('/dashboard')
+  }
 
   const params = await searchParams
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const filterDept = params?.dept
 
-  // Fetch departments for filter (super_admin only)
-  let departments: { id: string; name: string }[] = []
-  if (employee.role === 'super_admin') {
-    const { data } = await supabase.from('departments').select('id, name').order('name')
-    departments = data ?? []
-  }
-
-  const selectedDept = params?.dept ?? (employee.role === 'admin' ? employee.department_id ?? '' : '')
-
-  // Build attendance query
-  let query = supabase
-    .from('v_attendance_with_names')
+  const { data: departments } = await supabase
+    .from('departments')
     .select('*')
-    .eq('date', today)
+    .order('name')
 
-  if (selectedDept) {
-    // Get employees in that department first
-    const { data: deptEmployees } = await supabase
-      .from('users')
-      .select('id')
-      .eq('department_id', selectedDept)
-    const ids = (deptEmployees ?? []).map((e: { id: string }) => e.id)
-    if (ids.length > 0) {
-      query = query.in('employee_id', ids)
-    }
-  } else if (employee.role === 'admin' && employee.department_id) {
-    const { data: deptEmployees } = await supabase
-      .from('users')
-      .select('id')
-      .eq('department_id', employee.department_id)
-    const ids = (deptEmployees ?? []).map((e: { id: string }) => e.id)
-    if (ids.length > 0) {
-      query = query.in('employee_id', ids)
-    }
+  let teamQuery = supabase
+    .from('users')
+    .select('*, departments(name)')
+    .order('name')
+
+  if (employee.role === 'admin') {
+    teamQuery = teamQuery.eq('department_id', employee.department_id)
+  } else if (filterDept) {
+    teamQuery = teamQuery.eq('department_id', filterDept)
   }
 
-  const { data: attendance } = await query.order('full_name')
+  const { data: team } = await teamQuery
 
-  function statusBadge(record: { clock_in: string | null; clock_out: string | null; is_half_day: boolean }) {
-    if (!record.clock_in) return <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-1 text-sm font-medium">Not clocked in</span>
-    if (record.clock_in && !record.clock_out) return <span className="bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm font-medium">Currently in</span>
-    if (record.is_half_day) return <span className="bg-amber-100 text-amber-800 rounded-full px-3 py-1 text-sm font-medium">Half day</span>
-    return <span className="bg-blue-100 text-blue-800 rounded-full px-3 py-1 text-sm font-medium">Full day</span>
+  const roleColor = (role: string) => {
+    if (role === 'super_admin') return { bg: '#ede9fe', color: '#6d28d9', border: '#c4b5fd' }
+    if (role === 'admin') return { bg: 'var(--primary-l)', color: 'var(--primary)', border: 'var(--border)' }
+    return { bg: 'var(--surface2)', color: 'var(--muted)', border: 'var(--border)' }
   }
+
+  const typeColor = (type: string) => type === 'blue_collar'
+    ? { color: '#1d4ed8', bg: '#dbeafe' }
+    : { color: '#065f46', bg: '#d1fae5' }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Team Attendance</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Your team&apos;s attendance for today. This is a read-only overview — use &ldquo;Leave Requests&rdquo; to approve or reject time-off requests.
-        </p>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">
-        <strong>Today:</strong> {format(new Date(), 'EEEE, d MMMM yyyy')}
-      </div>
-
-      {/* Department filter (super_admin only) */}
-      {employee.role === 'super_admin' && departments.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <label htmlFor="dept" className="block text-sm font-medium text-gray-700 mb-2">Filter by Department</label>
-          <form>
-            <select
-              id="dept"
-              name="dept"
-              defaultValue={selectedDept}
-              onChange={e => {
-                const url = new URL(window.location.href)
-                url.searchParams.set('dept', e.target.value)
-                window.location.href = url.toString()
-              }}
-              className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-600"
-            >
-              <option value="">All Departments</option>
-              {departments.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-          </form>
+    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      {/* Page header */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+        marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem',
+      }}>
+        <div>
+          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Team</p>
+          <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
+            {employee.role === 'admin' ? 'My Team' : 'Team'}
+          </h1>
+          {team && (
+            <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+              {team.length} member{team.length !== 1 ? 's' : ''}
+              {filterDept && departments?.find(d => d.id === filterDept) && (
+                <span> · {departments.find(d => d.id === filterDept)?.name}</span>
+              )}
+            </p>
+          )}
         </div>
-      )}
 
-      {/* Attendance table */}
-      {(!attendance || attendance.length === 0) ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-500">
-          No attendance records for today in this view.
+        {employee.role === 'super_admin' && departments && departments.length > 0 && (
+          <TeamFilter departments={departments} currentDept={filterDept} />
+        )}
+      </div>
+
+      {(!team || team.length === 0) ? (
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', padding: '2.5rem', textAlign: 'center',
+          color: 'var(--muted)', boxShadow: 'var(--shadow)',
+        }}>
+          <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>👥</p>
+          <p style={{ fontWeight: 600, color: 'var(--text)', margin: '0 0 0.25rem' }}>No team members found</p>
+          <p style={{ fontSize: '0.875rem', margin: 0 }}>Try a different filter.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Desktop */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Name</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Department</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Clock In</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Clock Out</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {attendance.map((r) => (
-                  <tr key={r.id ?? r.employee_id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{r.full_name}</td>
-                    <td className="px-4 py-3 text-gray-600">{r.department_name ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-700 font-mono">{formatTime(r.clock_in)}</td>
-                    <td className="px-4 py-3 text-gray-700 font-mono">{formatTime(r.clock_out)}</td>
-                    <td className="px-4 py-3">{statusBadge(r)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Mobile */}
-          <div className="md:hidden divide-y divide-gray-100">
-            {attendance.map((r) => (
-              <div key={r.id ?? r.employee_id} className="px-4 py-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-gray-900">{r.full_name}</span>
-                  {statusBadge(r)}
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', overflow: 'hidden', boxShadow: 'var(--shadow)',
+        }}>
+          {team.map((member, idx) => {
+            const rc = roleColor(member.role)
+            const tc = typeColor(member.employee_type)
+            const initials = member.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+            return (
+              <div
+                key={member.id}
+                style={{
+                  padding: '0.875rem 1.25rem',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', gap: '1rem',
+                  borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
+                  transition: 'background 0.1s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', minWidth: 0 }}>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
+                    background: 'linear-gradient(135deg, var(--primary-l), var(--surface2))',
+                    border: '2px solid var(--border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--primary)', fontWeight: 700, fontSize: '14px',
+                  }}>
+                    {initials}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {member.name}
+                    </p>
+                    <p style={{ color: 'var(--muted)', fontSize: '0.78rem', margin: '0.15rem 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {member.email}
+                      {member.departments && ` · ${(member.departments as { name: string }).name}`}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {r.department_name && <span>{r.department_name} · </span>}
-                  {formatTime(r.clock_in)} – {formatTime(r.clock_out)}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                  {member.employee_type && (
+                    <span style={{
+                      background: tc.bg, color: tc.color,
+                      borderRadius: '999px', padding: '0.2rem 0.625rem',
+                      fontSize: '0.72rem', fontWeight: 600, textTransform: 'capitalize',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {member.employee_type.replace('_', ' ')}
+                    </span>
+                  )}
+                  <span style={{
+                    background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`,
+                    borderRadius: '999px', padding: '0.2rem 0.625rem',
+                    fontSize: '0.72rem', fontWeight: 600, textTransform: 'capitalize',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {member.role?.replace('_', ' ')}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
       )}
     </div>

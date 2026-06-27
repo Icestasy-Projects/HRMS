@@ -1,35 +1,32 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
-import type { ReactNode } from 'react'
 
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: employee, error } = await supabase
-    .from('users')
-    .select('*, department:departments(id, name, manager_id, created_at)')
-    .eq('user_id', user.id)
-    .single()
+  const { data: employee } = await supabase.from('users').select('*').eq('email', user.email).single()
 
-  if (error || !employee) {
+  if (!employee) {
+    async function signOut() {
+      'use server'
+      const s = await createClient()
+      await s.auth.signOut()
+      redirect('/login')
+    }
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-md w-full text-center">
-          <div className="text-4xl mb-4">⚠</div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Account not found</h1>
-          <p className="text-gray-600 text-sm">
-            Your account has not been set up in the system yet. Please contact your HR administrator.
+      <div style={{ minHeight:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--bg)', padding:'1rem' }}>
+        <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'1rem', padding:'2rem', maxWidth:'400px', textAlign:'center', boxShadow:'var(--shadow-md)' }}>
+          <div style={{ fontSize:'48px', marginBottom:'1rem' }}>⚠️</div>
+          <h2 style={{ color:'var(--danger)', marginBottom:'0.5rem', fontSize:'1.25rem', fontWeight:700 }}>Account Not Found</h2>
+          <p style={{ color:'var(--muted)', marginBottom:'1.5rem', fontSize:'14px', lineHeight:1.6 }}>
+            No employee record found for <strong>{user.email}</strong>.<br/>Please contact your HR administrator.
           </p>
-          <form action="/api/auth/signout" method="POST" className="mt-4">
-            <button
-              type="submit"
-              className="bg-gray-100 text-gray-700 rounded-lg px-5 py-3 font-semibold hover:bg-gray-200"
-            >
-              Sign out
+          <form action={signOut}>
+            <button type="submit" style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:'0.75rem', padding:'0.75rem 1.5rem', color:'var(--text)', cursor:'pointer', fontWeight:600 }}>
+              Sign Out
             </button>
           </form>
         </div>
@@ -37,16 +34,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     )
   }
 
-  // Fetch unread notification count
-  const { count: notificationCount } = await supabase
-    .from('notifications')
-    .select('id', { count: 'exact', head: true })
-    .eq('recipient_id', employee.id)
-    .eq('is_read', false)
+  const { count: notifCount } = await supabase
+    .from('notifications').select('*', { count:'exact', head:true })
+    .eq('recipient_id', employee.id).eq('is_read', false)
 
-  return (
-    <AppShell employee={employee} notificationCount={notificationCount ?? 0}>
-      {children}
-    </AppShell>
-  )
+  return <AppShell role={employee.role} userName={employee.name} notifCount={notifCount ?? 0}>{children}</AppShell>
 }

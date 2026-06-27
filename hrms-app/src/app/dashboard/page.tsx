@@ -2,8 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatTime } from '@/lib/attendance'
-import { balanceLabel } from '@/lib/leave'
-import { format } from 'date-fns'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -13,178 +11,214 @@ export default async function DashboardPage() {
   const { data: employee } = await supabase
     .from('users')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('email', user.email)
     .single()
 
   if (!employee) redirect('/login')
 
-  const today = format(new Date(), 'yyyy-MM-dd')
+  const today = new Date().toISOString().split('T')[0]
+  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+  const dateFull = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const firstName = employee.name.split(' ')[0]
 
-  // Today's attendance
-  const { data: attendance } = await supabase
-    .from('attendance')
+  const { data: todayLog } = await supabase
+    .from('attendance_logs')
     .select('*')
     .eq('employee_id', employee.id)
     .eq('date', today)
     .single()
 
-  // Leave balance for current year
-  const year = new Date().getFullYear()
-  const { data: balance } = await supabase
+  const { data: leaveBalance } = await supabase
     .from('leave_balances')
     .select('*')
     .eq('employee_id', employee.id)
-    .eq('year', year)
     .single()
 
-  // Pending leave requests (for admin/super_admin)
-  let pendingCount = 0
-  if (employee.role === 'admin' || employee.role === 'super_admin') {
-    const query = supabase
+  const isAdmin = employee.role === 'admin' || employee.role === 'super_admin'
+
+  let pendingLeaveCount = 0
+  if (isAdmin) {
+    let query = supabase
       .from('leave_requests')
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('status', 'pending')
-      .eq('leave_type', 'scheduled')
 
     if (employee.role === 'admin' && employee.department_id) {
-      // Get employees in same department
-      const { data: deptEmployees } = await supabase
+      const { data: deptUsers } = await supabase
         .from('users')
         .select('id')
         .eq('department_id', employee.department_id)
-      const ids = (deptEmployees ?? []).map((e: { id: string }) => e.id)
+      const ids = deptUsers?.map(u => u.id) ?? []
       if (ids.length > 0) {
-        const { count } = await query.in('employee_id', ids)
-        pendingCount = count ?? 0
+        query = query.in('employee_id', ids)
       }
-    } else {
-      const { count } = await query
-      pendingCount = count ?? 0
     }
+    const { count } = await query
+    pendingLeaveCount = count ?? 0
   }
 
-  const clockedIn = attendance?.clock_in && !attendance?.clock_out
-  const clockedOut = attendance?.clock_in && attendance?.clock_out
+  const attStatus = todayLog
+    ? todayLog.is_half_day
+      ? 'Half Day'
+      : todayLog.clock_out
+        ? 'Complete'
+        : 'Clocked In'
+    : 'Not clocked in'
+
+  const attColor = todayLog
+    ? todayLog.is_half_day
+      ? 'var(--warning)'
+      : todayLog.clock_out
+        ? 'var(--success)'
+        : 'var(--primary)'
+    : 'var(--muted)'
+
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  const attStatusLabel = todayLog
+    ? todayLog.is_half_day ? 'Half Day'
+      : todayLog.clock_out ? 'Complete' : 'Clocked In'
+    : 'Not clocked in'
+
+  const attBadgeBg = todayLog
+    ? todayLog.is_half_day ? '#fef3c7'
+      : todayLog.clock_out ? '#dcfce7' : 'var(--primary-l)'
+    : 'var(--surface2)'
+
+  const attBadgeColor = todayLog
+    ? todayLog.is_half_day ? 'var(--warning)'
+      : todayLog.clock_out ? 'var(--success)' : 'var(--primary)'
+    : 'var(--muted)'
+
+  type Worklet = { label: string; href: string; icon: string; badge?: number; show?: boolean }
+  const worklets: Worklet[] = [
+    { label: 'Time & Attendance', href: '/attendance', icon: '◷', show: true },
+    { label: 'My Leave', href: '/leave', icon: '🌿', show: true },
+    { label: 'Leave History', href: '/leave/history', icon: '📋', show: true },
+    { label: 'My Attendance Log', href: '/attendance/history', icon: '📅', show: true },
+    { label: 'Notifications', href: '/notifications', icon: '🔔', show: true },
+    { label: 'Team', href: '/team', icon: '👥', show: isAdmin },
+    { label: 'Leave Requests', href: '/team/leave', icon: '✅', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
+    { label: 'Manage', href: '/manage', icon: '⚙', show: employee.role === 'super_admin' },
+  ].filter(w => w.show)
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      {/* Page description */}
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Your daily overview — attendance, leave, and what needs your attention today.
-        </p>
-      </div>
+    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
 
-      {/* Today's attendance status */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-800">Today&apos;s Attendance</h2>
-          <span className="text-sm text-gray-500">{format(new Date(), 'EEEE, d MMMM yyyy')}</span>
+      {/* Hero banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, #5b1fa8 0%, #7c2fc9 55%, #9b4de0 100%)',
+        borderRadius: '0.75rem',
+        padding: '1.75rem 1.5rem',
+        marginBottom: '1.5rem',
+        boxShadow: 'var(--shadow-md)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
+      }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+            {greeting}, {firstName} 👋
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.75)', marginTop: '0.25rem', fontSize: '0.9rem' }}>
+            {dayName}, {dateFull}
+          </p>
         </div>
-
-        {!attendance && (
-          <div className="flex items-center gap-3">
-            <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-1 text-sm font-medium">Not clocked in</span>
-            <span className="text-sm text-gray-500">You haven&apos;t clocked in today yet.</span>
-          </div>
-        )}
-
-        {clockedIn && (
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <span className="bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm font-medium">Clocked in</span>
-              <span className="text-sm text-gray-700">Since {formatTime(attendance.clock_in)}</span>
-            </div>
-            {attendance.is_half_day && (
-              <p className="text-sm text-amber-700 font-medium">Half day recorded (arrived after 13:30)</p>
-            )}
-          </div>
-        )}
-
-        {clockedOut && (
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <span className={attendance.is_half_day ? 'bg-amber-100 text-amber-800 rounded-full px-3 py-1 text-sm font-medium' : 'bg-blue-100 text-blue-800 rounded-full px-3 py-1 text-sm font-medium'}>
-                {attendance.is_half_day ? 'Half day' : 'Full day'}
-              </span>
-              <span className="text-sm text-gray-700">
-                {formatTime(attendance.clock_in)} – {formatTime(attendance.clock_out)}
-              </span>
-            </div>
-          </div>
-        )}
+        <span style={{
+          background: attBadgeBg, color: attBadgeColor,
+          borderRadius: '999px', padding: '0.375rem 1rem',
+          fontSize: '0.8rem', fontWeight: 700,
+          whiteSpace: 'nowrap', alignSelf: 'flex-start',
+        }}>
+          {attStatusLabel}
+          {todayLog && !todayLog.clock_out && ` · ${formatTime(todayLog.clock_in)}`}
+        </span>
       </div>
 
-      {/* Leave balance */}
-      {balance && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-800 mb-3">Your Leave Balance</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-2xl font-bold text-blue-700">{balance.scheduled_balance}</div>
-              <div className="text-xs text-gray-500 mt-0.5">
-                {balanceLabel(balance.scheduled_balance, balance.scheduled_total, 'scheduled')}
-              </div>
+      {/* Worklets grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: '0.875rem',
+        marginBottom: '1.5rem',
+      }}>
+        {worklets.map(w => (
+          <Link key={w.href} href={w.href} style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '0.75rem',
+            padding: '1.125rem 1rem',
+            minHeight: '96px',
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between',
+            textDecoration: 'none',
+            boxShadow: 'var(--shadow)',
+            position: 'relative',
+          }}>
+            <span style={{ fontSize: '28px', lineHeight: 1 }}>{w.icon}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+              <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.8rem', lineHeight: 1.3 }}>{w.label}</span>
+              {w.badge && w.badge > 0 && (
+                <span style={{
+                  background: '#f59e0b', color: '#fff', fontSize: '10px', fontWeight: 700,
+                  borderRadius: '999px', padding: '1px 6px', minWidth: '18px', textAlign: 'center',
+                }}>{w.badge}</span>
+              )}
             </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-700">{balance.unscheduled_balance}</div>
-              <div className="text-xs text-gray-500 mt-0.5">
-                {balanceLabel(balance.unscheduled_balance, balance.unscheduled_total, 'unscheduled')}
-              </div>
-            </div>
-          </div>
-          {balance.scheduled_balance === 0 && (
-            <p className="text-sm text-red-700 font-medium mt-3">
-              You&apos;ve used all your leave. Any more time off will be deducted from your pay at 1.5× the daily rate.
+          </Link>
+        ))}
+      </div>
+
+      {/* Quick stats row */}
+      <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+        }}>
+          <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Today</p>
+          <p style={{ color: attColor, fontWeight: 700, fontSize: '1rem', margin: 0 }}>{attStatus}</p>
+          {todayLog && (
+            <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>
+              {formatTime(todayLog.clock_in)}{todayLog.clock_out ? ` → ${formatTime(todayLog.clock_out)}` : ' · Active'}
             </p>
           )}
         </div>
-      )}
 
-      {/* Pending leave requests (admin) */}
-      {(employee.role === 'admin' || employee.role === 'super_admin') && pendingCount > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-semibold text-amber-900">Leave Requests Awaiting Your Decision</h2>
-              <p className="text-amber-700 text-sm mt-1">
-                {pendingCount} scheduled leave request{pendingCount !== 1 ? 's' : ''} need{pendingCount === 1 ? 's' : ''} your approval.
-              </p>
-            </div>
-            <Link
-              href="/team/leave"
-              className="bg-amber-700 text-white rounded-lg px-4 py-2.5 font-semibold text-sm hover:bg-amber-800 min-h-[44px] flex items-center"
-            >
-              Review
-            </Link>
+        {leaveBalance && (
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+          }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Scheduled Leave</p>
+            <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{leaveBalance.scheduled_balance}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>days remaining</p>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Quick actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <h2 className="font-semibold text-gray-800 mb-3">Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/attendance"
-            className="bg-blue-700 text-white rounded-lg px-5 py-3 font-semibold hover:bg-blue-800 min-h-[44px] flex items-center text-sm"
-          >
-            {clockedIn ? 'Clock Out' : 'Clock In'}
-          </Link>
-          <Link
-            href="/leave/request"
-            className="bg-gray-100 text-gray-700 rounded-lg px-5 py-3 font-semibold hover:bg-gray-200 min-h-[44px] flex items-center text-sm"
-          >
-            Request Leave
-          </Link>
-          <Link
-            href="/attendance/history"
-            className="bg-gray-100 text-gray-700 rounded-lg px-5 py-3 font-semibold hover:bg-gray-200 min-h-[44px] flex items-center text-sm"
-          >
-            View History
-          </Link>
-        </div>
+        {leaveBalance && (
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+          }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Sick / Emergency</p>
+            <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{leaveBalance.unscheduled_balance}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>days remaining</p>
+          </div>
+        )}
+
+        {isAdmin && (
+          <div style={{
+            background: pendingLeaveCount > 0 ? 'var(--warning-l)' : 'var(--surface)',
+            border: `1px solid ${pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--border)'}`,
+            borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+          }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Pending Leaves</p>
+            <p style={{ color: pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--text)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{pendingLeaveCount}</p>
+            {pendingLeaveCount > 0 ? (
+              <Link href="/team/leave" style={{ color: 'var(--warning)', fontSize: '0.78rem', fontWeight: 600, marginTop: '0.25rem', display: 'block' }}>Review now →</Link>
+            ) : (
+              <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>all clear</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

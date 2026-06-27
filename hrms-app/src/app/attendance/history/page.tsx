@@ -1,154 +1,95 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatTime } from '@/lib/attendance'
-import { format, startOfMonth, endOfMonth, subMonths, addMonths } from 'date-fns'
-import Link from 'next/link'
 
-export default async function AttendanceHistoryPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ month?: string }>
-}) {
+export default async function AttendanceHistoryPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase
     .from('users')
-    .select('*')
-    .eq('user_id', user.id)
+    .select('id')
+    .eq('email', user.email)
     .single()
+
   if (!employee) redirect('/login')
 
-  const params = await searchParams
-  const monthParam = params?.month
-  const currentMonth = monthParam ? new Date(monthParam + '-01') : new Date()
-  const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
-  const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
-  const prevMonth = format(subMonths(currentMonth, 1), 'yyyy-MM')
-  const nextMonth = format(addMonths(currentMonth, 1), 'yyyy-MM')
-  const thisMonth = format(new Date(), 'yyyy-MM')
-  const isThisMonth = format(currentMonth, 'yyyy-MM') === thisMonth
-
-  const { data: records } = await supabase
-    .from('v_attendance_with_names')
+  const { data: logs } = await supabase
+    .from('attendance_logs')
     .select('*')
     .eq('employee_id', employee.id)
-    .gte('date', start)
-    .lte('date', end)
     .order('date', { ascending: false })
-
-  function statusBadge(status: string, isHalfDay: boolean) {
-    if (isHalfDay) return <span className="bg-amber-100 text-amber-800 rounded-full px-3 py-1 text-sm font-medium">Half Day</span>
-    if (status === 'present') return <span className="bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm font-medium">Full Day</span>
-    if (status === 'absent') return <span className="bg-red-100 text-red-800 rounded-full px-3 py-1 text-sm font-medium">Absent</span>
-    if (status === 'holiday') return <span className="bg-blue-100 text-blue-800 rounded-full px-3 py-1 text-sm font-medium">Holiday</span>
-    if (status === 'weekend') return <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-1 text-sm font-medium">Weekend</span>
-    return <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-1 text-sm font-medium">{status}</span>
-  }
-
-  function calcHours(clockIn: string | null, clockOut: string | null): string {
-    if (!clockIn || !clockOut) return '—'
-    const parse = (t: string) => {
-      const time = t.includes('T') ? t.split('T')[1] : t
-      const [h, m] = time.slice(0, 5).split(':').map(Number)
-      return h * 60 + m
-    }
-    const diff = parse(clockOut) - parse(clockIn)
-    if (diff < 0) return '—'
-    const h = Math.floor(diff / 60)
-    const m = diff % 60
-    return m === 0 ? `${h}h` : `${h}h ${m}m`
-  }
+    .limit(60)
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">My Attendance History</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Your complete attendance record. Each row shows when you clocked in and out.
-        </p>
-      </div>
+    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Attendance History
+      </h1>
 
-      {/* Month navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between">
-        <Link
-          href={`/attendance/history?month=${prevMonth}`}
-          className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2.5 font-semibold hover:bg-gray-200 text-sm min-h-[44px] flex items-center"
+      {(!logs || logs.length === 0) ? (
+        <div
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '1rem',
+            padding: '2rem',
+            textAlign: 'center',
+            color: 'var(--muted)',
+          }}
         >
-          ← Previous
-        </Link>
-        <span className="font-semibold text-gray-900">{format(currentMonth, 'MMMM yyyy')}</span>
-        <Link
-          href={isThisMonth ? '#' : `/attendance/history?month=${nextMonth}`}
-          className={`rounded-lg px-4 py-2.5 font-semibold text-sm min-h-[44px] flex items-center ${
-            isThisMonth
-              ? 'bg-gray-50 text-gray-300 cursor-default'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Next →
-        </Link>
-      </div>
-
-      {/* Records */}
-      {(!records || records.length === 0) ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-500">
-          No attendance records for {format(currentMonth, 'MMMM yyyy')}.
+          No attendance records found.
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Desktop table */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Date</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Day</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Clock In</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Clock Out</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Hours</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {records.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-900 font-medium">
-                      {format(new Date(r.date), 'd MMM yyyy')}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {format(new Date(r.date), 'EEE')}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700 font-mono">{formatTime(r.clock_in)}</td>
-                    <td className="px-4 py-3 text-gray-700 font-mono">{formatTime(r.clock_out)}</td>
-                    <td className="px-4 py-3 text-gray-700">{calcHours(r.clock_in, r.clock_out)}</td>
-                    <td className="px-4 py-3">{statusBadge(r.status, r.is_half_day)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          {logs.map(log => {
+            const badgeColor = log.is_half_day
+              ? 'var(--warning)'
+              : log.clock_out
+                ? 'var(--success)'
+                : 'var(--primary)'
+            const badgeLabel = log.is_half_day ? 'Half Day' : log.clock_out ? 'Present' : 'In Progress'
 
-          {/* Mobile cards */}
-          <div className="md:hidden divide-y divide-gray-100">
-            {records.map((r) => (
-              <div key={r.id} className="px-4 py-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-gray-900">
-                    {format(new Date(r.date), 'EEE, d MMM')}
-                  </span>
-                  {statusBadge(r.status, r.is_half_day)}
+            return (
+              <div
+                key={log.id}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '1rem',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                }}
+              >
+                <div>
+                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>
+                    {new Date(log.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </p>
+                  <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
+                    {formatTime(log.clock_in)} → {formatTime(log.clock_out)}
+                  </p>
                 </div>
-                <div className="text-sm text-gray-600">
-                  {formatTime(r.clock_in)} – {formatTime(r.clock_out)}
-                  {r.clock_in && r.clock_out && (
-                    <span className="ml-2 text-gray-400">({calcHours(r.clock_in, r.clock_out)})</span>
-                  )}
-                </div>
+                <span
+                  style={{
+                    background: `${badgeColor}20`,
+                    color: badgeColor,
+                    border: `1px solid ${badgeColor}`,
+                    borderRadius: '0.5rem',
+                    padding: '0.25rem 0.75rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {badgeLabel}
+                </span>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
       )}
     </div>

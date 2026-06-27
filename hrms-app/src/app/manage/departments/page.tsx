@@ -1,166 +1,152 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 
-export default async function ManageDepartmentsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; edit?: string }>
-}) {
+export default async function DepartmentsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: currentEmployee } = await supabase
-    .from('users')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
-  if (!currentEmployee || currentEmployee.role !== 'super_admin') redirect('/dashboard')
+  const { data: me } = await supabase.from('users').select('role').eq('email', user.email).single()
+  if (!me || me.role !== 'super_admin') redirect('/dashboard')
 
   const { data: departments } = await supabase
     .from('departments')
-    .select('*, manager:employees!departments_manager_id_fkey(id, full_name)')
+    .select('*, users!departments_manager_id_fkey(name)')
     .order('name')
 
-  const { data: employees } = await supabase
-    .from('users')
-    .select('id, full_name')
-    .eq('is_active', true)
-    .order('full_name')
+  const { data: allUsers } = await supabase.from('users').select('id, name').order('name')
 
-  const params = await searchParams
-  const errorMsg = params?.error
-  const editId = params?.edit
-
-  async function saveDepartment(formData: FormData) {
+  async function createDepartment(formData: FormData) {
     'use server'
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    const name = formData.get('name') as string
+    const managerId = formData.get('manager_id') as string
 
-    const { data: currentEmployee } = await supabase
-      .from('users')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-    if (!currentEmployee || currentEmployee.role !== 'super_admin') return
+    await supabase.from('departments').insert({
+      name,
+      manager_id: managerId || null,
+    })
 
-    const deptId = formData.get('dept_id') as string
-    const name = (formData.get('name') as string).trim()
-    const manager_id = formData.get('manager_id') as string || null
-
-    if (!name) return
-
-    if (deptId) {
-      await supabase.from('departments').update({ name, manager_id }).eq('id', deptId)
-    } else {
-      await supabase.from('departments').insert({ name, manager_id })
-    }
-
-    revalidatePath('/manage/departments')
     redirect('/manage/departments')
   }
 
-  const editingDept = editId ? departments?.find(d => d.id === editId) : null
-
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Departments</h1>
-        <p className="text-gray-500 text-sm mt-1">Manage your company&apos;s departments and their managers.</p>
+    <div style={{ maxWidth: '672px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Departments
+      </h1>
+
+      {/* Existing departments */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
+        {(!departments || departments.length === 0) ? (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              textAlign: 'center',
+              color: 'var(--muted)',
+            }}
+          >
+            No departments yet.
+          </div>
+        ) : departments.map(dept => (
+          <div
+            key={dept.id}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '1rem',
+              padding: '1rem 1.25rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div>
+              <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>{dept.name}</p>
+              {dept.users && (
+                <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
+                  Manager: {(dept.users as { name: string }).name}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {errorMsg && (
-        <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 text-sm font-medium">
-          {decodeURIComponent(errorMsg)}
-        </div>
-      )}
-
-      {/* Add / Edit form */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <h2 className="font-semibold text-gray-800 mb-4">
-          {editingDept ? `Edit: ${editingDept.name}` : 'Add New Department'}
+      {/* Create department form */}
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+        }}
+      >
+        <h2 style={{ color: 'var(--text)', fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
+          New Department
         </h2>
-        <form action={saveDepartment} className="space-y-4">
-          <input type="hidden" name="dept_id" value={editingDept?.id ?? ''} />
-
+        <form action={createDepartment} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Department Name</label>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Department Name
+            </label>
             <input
-              id="name"
               name="name"
               type="text"
               required
-              defaultValue={editingDept?.name ?? ''}
-              placeholder="e.g. Operations, Finance"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
             />
           </div>
-
           <div>
-            <label htmlFor="manager_id" className="block text-sm font-medium text-gray-700 mb-1">Manager</label>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Manager
+            </label>
             <select
-              id="manager_id"
               name="manager_id"
-              defaultValue={editingDept?.manager_id ?? ''}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
             >
-              <option value="">— No manager assigned —</option>
-              {(employees ?? []).map(e => (
-                <option key={e.id} value={e.id}>{e.full_name}</option>
+              <option value="">No Manager</option>
+              {allUsers?.map(u => (
+                <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
           </div>
-
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              className="bg-blue-700 text-white rounded-lg px-5 py-3 font-semibold hover:bg-blue-800 min-h-[44px] text-sm"
-            >
-              {editingDept ? 'Save Changes' : 'Add Department'}
-            </button>
-            {editingDept && (
-              <a
-                href="/manage/departments"
-                className="bg-gray-100 text-gray-700 rounded-lg px-5 py-3 font-semibold hover:bg-gray-200 min-h-[44px] text-sm flex items-center"
-              >
-                Cancel
-              </a>
-            )}
-          </div>
+          <button
+            type="submit"
+            style={{
+              background: 'var(--primary)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '0.75rem',
+              padding: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              minHeight: '44px',
+            }}
+          >
+            Create Department
+          </button>
         </form>
       </div>
-
-      {/* Department list */}
-      {departments && departments.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Department</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Manager</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {departments.map((dept) => (
-                <tr key={dept.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{dept.name}</td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {(dept.manager as { full_name?: string } | null)?.full_name ?? '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <a href={`/manage/departments?edit=${dept.id}`} className="text-blue-700 hover:underline font-medium text-sm">
-                      Edit
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   )
 }

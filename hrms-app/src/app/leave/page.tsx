@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { balanceLabel, carryforwardWarning, unpaidLeaveWarning } from '@/lib/leave'
-import { format } from 'date-fns'
+import { carryforwardWarning, unpaidLeaveWarning, balanceLabel } from '@/lib/leave'
 
 export default async function LeavePage() {
   const supabase = await createClient()
@@ -11,133 +10,106 @@ export default async function LeavePage() {
 
   const { data: employee } = await supabase
     .from('users')
-    .select('*')
-    .eq('user_id', user.id)
+    .select('id')
+    .eq('email', user.email)
     .single()
+
   if (!employee) redirect('/login')
 
-  const year = new Date().getFullYear()
   const { data: balance } = await supabase
     .from('leave_balances')
     .select('*')
     .eq('employee_id', employee.id)
-    .eq('year', year)
     .single()
 
-  const { data: recentRequests } = await supabase
-    .from('leave_requests')
-    .select('*')
-    .eq('employee_id', employee.id)
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  const carryWarning = balance ? carryforwardWarning(balance) : null
-  const scheduledUnpaidWarning = balance ? unpaidLeaveWarning('scheduled', balance) : null
-  const unscheduledUnpaidWarning = balance ? unpaidLeaveWarning('unscheduled', balance) : null
-
-  function statusBadge(status: string) {
-    if (status === 'approved') return <span className="bg-green-100 text-green-800 rounded-full px-3 py-1 text-sm font-medium">Approved</span>
-    if (status === 'pending')  return <span className="bg-amber-100 text-amber-800 rounded-full px-3 py-1 text-sm font-medium">Pending</span>
-    if (status === 'rejected') return <span className="bg-red-100 text-red-800 rounded-full px-3 py-1 text-sm font-medium">Rejected</span>
-    return <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-1 text-sm font-medium">{status}</span>
-  }
+  const carryWarn = balance ? carryforwardWarning(balance.scheduled_balance) : null
+  const unpaidWarn = balance ? unpaidLeaveWarning(balance.scheduled_balance, balance.unscheduled_balance) : null
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">My Leave</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Request time off here. Scheduled Leave needs manager approval; Unscheduled (sick) Leave is recorded immediately.
-        </p>
+    <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      {/* Page header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Leave</p>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
+          My Leave
+        </h1>
       </div>
 
-      {/* Warnings */}
-      {carryWarning && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <p className="text-sm text-amber-800 font-medium">{carryWarning}</p>
-        </div>
-      )}
-      {scheduledUnpaidWarning && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-sm text-red-800 font-medium">{scheduledUnpaidWarning}</p>
-        </div>
-      )}
-      {!scheduledUnpaidWarning && unscheduledUnpaidWarning && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-sm text-red-800 font-medium">{unscheduledUnpaidWarning}</p>
+      {carryWarn && (
+        <div style={{
+          background: 'var(--warning-l)', border: '1px solid var(--warning)',
+          borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
+          color: 'var(--warning)', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 500,
+        }}>
+          ⚠️ {carryWarn}
         </div>
       )}
 
-      {/* Leave balance */}
+      {unpaidWarn && (
+        <div style={{
+          background: 'var(--danger-l)', border: '1px solid var(--danger)',
+          borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
+          color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 500,
+        }}>
+          ⚠️ {unpaidWarn}
+        </div>
+      )}
+
       {balance ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Your Leave Balance for {year}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="text-3xl font-bold text-blue-700">{balance.scheduled_balance}</div>
-              <div className="text-sm text-blue-800 font-medium mt-1">Scheduled days left</div>
-              <div className="text-xs text-blue-600 mt-0.5">out of {balance.scheduled_total} total</div>
-              <div className="text-xs text-gray-500 mt-1">{balance.scheduled_used} used this year</div>
-            </div>
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="text-3xl font-bold text-blue-700">{balance.unscheduled_balance}</div>
-              <div className="text-sm text-blue-800 font-medium mt-1">Unscheduled days left</div>
-              <div className="text-xs text-blue-600 mt-0.5">out of {balance.unscheduled_total} total</div>
-              <div className="text-xs text-gray-500 mt-1">{balance.unscheduled_used} used this year</div>
-            </div>
-          </div>
-          {balance.carried_forward > 0 && (
-            <p className="text-xs text-gray-500 mt-3">
-              Includes {balance.carried_forward} day{balance.carried_forward !== 1 ? 's' : ''} carried forward from last year.
+        <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '1.75rem' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, var(--primary-l), var(--surface))',
+            border: '1px solid var(--border)', borderRadius: '0.75rem',
+            padding: '1.5rem', boxShadow: 'var(--shadow)',
+          }}>
+            <p style={{ color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.75rem' }}>
+              {balanceLabel(balance.scheduled_balance, balance.scheduled_total, 'scheduled')}
             </p>
-          )}
+            <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{balance.scheduled_balance}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.375rem 0 0' }}>of {balance.scheduled_total ?? '—'} days</p>
+          </div>
+
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: '0.75rem', padding: '1.5rem', boxShadow: 'var(--shadow)',
+          }}>
+            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.75rem' }}>
+              {balanceLabel(balance.unscheduled_balance, balance.unscheduled_total, 'unscheduled')}
+            </p>
+            <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{balance.unscheduled_balance}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.375rem 0 0' }}>of {balance.unscheduled_total ?? '—'} days</p>
+          </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <p className="text-gray-500 text-sm">Leave balance not found for {year}. Please contact HR.</p>
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', padding: '2rem', textAlign: 'center',
+          color: 'var(--muted)', marginBottom: '1.75rem', boxShadow: 'var(--shadow)',
+        }}>
+          <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>📋</p>
+          <p style={{ fontWeight: 600, margin: '0 0 0.25rem', color: 'var(--text)' }}>No Leave Balance Found</p>
+          <p style={{ fontSize: '0.875rem', margin: 0 }}>Contact your HR administrator to set up your leave balance.</p>
         </div>
       )}
 
-      {/* Request leave button */}
-      <div className="flex gap-3">
-        <Link
-          href="/leave/request"
-          className="bg-blue-700 text-white rounded-lg px-5 py-3 font-semibold hover:bg-blue-800 min-h-[44px] flex items-center text-sm"
-        >
-          Request Leave
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <Link href="/leave/request" style={{
+          background: 'var(--primary)', color: '#fff',
+          borderRadius: '0.5rem', padding: '0.75rem 1.5rem',
+          fontWeight: 600, fontSize: '0.9rem', minHeight: '44px',
+          display: 'flex', alignItems: 'center', boxShadow: 'var(--shadow)',
+        }}>
+          + Request Leave
         </Link>
-        <Link
-          href="/leave/history"
-          className="bg-gray-100 text-gray-700 rounded-lg px-5 py-3 font-semibold hover:bg-gray-200 min-h-[44px] flex items-center text-sm"
-        >
-          Full History
+        <Link href="/leave/history" style={{
+          background: 'transparent', border: '1px solid var(--border)',
+          color: 'var(--text)', borderRadius: '0.5rem', padding: '0.75rem 1.25rem',
+          fontWeight: 600, fontSize: '0.9rem', minHeight: '44px',
+          display: 'flex', alignItems: 'center',
+        }}>
+          View History
         </Link>
       </div>
-
-      {/* Recent requests */}
-      {recentRequests && recentRequests.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-800 mb-3">Recent Leave Requests</h2>
-          <div className="space-y-3">
-            {recentRequests.map((req) => (
-              <div key={req.id} className="flex items-start justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
-                <div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {req.leave_type === 'scheduled' ? 'Scheduled Leave' : 'Unscheduled Leave'}
-                    {req.is_half_day && ' (half day)'}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {format(new Date(req.start_date), 'd MMM')}
-                    {req.start_date !== req.end_date && ` – ${format(new Date(req.end_date), 'd MMM yyyy')}`}
-                    {req.start_date === req.end_date && ` ${format(new Date(req.start_date), 'yyyy')}`}
-                  </div>
-                </div>
-                <div>{statusBadge(req.status)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -1,175 +1,167 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 
-export default async function EditEmployeePage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+export default async function EditEmployeePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: currentEmployee } = await supabase
-    .from('users')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
-  if (!currentEmployee || currentEmployee.role !== 'super_admin') redirect('/dashboard')
+  const { data: me } = await supabase.from('users').select('role').eq('email', user.email).single()
+  if (!me || me.role !== 'super_admin') redirect('/dashboard')
 
-  const { id } = await params
-  const { data: emp, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const { data: emp } = await supabase.from('users').select('*').eq('id', id).single()
+  if (!emp) redirect('/manage/employees')
 
-  if (error || !emp) {
-    return (
-      <div className="max-w-lg mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-800">
-          Employee not found.
-        </div>
-      </div>
-    )
-  }
-
-  const { data: departments } = await supabase
-    .from('departments')
-    .select('id, name')
-    .order('name')
+  const { data: departments } = await supabase.from('departments').select('*').order('name')
 
   async function updateEmployee(formData: FormData) {
     'use server'
+    const { id } = await params
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
 
-    const { data: currentEmployee } = await supabase
+    await supabase
       .from('users')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-    if (!currentEmployee || currentEmployee.role !== 'super_admin') return
+      .update({
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        phone: formData.get('phone') as string,
+        role: formData.get('role') as string,
+        department_id: (formData.get('department_id') as string) || null,
+        employee_type: formData.get('employee_type') as string,
+      })
+      .eq('id', id)
 
-    const empId = formData.get('emp_id') as string
-    const full_name = formData.get('full_name') as string
-    const employee_type = formData.get('employee_type') as string
-    const department_id = formData.get('department_id') as string || null
-    const role = formData.get('role') as string
-    const is_active = formData.get('is_active') === 'true'
-
-    const { error } = await supabase
-      .from('users')
-      .update({ full_name, employee_type, department_id, role, is_active })
-      .eq('id', empId)
-
-    if (error) return
-
-    revalidatePath('/manage/employees')
     redirect('/manage/employees')
   }
 
   return (
-    <div className="max-w-lg mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Edit Employee</h1>
-        <p className="text-gray-500 text-sm mt-1">Update employee details below.</p>
-      </div>
+    <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Edit Employee
+      </h1>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <form action={updateEmployee} className="space-y-4">
-          <input type="hidden" name="emp_id" value={emp.id} />
-
-          <div>
-            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input
-              id="full_name"
-              name="full_name"
-              type="text"
-              required
-              defaultValue={emp.full_name}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-            <div className="w-full border border-gray-100 bg-gray-50 rounded-lg px-3 py-2.5 text-sm text-gray-500 min-h-[44px] flex items-center">
-              {emp.email} <span className="text-xs ml-2 text-gray-400">(cannot be changed here)</span>
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+        }}
+      >
+        <form action={updateEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {[
+            { name: 'name', label: 'Full Name', type: 'text', value: emp.name, required: true },
+            { name: 'email', label: 'Email', type: 'email', value: emp.email, required: true },
+            { name: 'phone', label: 'Phone', type: 'tel', value: emp.phone ?? '', required: false },
+          ].map(field => (
+            <div key={field.name}>
+              <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+                {field.label}
+              </label>
+              <input
+                name={field.name}
+                type={field.type}
+                defaultValue={field.value}
+                required={field.required}
+                style={{
+                  width: '100%',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  color: 'var(--text)',
+                  outline: 'none',
+                }}
+              />
             </div>
-          </div>
+          ))}
 
           <div>
-            <label htmlFor="employee_type" className="block text-sm font-medium text-gray-700 mb-1">Employee Type</label>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Role
+            </label>
             <select
-              id="employee_type"
-              name="employee_type"
-              defaultValue={emp.employee_type}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
+              name="role"
+              defaultValue={emp.role}
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
             >
-              <option value="white_collar">White Collar (Mon–Fri, 9h/day)</option>
-              <option value="blue_collar">Blue Collar (Mon–Sat, 8h/day)</option>
+              <option value="employee">Employee</option>
+              <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
             </select>
           </div>
 
           <div>
-            <label htmlFor="department_id" className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Department
+            </label>
             <select
-              id="department_id"
               name="department_id"
               defaultValue={emp.department_id ?? ''}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
             >
-              <option value="">— No department —</option>
-              {(departments ?? []).map((d) => (
+              <option value="">No Department</option>
+              {departments?.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Employee Type
+            </label>
             <select
-              id="role"
-              name="role"
-              defaultValue={emp.role}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
+              name="employee_type"
+              defaultValue={emp.employee_type}
+              style={{
+                width: '100%',
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 1rem',
+                color: 'var(--text)',
+                outline: 'none',
+              }}
             >
-              <option value="employee">Employee</option>
-              <option value="admin">Admin (team manager)</option>
-              <option value="super_admin">Super Admin (HR / company-wide)</option>
+              <option value="white_collar">White Collar</option>
+              <option value="blue_collar">Blue Collar</option>
             </select>
           </div>
 
-          <div>
-            <label htmlFor="is_active" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              id="is_active"
-              name="is_active"
-              defaultValue={emp.is_active ? 'true' : 'false'}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
-            >
-              <option value="true">Active</option>
-              <option value="false">Inactive (cannot sign in)</option>
-            </select>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="submit"
-              className="bg-blue-700 text-white rounded-lg px-5 py-3 font-semibold hover:bg-blue-800 min-h-[44px] text-sm flex-1"
-            >
-              Save Changes
-            </button>
-            <a
-              href="/manage/employees"
-              className="bg-gray-100 text-gray-700 rounded-lg px-5 py-3 font-semibold hover:bg-gray-200 min-h-[44px] text-sm flex items-center justify-center"
-            >
-              Cancel
-            </a>
-          </div>
+          <button
+            type="submit"
+            style={{
+              background: 'var(--primary)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '0.75rem',
+              padding: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              minHeight: '44px',
+              marginTop: '0.5rem',
+            }}
+          >
+            Save Changes
+          </button>
         </form>
       </div>
     </div>

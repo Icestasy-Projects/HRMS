@@ -1,136 +1,101 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
+import { SubmitButton } from '@/components/SubmitButton'
 
-export default async function LeavePolicyPage() {
+export default async function PolicyPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: me } = await supabase.from('users').select('role').eq('user_id', user.id).single()
+  const { data: me } = await supabase.from('users').select('role').eq('email', user.email).single()
   if (!me || me.role !== 'super_admin') redirect('/dashboard')
 
-  const { data: policy } = await supabase.from('leave_policy').select('*').single()
+  const { data: policy } = await supabase.from('leave_policy').select('*').limit(1).single()
 
   async function savePolicy(formData: FormData) {
     'use server'
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: me } = await supabase.from('users').select('role').eq('user_id', user.id).single()
-    if (!me || me.role !== 'super_admin') return
 
-    const vals = {
-      scheduled_days:              Number(formData.get('scheduled_days')),
-      unscheduled_days:            Number(formData.get('unscheduled_days')),
-      max_carryforward:            Number(formData.get('max_carryforward')),
-      half_day_scheduled_cost:     Number(formData.get('half_day_scheduled_cost')),
-      half_day_unscheduled_cost:   Number(formData.get('half_day_unscheduled_cost')),
-      unpaid_multiplier:           Number(formData.get('unpaid_multiplier')),
+    const updates = {
+      scheduled_days_per_year: Number(formData.get('scheduled_days_per_year')),
+      unscheduled_days_per_year: Number(formData.get('unscheduled_days_per_year')),
+      max_carryforward: Number(formData.get('max_carryforward')),
+      unpaid_deduction_multiplier: Number(formData.get('unpaid_deduction_multiplier')),
     }
 
-    const { data: existing } = await supabase.from('leave_policy').select('id').single()
+    const { data: existing } = await supabase.from('leave_policy').select('id').limit(1).single()
+
     if (existing) {
-      await supabase.from('leave_policy').update(vals).eq('id', existing.id)
+      await supabase.from('leave_policy').update(updates).eq('id', existing.id)
     } else {
-      await supabase.from('leave_policy').insert(vals)
+      await supabase.from('leave_policy').insert(updates)
     }
 
-    revalidatePath('/manage/policy')
+    redirect('/manage/policy')
   }
-
-  const p = policy ?? {
-    scheduled_days: 18,
-    unscheduled_days: 6,
-    max_carryforward: 12,
-    half_day_scheduled_cost: 0.5,
-    half_day_unscheduled_cost: 0.75,
-    unpaid_multiplier: 1.5,
-  }
-
-  const fields = [
-    {
-      name: 'scheduled_days',
-      label: 'Annual Scheduled Leave Days',
-      description: 'How many planned leave days each employee gets per year.',
-      value: p.scheduled_days,
-      step: '1', min: '1',
-    },
-    {
-      name: 'unscheduled_days',
-      label: 'Annual Unscheduled Leave Days',
-      description: 'How many sick / emergency days each employee gets per year.',
-      value: p.unscheduled_days,
-      step: '1', min: '0',
-    },
-    {
-      name: 'max_carryforward',
-      label: 'Maximum Days Carried Forward',
-      description: 'At year-end, up to this many unused scheduled days roll into next year. Anything over this limit is lost.',
-      value: p.max_carryforward,
-      step: '1', min: '0',
-    },
-    {
-      name: 'half_day_scheduled_cost',
-      label: 'Scheduled Half-Day Deduction',
-      description: 'How many days a half-day of scheduled leave costs (currently 0.5).',
-      value: p.half_day_scheduled_cost,
-      step: '0.25', min: '0',
-    },
-    {
-      name: 'half_day_unscheduled_cost',
-      label: 'Unscheduled Half-Day Deduction',
-      description: 'How many days a half-day of unscheduled leave costs (currently 0.75).',
-      value: p.half_day_unscheduled_cost,
-      step: '0.25', min: '0',
-    },
-    {
-      name: 'unpaid_multiplier',
-      label: 'Unpaid Leave Pay Deduction Multiplier',
-      description: 'When an employee has no leave balance, each day off costs this multiple of their daily pay (currently 1.5×).',
-      value: p.unpaid_multiplier,
-      step: '0.1', min: '1',
-    },
-  ]
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Leave Policy</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          These settings apply to all employees company-wide. Changes take effect immediately.
-        </p>
-      </div>
+    <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
+        Leave Policy
+      </h1>
 
-      <form action={savePolicy} className="space-y-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
-          {fields.map(f => (
-            <div key={f.name}>
-              <label htmlFor={f.name} className="block text-sm font-semibold text-gray-800 mb-0.5">
-                {f.label}
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '1rem',
+          padding: '1.5rem',
+        }}
+      >
+        <form action={savePolicy} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {[
+            { name: 'scheduled_days_per_year', label: 'Scheduled Days / Year', value: policy?.scheduled_days_per_year ?? 15 },
+            { name: 'unscheduled_days_per_year', label: 'Unscheduled Days / Year', value: policy?.unscheduled_days_per_year ?? 10 },
+            { name: 'max_carryforward', label: 'Max Carry Forward Days', value: policy?.max_carryforward ?? 12 },
+            { name: 'unpaid_deduction_multiplier', label: 'Unpaid Deduction Multiplier', value: policy?.unpaid_deduction_multiplier ?? 1.5 },
+          ].map(field => (
+            <div key={field.name}>
+              <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+                {field.label}
               </label>
-              <p className="text-xs text-gray-500 mb-2">{f.description}</p>
               <input
-                id={f.name}
-                name={f.name}
+                name={field.name}
                 type="number"
-                step={f.step}
-                min={f.min}
-                defaultValue={f.value}
+                step="0.1"
+                defaultValue={field.value}
                 required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px] max-w-[160px]"
+                style={{
+                  width: '100%',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  color: 'var(--text)',
+                  outline: 'none',
+                }}
               />
             </div>
           ))}
-        </div>
 
-        <button
-          type="submit"
-          className="bg-blue-700 text-white rounded-lg px-5 py-3 font-semibold hover:bg-blue-800 min-h-[44px] transition-colors"
-        >
-          Save Policy
-        </button>
-      </form>
+          <SubmitButton
+            loadingText="Saving..."
+            style={{
+              background: 'var(--primary)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '0.75rem',
+              padding: '0.875rem',
+              fontWeight: 600,
+              minHeight: '44px',
+              marginTop: '0.5rem',
+              width: '100%',
+            }}
+          >
+            Save Policy
+          </SubmitButton>
+        </form>
+      </div>
     </div>
   )
 }

@@ -1,186 +1,194 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import type { LeaveBalance } from '@/lib/supabase/types'
-import { HALF_DAY_SCHEDULED_COST, HALF_DAY_UNSCHEDULED_COST } from '@/lib/leave'
-import { format } from 'date-fns'
+import { useState } from 'react'
 
-interface Props {
-  balance: LeaveBalance | null
-  submitAction: (formData: FormData) => Promise<void>
+interface LeaveRequestFormProps {
+  scheduledBalance: number
+  unscheduledBalance: number
+  onSubmit: (formData: FormData) => Promise<void>
 }
 
-export default function LeaveRequestForm({ balance, submitAction }: Props) {
-  const today = format(new Date(), 'yyyy-MM-dd')
+export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance, onSubmit }: LeaveRequestFormProps) {
   const [leaveType, setLeaveType] = useState<'scheduled' | 'unscheduled'>('scheduled')
-  const [startDate, setStartDate] = useState(today)
-  const [endDate, setEndDate] = useState(today)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [isHalfDay, setIsHalfDay] = useState(false)
-  const [isPending, startTransition] = useTransition()
 
-  // Calculate days and deduction
-  function calcWorkingDays(start: string, end: string): number {
-    const s = new Date(start)
-    const e = new Date(end)
-    let days = 0
-    const cur = new Date(s)
-    while (cur <= e) {
-      const dow = cur.getDay()
-      if (dow !== 0 && dow !== 6) days++
-      cur.setDate(cur.getDate() + 1)
-    }
-    return days
+  function calcDays() {
+    if (!startDate || !endDate) return 0
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    if (end < start) return 0
+    const diff = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
+    return isHalfDay ? 0.5 : diff
   }
 
-  const workDays = isHalfDay ? 0.5 : calcWorkingDays(startDate, endDate)
-  const deduction = isHalfDay
-    ? (leaveType === 'scheduled' ? HALF_DAY_SCHEDULED_COST : HALF_DAY_UNSCHEDULED_COST)
-    : workDays
-
-  const currentBalance = leaveType === 'scheduled'
-    ? (balance?.scheduled_balance ?? 0)
-    : (balance?.unscheduled_balance ?? 0)
-  const afterBalance = Math.max(0, currentBalance - deduction)
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const fd = new FormData(e.currentTarget)
-    fd.set('is_half_day', isHalfDay ? 'true' : 'false')
-    startTransition(() => submitAction(fd))
-  }
+  const days = calcDays()
+  const balance = leaveType === 'scheduled' ? scheduledBalance : unscheduledBalance
+  const remaining = balance - days
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Leave type */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <label className="block text-sm font-semibold text-gray-700 mb-3">Leave Type</label>
-        <div className="grid grid-cols-1 gap-3">
-          <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${leaveType === 'scheduled' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-            <input
-              type="radio"
-              name="leave_type"
-              value="scheduled"
-              checked={leaveType === 'scheduled'}
-              onChange={() => setLeaveType('scheduled')}
-              className="mt-0.5"
-            />
-            <div>
-              <div className="font-semibold text-gray-900">Scheduled Leave</div>
-              <div className="text-sm text-gray-500 mt-0.5">Planned ahead — holiday, personal time</div>
-              <div className="text-xs text-blue-700 mt-1 font-medium">Your manager will review this before it&apos;s approved.</div>
-            </div>
-          </label>
+    <form action={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <input type="hidden" name="leave_type" value={leaveType} />
 
-          <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${leaveType === 'unscheduled' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-            <input
-              type="radio"
-              name="leave_type"
-              value="unscheduled"
-              checked={leaveType === 'unscheduled'}
-              onChange={() => setLeaveType('unscheduled')}
-              className="mt-0.5"
-            />
-            <div>
-              <div className="font-semibold text-gray-900">Unscheduled Leave</div>
-              <div className="text-sm text-gray-500 mt-0.5">Sick day, emergency, unexpected absence</div>
-              <div className="text-xs text-green-700 mt-1 font-medium">This is recorded immediately. Your manager will be notified.</div>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      {/* Dates */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-            <input
-              id="start_date"
-              name="start_date"
-              type="date"
-              required
-              value={startDate}
-              min={today}
-              onChange={e => {
-                setStartDate(e.target.value)
-                if (e.target.value > endDate) setEndDate(e.target.value)
-              }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
-            />
-          </div>
-          <div>
-            <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-            <input
-              id="end_date"
-              name="end_date"
-              type="date"
-              required
-              value={endDate}
-              min={startDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 min-h-[44px]"
-            />
-          </div>
-        </div>
-
-        {/* Half day */}
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isHalfDay}
-            onChange={e => setIsHalfDay(e.target.checked)}
-            className="w-5 h-5 rounded border-gray-300 text-blue-600"
-          />
-          <div>
-            <span className="text-sm font-medium text-gray-700">Half day only</span>
-            <p className="text-xs text-gray-500">
-              {leaveType === 'scheduled' ? `Deducts ${HALF_DAY_SCHEDULED_COST} day` : `Deducts ${HALF_DAY_UNSCHEDULED_COST} days`}
-            </p>
-          </div>
+      {/* Type toggle */}
+      <div>
+        <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+          Leave Type
         </label>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {(['scheduled', 'unscheduled'] as const).map(t => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setLeaveType(t)}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                borderRadius: '0.75rem',
+                border: `1px solid ${leaveType === t ? 'var(--primary)' : 'var(--border)'}`,
+                background: leaveType === t ? 'rgba(139,47,201,0.2)' : 'var(--surface2)',
+                color: leaveType === t ? 'var(--primary-h)' : 'var(--muted)',
+                cursor: 'pointer',
+                fontWeight: leaveType === t ? 600 : 400,
+                textTransform: 'capitalize',
+                minHeight: '44px',
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginTop: '0.375rem' }}>
+          Balance: {balance} day{balance !== 1 ? 's' : ''}
+          {leaveType === 'unscheduled' && ' · Auto-approved'}
+        </p>
       </div>
+
+      {/* Date range */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+        <div>
+          <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+            Start Date
+          </label>
+          <input
+            name="start_date"
+            type="date"
+            required
+            value={startDate}
+            onChange={e => { setStartDate(e.target.value); if (!endDate) setEndDate(e.target.value) }}
+            style={{
+              width: '100%',
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1rem',
+              color: 'var(--text)',
+              outline: 'none',
+            }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+            End Date
+          </label>
+          <input
+            name="end_date"
+            type="date"
+            required
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+            min={startDate}
+            style={{
+              width: '100%',
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1rem',
+              color: 'var(--text)',
+              outline: 'none',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Half day */}
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          cursor: 'pointer',
+          color: 'var(--text)',
+          fontSize: '0.9rem',
+        }}
+      >
+        <input
+          name="is_half_day"
+          type="checkbox"
+          checked={isHalfDay}
+          onChange={e => setIsHalfDay(e.target.checked)}
+          style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+        />
+        Half day only
+      </label>
 
       {/* Reason */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-1">
-          Reason <span className="text-gray-400">(optional)</span>
+      <div>
+        <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+          Reason
         </label>
         <textarea
-          id="reason"
           name="reason"
           rows={3}
-          placeholder="Add any details that might be helpful for your manager…"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
+          style={{
+            width: '100%',
+            background: 'var(--surface2)',
+            border: '1px solid var(--border)',
+            borderRadius: '0.75rem',
+            padding: '0.75rem 1rem',
+            color: 'var(--text)',
+            outline: 'none',
+            resize: 'vertical',
+          }}
         />
       </div>
 
-      {/* Deduction preview */}
-      {workDays > 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <div className="text-sm font-semibold text-gray-700 mb-2">Deduction preview</div>
-          <div className="text-sm text-gray-700">
-            {leaveType === 'scheduled' ? 'Scheduled Leave' : 'Unscheduled Leave'}
-            {isHalfDay ? ', half day' : workDays > 1 ? `, ${workDays} working days` : ', 1 working day'}
-            {' → '}<strong>{deduction} day{deduction !== 1 ? 's' : ''} used</strong>
-          </div>
-          <div className="text-sm text-gray-600 mt-1">
-            Balance: <strong>{currentBalance}</strong> → <strong className={afterBalance < 2 ? 'text-red-700' : ''}>{afterBalance}</strong>
-          </div>
-          {afterBalance <= 0 && deduction > currentBalance && (
-            <div className="text-sm text-red-700 font-medium mt-2">
-              You&apos;ve used all your leave. Any additional time off will be deducted from your pay at 1.5× the daily rate.
-            </div>
-          )}
+      {/* Preview */}
+      {days > 0 && (
+        <div
+          style={{
+            background: 'var(--surface2)',
+            border: '1px solid var(--border)',
+            borderRadius: '0.75rem',
+            padding: '0.875rem 1rem',
+            fontSize: '0.875rem',
+          }}
+        >
+          <p style={{ color: 'var(--text)', margin: '0 0 0.25rem' }}>
+            Deducting <strong>{days}</strong> day{days !== 1 ? 's' : ''} from {leaveType} leave
+          </p>
+          <p style={{ color: remaining >= 0 ? 'var(--success)' : 'var(--danger)', margin: 0 }}>
+            Remaining after: <strong>{remaining}</strong> day{remaining !== 1 ? 's' : ''}
+          </p>
         </div>
       )}
 
-      {/* Submit */}
       <button
         type="submit"
-        disabled={isPending || workDays === 0}
-        className="w-full bg-blue-700 text-white rounded-lg px-5 py-3 font-semibold hover:bg-blue-800 disabled:opacity-50 min-h-[44px] transition-colors"
+        style={{
+          background: 'var(--primary)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '0.75rem',
+          padding: '0.875rem',
+          fontWeight: 600,
+          fontSize: '1rem',
+          cursor: 'pointer',
+          minHeight: '44px',
+        }}
       >
-        {isPending ? 'Submitting…' : leaveType === 'scheduled' ? 'Submit Leave Request' : 'Record Unscheduled Leave'}
+        {leaveType === 'unscheduled' ? 'Submit (Auto-approved)' : 'Submit Request'}
       </button>
     </form>
   )

@@ -1,204 +1,342 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import type { ReactNode } from 'react'
-import type { Employee } from '@/lib/supabase/types'
-import { Bell, Home, Clock, Calendar, Users, Settings, LogOut, Menu, X, ClockCheck } from 'lucide-react'
-import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Link, { useLinkStatus } from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 
-interface NavItem {
-  href: string
-  label: string
-  icon: ReactNode
+type NavItem = { label: string; href: string; badge?: number }
+
+function getNavItems(role: string): NavItem[] {
+  if (role === 'super_admin') return [
+    { label: 'Home', href: '/dashboard' },
+    { label: 'Attendance', href: '/attendance' },
+    { label: 'Leave', href: '/leave' },
+    { label: 'Team', href: '/team' },
+    { label: 'Manage', href: '/manage' },
+  ]
+  if (role === 'admin') return [
+    { label: 'Home', href: '/dashboard' },
+    { label: 'Attendance', href: '/attendance' },
+    { label: 'Leave', href: '/leave' },
+    { label: 'Team', href: '/team' },
+  ]
+  return [
+    { label: 'Home', href: '/dashboard' },
+    { label: 'Attendance', href: '/attendance' },
+    { label: 'Leave', href: '/leave' },
+  ]
 }
 
-function navItems(role: string): NavItem[] {
-  const base: NavItem[] = [
-    { href: '/dashboard',          label: 'Dashboard',    icon: <Home size={20} /> },
-    { href: '/attendance',         label: 'Clock In/Out', icon: <Clock size={20} /> },
-    { href: '/attendance/history', label: 'My Attendance',icon: <ClockCheck size={20} /> },
-    { href: '/leave',              label: 'My Leave',     icon: <Calendar size={20} /> },
-    { href: '/notifications',      label: 'Notifications',icon: <Bell size={20} /> },
-  ]
-  const adminExtra: NavItem[] = [
-    { href: '/team',       label: 'Team',           icon: <Users size={20} /> },
-    { href: '/team/leave', label: 'Leave Requests', icon: <Calendar size={20} /> },
-  ]
-  const superAdminExtra: NavItem[] = [
-    { href: '/manage', label: 'Manage', icon: <Settings size={20} /> },
-  ]
-
-  if (role === 'super_admin') return [...base, ...adminExtra, ...superAdminExtra]
-  if (role === 'admin')       return [...base, ...adminExtra]
-  return base
-}
-
-export default function AppShell({
-  employee,
-  notificationCount,
-  children,
-}: {
-  employee: Employee
-  notificationCount: number
-  children: ReactNode
-}) {
+function TopNavLink({ item }: { item: NavItem }) {
   const pathname = usePathname()
-  const router = useRouter()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const items = navItems(employee.role)
+  const { pending } = useLinkStatus()
+  const active = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)
+  return (
+    <Link
+      href={item.href}
+      prefetch={false}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '0.375rem',
+        padding: '0 0.875rem', height: '56px',
+        color: active ? '#fff' : 'rgba(255,255,255,0.72)',
+        fontWeight: active ? 600 : 400, fontSize: '14px',
+        textDecoration: 'none',
+        borderBottom: active ? '3px solid #fff' : '3px solid transparent',
+        transition: 'color 0.15s, border-color 0.15s',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {item.label}
+      {pending && (
+        <span style={{
+          width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.4)',
+          borderTopColor: '#fff', borderRadius: '50%',
+          display: 'inline-block', animation: 'spin 0.6s linear infinite',
+        }} />
+      )}
+    </Link>
+  )
+}
+
+function DrawerNavLink({ item, onClose }: { item: NavItem; onClose: () => void }) {
+  const pathname = usePathname()
+  const { pending } = useLinkStatus()
+  const active = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      prefetch={false}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0.875rem 1rem', borderRadius: '0.625rem', marginBottom: '2px',
+        background: active ? 'var(--primary-l)' : 'transparent',
+        color: active ? 'var(--primary)' : 'var(--text)',
+        fontWeight: active ? 600 : 400, fontSize: '15px',
+        textDecoration: 'none',
+      }}
+    >
+      <span>{item.label}</span>
+      {pending && (
+        <span style={{
+          width: '14px', height: '14px', border: '2px solid var(--border)',
+          borderTopColor: 'var(--primary)', borderRadius: '50%',
+          display: 'inline-block', animation: 'spin 0.6s linear infinite',
+        }} />
+      )}
+      {!pending && item.badge && item.badge > 0 && (
+        <span style={{
+          background: '#f59e0b', color: '#fff', fontSize: '11px',
+          fontWeight: 700, borderRadius: '999px', padding: '1px 7px',
+          minWidth: '20px', textAlign: 'center',
+        }}>{item.badge}</span>
+      )}
+    </Link>
+  )
+}
+
+function BottomNavLink({ item, icon, notifCount }: { item: NavItem; icon: string; notifCount: number }) {
+  const pathname = usePathname()
+  const { pending } = useLinkStatus()
+  const active = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)
+  return (
+    <Link
+      href={item.href}
+      prefetch={false}
+      style={{
+        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '0.5rem 0.25rem', gap: '0.25rem', textDecoration: 'none', position: 'relative',
+        color: active ? 'var(--primary)' : 'var(--muted)',
+        minHeight: '56px',
+      }}
+    >
+      <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{pending ? '·' : icon}</span>
+      <span style={{ fontSize: '0.62rem', fontWeight: active ? 700 : 400, letterSpacing: '0.01em' }}>{item.label}</span>
+      {notifCount > 0 && (
+        <span style={{
+          position: 'absolute', top: '6px', right: 'calc(50% - 16px)',
+          background: '#f59e0b', color: '#fff', fontSize: '9px', fontWeight: 700,
+          borderRadius: '999px', padding: '0 4px', minWidth: '14px', height: '14px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{notifCount}</span>
+      )}
+    </Link>
+  )
+}
+
+interface AppShellProps {
+  children: React.ReactNode
+  role: string
+  userName: string
+  notifCount: number
+}
+
+export default function AppShell({ children, role, userName, notifCount }: AppShellProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
+  const navItems = getNavItems(role)
+  const initials = userName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
   async function signOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/login')
-  }
-
-  function NavLink({ item }: { item: NavItem }) {
-    const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
-    return (
-      <Link
-        href={item.href}
-        onClick={() => setMobileMenuOpen(false)}
-        className={`flex items-center gap-3 px-3 py-3 rounded-lg font-medium text-sm min-h-[44px] transition-colors ${
-          active
-            ? 'bg-blue-700 text-white'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-        }`}
-      >
-        {item.icon}
-        <span>{item.label}</span>
-        {item.href === '/notifications' && notificationCount > 0 && (
-          <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
-            {notificationCount > 99 ? '99+' : notificationCount}
-          </span>
-        )}
-      </Link>
-    )
+    window.location.href = '/login'
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top navbar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="flex items-center justify-between px-4 h-14">
-          {/* Mobile menu toggle */}
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
+
+      {/* Fixed top header */}
+      <header style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+        height: '56px',
+        background: 'linear-gradient(135deg, #5b1fa8 0%, #7c2fc9 55%, #9b4de0 100%)',
+        display: 'flex', alignItems: 'stretch',
+        boxShadow: '0 2px 8px rgba(91,31,168,0.35)',
+      }}>
+        {/* Left: hamburger + logo */}
+        <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '0.875rem', gap: '0.375rem', flexShrink: 0 }}>
           <button
-            className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
+            onClick={() => setDrawerOpen(o => !o)}
+            className="ham-btn"
+            style={{
+              width: '40px', height: '40px', background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px',
+              borderRadius: '0.5rem',
+            }}
+            aria-label="Open menu"
           >
-            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            {[0,1,2].map(i => <span key={i} style={{ display: 'block', width: '18px', height: '2px', background: '#fff', borderRadius: '2px' }} />)}
           </button>
+          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '8px',
+              background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: 800, fontSize: '12px', flexShrink: 0,
+            }}>IC</div>
+            <span style={{ fontWeight: 700, fontSize: '15px', color: '#fff', letterSpacing: '-0.01em' }}>Icestasy</span>
+          </Link>
+        </div>
 
-          {/* Company name */}
-          <span className="text-blue-700 font-bold text-lg tracking-tight md:block hidden">
-            Icestasy HRMS
-          </span>
-          <span className="text-blue-700 font-bold text-base tracking-tight md:hidden">
-            Icestasy
-          </span>
+        {/* Center: nav tabs — desktop only */}
+        <nav className="top-nav" style={{ flex: 1, display: 'none', alignItems: 'stretch', paddingLeft: '1.25rem' }}>
+          {navItems.map(item => (
+            <TopNavLink key={item.href} item={item} />
+          ))}
+        </nav>
 
-          <div className="flex items-center gap-2">
-            {/* Notification bell */}
-            <Link
-              href="/notifications"
-              className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
-            >
-              <Bell size={20} />
-              {notificationCount > 0 && (
-                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full px-1 py-0.5 min-w-[16px] text-center leading-none">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </span>
-              )}
-            </Link>
+        {/* Right: bell + avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', paddingRight: '0.875rem', gap: '0.25rem', marginLeft: 'auto' }}>
+          <Link href="/notifications" prefetch={false} style={{
+            position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '40px', height: '40px', borderRadius: '0.5rem',
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            {notifCount > 0 && (
+              <span style={{
+                position: 'absolute', top: '5px', right: '5px',
+                background: '#f59e0b', color: '#fff',
+                fontSize: '10px', fontWeight: 700, borderRadius: '999px',
+                padding: '0 4px', minWidth: '16px', height: '16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{notifCount}</span>
+            )}
+          </Link>
 
-            {/* Employee name */}
-            <span className="hidden sm:block text-sm text-gray-700 font-medium max-w-[120px] truncate">
-              {employee.full_name}
-            </span>
-
-            {/* Sign out */}
+          <div style={{ position: 'relative' }}>
             <button
-              onClick={signOut}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 text-sm font-medium min-h-[44px] transition-colors"
-              aria-label="Sign out"
+              onClick={() => setAvatarMenuOpen(o => !o)}
+              style={{
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.4)',
+                color: '#fff', fontWeight: 700, fontSize: '13px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              <LogOut size={18} />
-              <span className="hidden sm:inline">Sign out</span>
+              {initials}
             </button>
+            {avatarMenuOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setAvatarMenuOpen(false)} />
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50,
+                  background: 'var(--surface)', borderRadius: '0.75rem',
+                  boxShadow: 'var(--shadow-md)', border: '1px solid var(--border)',
+                  minWidth: '200px', overflow: 'hidden',
+                }}>
+                  <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)' }}>
+                    <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)', margin: 0 }}>{userName}</p>
+                    <p style={{ fontSize: '12px', color: 'var(--muted)', textTransform: 'capitalize', margin: '2px 0 0' }}>{role.replace('_', ' ')}</p>
+                  </div>
+                  <div style={{ padding: '0.375rem' }}>
+                    <button onClick={signOut} style={{
+                      width: '100%', padding: '0.625rem 0.875rem', borderRadius: '0.5rem',
+                      border: 'none', background: 'transparent', color: 'var(--danger)',
+                      fontSize: '14px', fontWeight: 500, cursor: 'pointer', textAlign: 'left',
+                    }}>
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="flex">
-        {/* Desktop sidebar */}
-        <nav className="hidden md:flex flex-col w-56 shrink-0 bg-white border-r border-gray-200 min-h-[calc(100vh-3.5rem)] sticky top-14 p-3 gap-1">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 mt-1">
-            Navigation
-          </div>
-          {items.map(item => <NavLink key={item.href} item={item} />)}
-          <div className="mt-auto border-t border-gray-100 pt-3">
-            <div className="px-3 py-2 text-xs text-gray-500">
-              <div className="font-medium text-gray-700 truncate">{employee.full_name}</div>
-              <div className="mt-0.5 capitalize">{employee.role.replace('_', ' ')}</div>
+      {/* Mobile drawer */}
+      {drawerOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60 }} onClick={() => setDrawerOpen(false)}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,13,46,0.45)', backdropFilter: 'blur(4px)' }} />
+          <div style={{
+            position: 'absolute', left: 0, top: 0, bottom: 0, width: '280px',
+            background: 'var(--surface)', display: 'flex', flexDirection: 'column',
+            boxShadow: 'var(--shadow-md)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{
+              padding: '1rem',
+              background: 'linear-gradient(135deg, #5b1fa8, #7c2fc9)',
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+            }}>
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: '14px', fontWeight: 700,
+              }}>{initials}</div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#fff', fontSize: '14px' }}>{userName}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', textTransform: 'capitalize' }}>{role.replace('_', ' ')}</div>
+              </div>
+            </div>
+            <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto' }}>
+              {navItems.map(item => (
+                <DrawerNavLink key={item.href} item={item} onClose={() => setDrawerOpen(false)} />
+              ))}
+              <DrawerNavLink
+                item={{ label: 'Notifications', href: '/notifications', badge: notifCount }}
+                onClose={() => setDrawerOpen(false)}
+              />
+            </nav>
+            <div style={{ padding: '0.875rem', borderTop: '1px solid var(--border)' }}>
+              <button onClick={signOut} style={{
+                width: '100%', padding: '0.75rem', borderRadius: '0.75rem',
+                border: '1px solid var(--border)', background: 'transparent',
+                color: 'var(--danger)', fontSize: '14px', cursor: 'pointer', fontWeight: 500,
+              }}>Sign out</button>
             </div>
           </div>
-        </nav>
+        </div>
+      )}
 
-        {/* Mobile overlay menu */}
-        {mobileMenuOpen && (
-          <>
-            <div
-              className="md:hidden fixed inset-0 bg-black/40 z-30"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <nav className="md:hidden fixed top-14 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-40 p-3 flex flex-col gap-1 overflow-y-auto">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2">
-                Navigation
-              </div>
-              {items.map(item => <NavLink key={item.href} item={item} />)}
-              <div className="mt-auto border-t border-gray-100 pt-3">
-                <div className="px-3 py-2 text-xs text-gray-500">
-                  <div className="font-medium text-gray-700 truncate">{employee.full_name}</div>
-                  <div className="mt-0.5 capitalize">{employee.role.replace('_', ' ')}</div>
-                </div>
-              </div>
-            </nav>
-          </>
-        )}
-
-        {/* Main content */}
-        <main className="flex-1 min-w-0 p-4 md:p-6 pb-24 md:pb-6">
+      {/* Main content */}
+      <main style={{ paddingTop: '56px', minHeight: '100dvh' }}>
+        <div style={{ padding: '1.25rem 1rem 5rem' }} className="main-inner">
           {children}
-        </main>
-      </div>
+        </div>
+      </main>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30 flex">
-        {items.slice(0, 5).map(item => {
-          const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+      <nav className="bottom-nav" style={{
+        display: 'none',
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
+        boxShadow: '0 -2px 12px rgba(124,47,201,0.08)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
+        {navItems.slice(0, 4).map(item => {
+          const icons: Record<string, string> = {
+            '/dashboard': '⊞',
+            '/attendance': '◷',
+            '/leave': '🌿',
+            '/team': '👥',
+            '/manage': '⚙',
+            '/notifications': '🔔',
+          }
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[56px] text-xs font-medium transition-colors relative ${
-                active ? 'text-blue-700' : 'text-gray-500'
-              }`}
-            >
-              {item.icon}
-              <span className="text-[10px] leading-none">{item.label.split(' ')[0]}</span>
-              {item.href === '/notifications' && notificationCount > 0 && (
-                <span className="absolute top-1 right-2 bg-red-500 text-white text-[9px] rounded-full px-1 py-0.5 leading-none">
-                  {notificationCount}
-                </span>
-              )}
-            </Link>
+            <BottomNavLink key={item.href} item={item} icon={icons[item.href] ?? '●'} notifCount={0} />
           )
         })}
+        <BottomNavLink item={{ label: 'Alerts', href: '/notifications' }} icon="🔔" notifCount={notifCount} />
       </nav>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (min-width: 768px) {
+          .ham-btn { display: none !important; }
+          .top-nav { display: flex !important; }
+          .main-inner { padding: 1.75rem 2rem 1.75rem !important; }
+        }
+        @media (max-width: 767px) {
+          .bottom-nav { display: flex !important; }
+        }
+      `}</style>
     </div>
   )
 }
