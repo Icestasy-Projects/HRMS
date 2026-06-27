@@ -96,6 +96,35 @@ function DrawerNavLink({ item, onClose }: { item: NavItem; onClose: () => void }
   )
 }
 
+function BottomNavLink({ item, icon, notifCount }: { item: NavItem; icon: string; notifCount: number }) {
+  const pathname = usePathname()
+  const { pending } = useLinkStatus()
+  const active = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)
+  return (
+    <Link
+      href={item.href}
+      prefetch={false}
+      style={{
+        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '0.5rem 0.25rem', gap: '0.25rem', textDecoration: 'none', position: 'relative',
+        color: active ? 'var(--primary)' : 'var(--muted)',
+        minHeight: '56px',
+      }}
+    >
+      <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{pending ? '·' : icon}</span>
+      <span style={{ fontSize: '0.62rem', fontWeight: active ? 700 : 400, letterSpacing: '0.01em' }}>{item.label}</span>
+      {notifCount > 0 && (
+        <span style={{
+          position: 'absolute', top: '6px', right: 'calc(50% - 16px)',
+          background: '#f59e0b', color: '#fff', fontSize: '9px', fontWeight: 700,
+          borderRadius: '999px', padding: '0 4px', minWidth: '14px', height: '14px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{notifCount}</span>
+      )}
+    </Link>
+  )
+}
+
 interface AppShellProps {
   children: React.ReactNode
   role: string
@@ -267,17 +296,45 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
 
       {/* Main content */}
       <main style={{ paddingTop: '56px', minHeight: '100dvh' }}>
-        <div style={{ padding: '1.25rem 1rem' }} className="main-inner">
+        <div style={{ padding: '1.25rem 1rem 5rem' }} className="main-inner">
           {children}
         </div>
       </main>
+
+      {/* Mobile bottom nav */}
+      <nav className="bottom-nav" style={{
+        display: 'none',
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
+        boxShadow: '0 -2px 12px rgba(124,47,201,0.08)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
+        {navItems.slice(0, 4).map(item => {
+          const icons: Record<string, string> = {
+            '/dashboard': '⊞',
+            '/attendance': '◷',
+            '/leave': '🌿',
+            '/team': '👥',
+            '/manage': '⚙',
+            '/notifications': '🔔',
+          }
+          return (
+            <BottomNavLink key={item.href} item={item} icon={icons[item.href] ?? '●'} notifCount={0} />
+          )
+        })}
+        <BottomNavLink item={{ label: 'Alerts', href: '/notifications' }} icon="🔔" notifCount={notifCount} />
+      </nav>
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @media (min-width: 768px) {
           .ham-btn { display: none !important; }
           .top-nav { display: flex !important; }
-          .main-inner { padding: 1.75rem 2rem !important; }
+          .main-inner { padding: 1.75rem 2rem 1.75rem !important; }
+        }
+        @media (max-width: 767px) {
+          .bottom-nav { display: flex !important; }
         }
       `}</style>
     </div>
