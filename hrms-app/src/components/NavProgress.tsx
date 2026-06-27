@@ -26,8 +26,7 @@ export default function NavProgress() {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, zIndex: 9999,
-      height: '3px',
-      width: `${width}%`,
+      height: '3px', width: `${width}%`,
       background: 'linear-gradient(90deg, #c084fc, #fff)',
       transition: pending ? 'width 0.4s ease' : 'width 0.2s ease',
       borderRadius: '0 2px 2px 0',

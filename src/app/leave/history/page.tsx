@@ -1,6 +1,6 @@
-import Breadcrumb from '@/components/Breadcrumb'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 
 export default async function LeaveHistoryPage() {
   const supabase = await createClient()
@@ -28,14 +28,28 @@ export default async function LeaveHistoryPage() {
     return 'var(--muted)'
   }
 
+  function typeLabel(type: string) {
+    return type === 'unscheduled' ? 'Sick / Emergency' : 'Scheduled'
+  }
+
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-      {/* Page header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Leave / History</p>
-        <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
-          Leave History
-        </h1>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div>
+          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 0.25rem' }}>Home / Leave / History</p>
+          <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
+            Leave History
+          </h1>
+        </div>
+        <Link href="/leave/request" style={{
+          background: 'var(--primary)', color: '#fff',
+          borderRadius: '0.625rem', padding: '0.625rem 1.125rem',
+          fontWeight: 600, fontSize: '0.875rem', minHeight: '40px',
+          display: 'flex', alignItems: 'center', gap: '0.375rem',
+          boxShadow: 'var(--shadow)',
+        }}>
+          + Request Leave
+        </Link>
       </div>
 
       {fetchError && (
@@ -58,8 +72,15 @@ export default async function LeaveHistoryPage() {
           color: 'var(--muted)', boxShadow: 'var(--shadow)',
         }}>
           <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>📋</p>
-          <p style={{ fontWeight: 600, color: 'var(--text)', margin: '0 0 0.25rem' }}>No leave requests found</p>
-          <p style={{ fontSize: '0.875rem', margin: 0 }}>Your leave history will appear here.</p>
+          <p style={{ fontWeight: 600, color: 'var(--text)', margin: '0 0 0.25rem' }}>No leave requests yet</p>
+          <p style={{ fontSize: '0.875rem', margin: '0 0 1.25rem' }}>Your leave history will appear here.</p>
+          <Link href="/leave/request" style={{
+            background: 'var(--primary)', color: '#fff',
+            borderRadius: '0.625rem', padding: '0.625rem 1.25rem',
+            fontWeight: 600, fontSize: '0.875rem',
+          }}>
+            Request Leave
+          </Link>
         </div>
       ) : (
         <div style={{
@@ -78,16 +99,16 @@ export default async function LeaveHistoryPage() {
                   borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, textTransform: 'capitalize' }}>
-                    {req.leave_type} Leave {req.is_half_day ? '(Half Day)' : ''}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>
+                    {typeLabel(req.leave_type)}{req.is_half_day ? ' · Half Day' : ''}
                   </p>
                   <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
                     {req.start_date} → {req.end_date} · {req.days_count} day{req.days_count !== 1 ? 's' : ''}
                   </p>
                   {req.reason && (
-                    <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.25rem 0 0', fontStyle: 'italic' }}>
-                      {req.reason}
+                    <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.25rem 0 0', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      &ldquo;{req.reason}&rdquo;
                     </p>
                   )}
                 </div>
@@ -96,7 +117,7 @@ export default async function LeaveHistoryPage() {
                   border: `1px solid ${sc}`,
                   borderRadius: '999px', padding: '0.25rem 0.75rem',
                   fontSize: '0.78rem', fontWeight: 600,
-                  whiteSpace: 'nowrap', textTransform: 'capitalize',
+                  whiteSpace: 'nowrap', textTransform: 'capitalize', flexShrink: 0,
                 }}>
                   {req.status}
                 </span>

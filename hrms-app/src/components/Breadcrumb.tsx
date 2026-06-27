@@ -1,9 +1,6 @@
 import Link from 'next/link'
 
-interface Crumb {
-  label: string
-  href?: string
-}
+interface Crumb { label: string; href?: string }
 
 export default function Breadcrumb({ crumbs }: { crumbs: Crumb[] }) {
   return (
@@ -12,9 +9,7 @@ export default function Breadcrumb({ crumbs }: { crumbs: Crumb[] }) {
         <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
           {i > 0 && <span style={{ opacity: 0.5 }}>/</span>}
           {c.href ? (
-            <Link href={c.href} style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>
-              {c.label}
-            </Link>
+            <Link href={c.href} style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>{c.label}</Link>
           ) : (
             <span>{c.label}</span>
           )}
