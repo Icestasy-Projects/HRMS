@@ -11,7 +11,7 @@ export default async function NotificationsPage() {
   const { data: employee } = await supabase
     .from('users')
     .select('id')
-    .eq('email', user.email)
+    .eq('id', user.id)
     .single()
 
   if (!employee) redirect('/login')
@@ -28,7 +28,7 @@ export default async function NotificationsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data: emp } = await supabase.from('users').select('id').eq('email', user.email).single()
+    const { data: emp } = await supabase.from('users').select('id').eq('id', user.id).single()
     if (!emp) return
 
     await supabase

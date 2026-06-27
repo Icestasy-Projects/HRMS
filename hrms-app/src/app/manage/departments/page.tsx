@@ -6,7 +6,7 @@ export default async function DepartmentsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: me } = await supabase.from('users').select('role').eq('email', user.email).single()
+  const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
   if (!me || me.role !== 'super_admin') redirect('/dashboard')
 
   const { data: departments } = await supabase

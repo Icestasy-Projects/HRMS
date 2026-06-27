@@ -7,7 +7,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: employee } = await supabase.from('users').select('*').eq('email', user.email).single()
+  const { data: employee } = await supabase.from('users').select('*').eq('id', user.id).single()
 
   if (!employee) {
     async function signOut() {

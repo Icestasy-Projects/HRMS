@@ -15,7 +15,7 @@ export default async function TeamPage({
   const { data: employee } = await supabase
     .from('users')
     .select('*')
-    .eq('email', user.email)
+    .eq('id', user.id)
     .single()
 
   if (!employee || (employee.role !== 'admin' && employee.role !== 'super_admin')) {
