@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus } from '@/lib/attendance'
 
-export default async function AttendancePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -69,6 +68,7 @@ export default async function AttendancePage() {
           status: isHalfDay ? 'half_day' : 'present',
         })
         .eq('id', existing.id)
+      if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
     }
 
     redirect('/attendance')

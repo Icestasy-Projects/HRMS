@@ -14,7 +14,7 @@ export default async function LeaveHistoryPage() {
 
   if (!employee) redirect('/login')
 
-  const { data: requests } = await supabase
+  const { data: requests, error: fetchError } = await supabase
     .from('leave_requests')
     .select('*')
     .eq('employee_id', employee.id)
@@ -36,6 +36,19 @@ export default async function LeaveHistoryPage() {
           Leave History
         </h1>
       </div>
+
+      {fetchError && (
+        <div style={{
+          background: 'var(--danger-l)', border: '1px solid var(--danger)',
+          borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
+          color: 'var(--danger)', marginBottom: '1rem', fontSize: '0.875rem',
+        }}>
+          ⚠️ Could not load history: {fetchError.message}
+          <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', opacity: 0.85 }}>
+            Ask your admin to disable Row Level Security on leave_requests in Supabase.
+          </p>
+        </div>
+      )}
 
       {(!requests || requests.length === 0) ? (
         <div style={{

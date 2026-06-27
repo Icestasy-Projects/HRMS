@@ -35,7 +35,10 @@ export default async function TeamLeavePage() {
         .select('*, users(name, email)')
         .in('employee_id', empIds)
         .order('created_at', { ascending: false })
-    : { data: [] }
+    : { data: [], error: null }
+
+  const pending = allRequests?.filter(r => r.status === 'pending' && r.leave_type === 'scheduled') ?? []
+  const others = allRequests?.filter(r => !(r.status === 'pending' && r.leave_type === 'scheduled')) ?? []
 
   const pending = allRequests?.filter(r => r.status === 'pending' && r.leave_type === 'scheduled') ?? []
   const others = allRequests?.filter(r => !(r.status === 'pending' && r.leave_type === 'scheduled')) ?? []
@@ -72,7 +75,6 @@ export default async function TeamLeavePage() {
         .eq('employee_id', req.employee_id)
     }
 
-    // Notify employee
     await supabase.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',
