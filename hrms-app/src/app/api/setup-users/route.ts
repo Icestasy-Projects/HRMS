@@ -14,10 +14,14 @@ export async function GET() {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
+  // Clean up any duplicate leave requests
+  await supabase.rpc('exec_sql' as never, {
+    sql: `DELETE FROM public.leave_requests a USING public.leave_requests b WHERE a.id > b.id AND a.employee_id = b.employee_id AND a.start_date = b.start_date`
+  }).catch(() => null)
+
   const results = []
 
   for (const u of USERS) {
-    // Create auth user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: u.email,
       password: u.password,
@@ -29,10 +33,7 @@ export async function GET() {
       continue
     }
 
-    const userId = authData?.user?.id
-
-    // Get id if user already existed
-    let finalId = userId
+    let finalId = authData?.user?.id
     if (!finalId) {
       const { data: existing } = await supabase.auth.admin.listUsers()
       finalId = existing?.users?.find(x => x.email === u.email)?.id
@@ -43,7 +44,6 @@ export async function GET() {
       continue
     }
 
-    // Upsert into public.users
     const { error: dbError } = await supabase.from('users').upsert({
       id: finalId,
       email: u.email,
@@ -51,6 +51,15 @@ export async function GET() {
       role: u.role,
       employee_type: 'white_collar',
     }, { onConflict: 'id' })
+
+    // Create default leave balance (12 SL, 6 UL per year)
+    await supabase.from('leave_balances').upsert({
+      employee_id: finalId,
+      scheduled_balance: 12,
+      scheduled_total: 12,
+      unscheduled_balance: 6,
+      unscheduled_total: 6,
+    }, { onConflict: 'employee_id' })
 
     results.push({
       email: u.email,

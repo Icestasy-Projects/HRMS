@@ -5,10 +5,25 @@ import { useState } from 'react'
 interface LeaveRequestFormProps {
   scheduledBalance: number
   unscheduledBalance: number
+  holidays: string[]
   onSubmit: (formData: FormData) => Promise<void>
 }
 
-export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance, onSubmit }: LeaveRequestFormProps) {
+function countWorkdays(start: string, end: string, holidays: string[]): number {
+  const holidaySet = new Set(holidays)
+  let count = 0
+  const cur = new Date(start)
+  const endD = new Date(end)
+  while (cur <= endD) {
+    const day = cur.getDay()
+    const iso = cur.toISOString().split('T')[0]
+    if (day !== 0 && day !== 6 && !holidaySet.has(iso)) count++
+    cur.setDate(cur.getDate() + 1)
+  }
+  return count
+}
+
+export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance, holidays, onSubmit }: LeaveRequestFormProps) {
   const [leaveType, setLeaveType] = useState<'SL' | 'UL'>('SL')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -19,12 +34,8 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
 
   function calcDays() {
     if (!startDate || !endDate) return 0
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    if (end < start) return 0
-    const diff = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
     if (isHalfDay && sameDay) return leaveType === 'UL' ? 0.75 : 0.5
-    return diff
+    return countWorkdays(startDate, endDate, holidays)
   }
 
   const days = calcDays()
@@ -47,15 +58,11 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
               type="button"
               onClick={() => { setLeaveType(val); setIsHalfDay(false) }}
               style={{
-                flex: 1,
-                padding: '0.75rem',
-                borderRadius: '0.75rem',
+                flex: 1, padding: '0.75rem', borderRadius: '0.75rem',
                 border: `1px solid ${leaveType === val ? 'var(--primary)' : 'var(--border)'}`,
                 background: leaveType === val ? 'rgba(139,47,201,0.2)' : 'var(--surface2)',
                 color: leaveType === val ? 'var(--primary-h)' : 'var(--muted)',
-                cursor: 'pointer',
-                fontWeight: leaveType === val ? 600 : 400,
-                minHeight: '44px',
+                cursor: 'pointer', fontWeight: leaveType === val ? 600 : 400, minHeight: '44px',
               }}
             >
               {label}
@@ -71,71 +78,39 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
       {/* Date range */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
         <div>
-          <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
-            Start Date
-          </label>
+          <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>Start Date</label>
           <input
-            name="start_date"
-            type="date"
-            required
-            value={startDate}
-            onChange={e => {
-              setStartDate(e.target.value)
-              if (!endDate) setEndDate(e.target.value)
-              setIsHalfDay(false)
-            }}
-            style={{
-              width: '100%',
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: '0.75rem',
-              padding: '0.75rem 1rem',
-              color: 'var(--text)',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
+            name="start_date" type="date" required value={startDate}
+            onChange={e => { setStartDate(e.target.value); if (!endDate) setEndDate(e.target.value); setIsHalfDay(false) }}
+            style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.75rem 1rem', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
         <div>
-          <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
-            End Date
-          </label>
+          <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>End Date</label>
           <input
-            name="end_date"
-            type="date"
-            required
-            value={endDate}
+            name="end_date" type="date" required value={endDate} min={startDate}
             onChange={e => { setEndDate(e.target.value); setIsHalfDay(false) }}
-            min={startDate}
-            style={{
-              width: '100%',
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: '0.75rem',
-              padding: '0.75rem 1rem',
-              color: 'var(--text)',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
+            style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.75rem 1rem', color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
       </div>
 
-      {/* Half day — only enabled when start === end */}
-      <label
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          cursor: halfDayDisabled ? 'not-allowed' : 'pointer',
-          color: halfDayDisabled ? 'var(--muted)' : 'var(--text)',
-          fontSize: '0.9rem',
-          opacity: halfDayDisabled ? 0.5 : 1,
-        }}
-      >
+      {/* Workday info */}
+      {startDate && endDate && days === 0 && !isHalfDay && (
+        <p style={{ color: 'var(--danger)', fontSize: '0.82rem', margin: '-0.5rem 0 0' }}>
+          ⚠️ Selected range has no working days (weekends/holidays only)
+        </p>
+      )}
+
+      {/* Half day */}
+      <label style={{
+        display: 'flex', alignItems: 'center', gap: '0.75rem',
+        cursor: halfDayDisabled ? 'not-allowed' : 'pointer',
+        color: halfDayDisabled ? 'var(--muted)' : 'var(--text)',
+        fontSize: '0.9rem', opacity: halfDayDisabled ? 0.5 : 1,
+      }}>
         <input
-          name="is_half_day"
-          type="checkbox"
+          name="is_half_day" type="checkbox"
           checked={isHalfDay && sameDay}
           disabled={halfDayDisabled}
           onChange={e => setIsHalfDay(e.target.checked)}
@@ -149,37 +124,18 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
 
       {/* Reason */}
       <div>
-        <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
-          Reason
-        </label>
+        <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>Reason</label>
         <textarea
-          name="reason"
-          rows={3}
-          style={{
-            width: '100%',
-            background: 'var(--surface2)',
-            border: '1px solid var(--border)',
-            borderRadius: '0.75rem',
-            padding: '0.75rem 1rem',
-            color: 'var(--text)',
-            outline: 'none',
-            resize: 'vertical',
-            boxSizing: 'border-box',
-          }}
+          name="reason" rows={3}
+          style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.75rem 1rem', color: 'var(--text)', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
         />
       </div>
 
       {/* Preview */}
       {days > 0 && (
-        <div style={{
-          background: 'var(--surface2)',
-          border: '1px solid var(--border)',
-          borderRadius: '0.75rem',
-          padding: '0.875rem 1rem',
-          fontSize: '0.875rem',
-        }}>
+        <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.875rem 1rem', fontSize: '0.875rem' }}>
           <p style={{ color: 'var(--text)', margin: '0 0 0.25rem' }}>
-            Deducting <strong>{days}</strong> day{days !== 1 ? 's' : ''} from {leaveType === 'SL' ? 'scheduled' : 'unscheduled'} leave
+            Deducting <strong>{days}</strong> working day{days !== 1 ? 's' : ''} from {leaveType === 'SL' ? 'scheduled' : 'unscheduled'} leave
           </p>
           <p style={{ color: remaining >= 0 ? 'var(--success)' : 'var(--danger)', margin: 0 }}>
             Remaining after: <strong>{remaining}</strong> day{remaining !== 1 ? 's' : ''}
@@ -189,17 +145,7 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
 
       <button
         type="submit"
-        style={{
-          background: 'var(--primary)',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '0.75rem',
-          padding: '0.875rem',
-          fontWeight: 600,
-          fontSize: '1rem',
-          cursor: 'pointer',
-          minHeight: '44px',
-        }}
+        style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', minHeight: '44px' }}
       >
         {leaveType === 'UL' ? 'Submit (Auto-approved)' : 'Submit Request'}
       </button>

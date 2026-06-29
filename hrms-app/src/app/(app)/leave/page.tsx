@@ -17,11 +17,19 @@ export default async function LeavePage() {
 
   if (!employee) redirect('/login')
 
-  const { data: balance } = await supabase
+  let { data: balance } = await supabase
     .from('leave_balances')
     .select('*')
     .eq('employee_id', employee.id)
     .single()
+
+  if (!balance) {
+    const { data: created } = await supabase
+      .from('leave_balances')
+      .insert({ employee_id: employee.id, scheduled_balance: 12, scheduled_total: 12, unscheduled_balance: 6, unscheduled_total: 6 })
+      .select().single()
+    balance = created
+  }
 
   const carryWarn = balance ? carryforwardWarning(balance.scheduled_balance) : null
   const unpaidWarn = balance ? unpaidLeaveWarning(balance.scheduled_balance, balance.unscheduled_balance) : null
