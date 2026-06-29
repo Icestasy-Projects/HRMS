@@ -8,47 +8,68 @@ const USERS = [
 ]
 
 export async function GET() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
   if (!serviceKey) {
-    return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY is not set in environment variables. Add it in Vercel → Project Settings → Environment Variables, then redeploy.' }, { status: 500 })
+    return NextResponse.json({
+      error: 'SUPABASE_SERVICE_ROLE_KEY is not set. Go to Vercel → Project Settings → Environment Variables and add it, then redeploy.'
+    }, { status: 500 })
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
+  if (!supabaseUrl) {
+    return NextResponse.json({ error: 'NEXT_PUBLIC_SUPABASE_URL is not set.' }, { status: 500 })
+  }
 
-  // Clean up any duplicate leave requests (best-effort)
-  try {
-    await supabase.rpc('exec_sql' as never, {
-      sql: `DELETE FROM public.leave_requests a USING public.leave_requests b WHERE a.id > b.id AND a.employee_id = b.employee_id AND a.start_date = b.start_date`
-    })
-  } catch { /* ignore */ }
+  const supabase = createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  })
 
   const results = []
 
   for (const u of USERS) {
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: u.email,
-      password: u.password,
-      email_confirm: true,
+    // Use direct fetch to Supabase Auth Admin API for clearer error messages
+    const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+        'apikey': serviceKey,
+      },
+      body: JSON.stringify({
+        email: u.email,
+        password: u.password,
+        email_confirm: true,
+      }),
     })
 
-    const errMsg = authError ? (typeof authError.message === 'string' ? authError.message : JSON.stringify(authError)) : null
-    if (authError && errMsg && !errMsg.includes('already been registered')) {
-      results.push({ email: u.email, status: 'error', message: errMsg })
-      continue
+    const createBody = await createRes.json()
+
+    let finalId: string | undefined = createBody?.id
+
+    if (!createRes.ok) {
+      const errMsg: string = createBody?.msg || createBody?.message || createBody?.error_description || JSON.stringify(createBody)
+      const alreadyExists = errMsg.toLowerCase().includes('already') || errMsg.toLowerCase().includes('registered') || createRes.status === 422
+
+      if (!alreadyExists) {
+        results.push({ email: u.email, status: 'auth_error', httpStatus: createRes.status, message: errMsg })
+        continue
+      }
+
+      // User already exists — look them up
+      const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users?per_page=1000`, {
+        headers: {
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+        },
+      })
+      const listBody = await listRes.json()
+      const existing = (listBody?.users ?? []).find((x: { email: string; id: string }) => x.email === u.email)
+      finalId = existing?.id
     }
 
-    let finalId = authData?.user?.id
     if (!finalId) {
-      const { data: existing } = await supabase.auth.admin.listUsers()
-      finalId = existing?.users?.find(x => x.email === u.email)?.id
-    }
-
-    if (!finalId) {
-      results.push({ email: u.email, status: 'error', message: 'Could not resolve user id' })
+      results.push({ email: u.email, status: 'error', message: 'Could not resolve user id after create/lookup' })
       continue
     }
 
@@ -60,7 +81,6 @@ export async function GET() {
       employee_type: 'white_collar',
     }, { onConflict: 'id' })
 
-    // Create default leave balance (12 SL, 6 UL per year)
     await supabase.from('leave_balances').upsert({
       employee_id: finalId,
       scheduled_balance: 12,
@@ -74,7 +94,7 @@ export async function GET() {
       role: u.role,
       password: u.password,
       status: dbError ? 'db_error' : 'ok',
-      message: dbError?.message,
+      message: dbError?.message ?? null,
     })
   }
 
