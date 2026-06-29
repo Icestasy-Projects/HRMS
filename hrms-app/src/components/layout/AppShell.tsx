@@ -12,7 +12,6 @@ function getNavItems(role: string): NavItem[] {
   if (role === 'super_admin') return [
     { label: 'Home', href: '/dashboard' },
     { label: 'Attendance', href: '/attendance' },
-    { label: 'Leave', href: '/leave' },
     { label: 'Team', href: '/team' },
     { label: 'Manage', href: '/manage' },
   ]
