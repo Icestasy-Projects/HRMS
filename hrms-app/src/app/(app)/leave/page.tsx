@@ -1,5 +1,5 @@
 import Breadcrumb from '@/components/Breadcrumb'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { carryforwardWarning, unpaidLeaveWarning, balanceLabel } from '@/lib/leave'
@@ -24,7 +24,8 @@ export default async function LeavePage() {
     .single()
 
   if (!balance) {
-    const { data: created } = await supabase
+    const admin = createAdminClient()
+    const { data: created } = await admin
       .from('leave_balances')
       .insert({ employee_id: employee.id, scheduled_balance: 12, scheduled_total: 12, unscheduled_balance: 6, unscheduled_total: 6 })
       .select().single()
