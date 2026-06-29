@@ -2,9 +2,9 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 const USERS = [
-  { id: '75c4b656-f1c4-44f3-8199-8f1ffaa17b15', email: 'employee@icestasy.com',   password: 'Emp@12345',   name: 'Employee12',   role: 'employee' },
-  { id: '75cc045b-c039-45cf-92bc-38da1fe8e677', email: 'admin@icestasy.com',      password: 'Admin@12345', name: 'Admin12',      role: 'admin' },
-  { id: 'cf5806b6-824b-44a7-9bc5-f31598b3e56d', email: 'superadmin@icestasy.com', password: 'Super@12345', name: 'SuperAdmin12', role: 'super_admin' },
+  { id: '8db9faf4-7153-4a1c-8e94-b5daf16c24c0', email: 'employee@icestasy.com',   password: 'Emp@12345',   name: 'Employee12',   role: 'employee' },
+  { id: 'f5764763-282d-45ba-97d4-4ea02e926ac3', email: 'admin@icestasy.com',      password: 'Admin@12345', name: 'Admin12',      role: 'admin' },
+  { id: '1719c40c-4e70-44d0-8768-c24b46d62b98', email: 'superadmin@icestasy.com', password: 'Super@12345', name: 'SuperAdmin12', role: 'super_admin' },
 ]
 
 export async function GET() {
