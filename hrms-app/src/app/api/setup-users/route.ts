@@ -8,9 +8,14 @@ const USERS = [
 ]
 
 export async function GET() {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceKey) {
+    return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY is not set in environment variables. Add it in Vercel → Project Settings → Environment Variables, then redeploy.' }, { status: 500 })
+  }
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    serviceKey,
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
@@ -30,8 +35,9 @@ export async function GET() {
       email_confirm: true,
     })
 
-    if (authError && !authError.message.includes('already been registered')) {
-      results.push({ email: u.email, status: 'error', message: authError.message })
+    const errMsg = authError ? (typeof authError.message === 'string' ? authError.message : JSON.stringify(authError)) : null
+    if (authError && errMsg && !errMsg.includes('already been registered')) {
+      results.push({ email: u.email, status: 'error', message: errMsg })
       continue
     }
 
