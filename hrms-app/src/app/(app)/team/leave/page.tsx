@@ -37,8 +37,8 @@ export default async function TeamLeavePage() {
         .order('requested_at', { ascending: false })
     : { data: [], error: null }
 
-  const pending = allRequests?.filter(r => r.status === 'pending' && r.leave_type === 'scheduled') ?? []
-  const others = allRequests?.filter(r => !(r.status === 'pending' && r.leave_type === 'scheduled')) ?? []
+  const pending = allRequests?.filter(r => r.status === 'pending' && r.leave_type === 'SL') ?? []
+  const others = allRequests?.filter(r => !(r.status === 'pending' && r.leave_type === 'SL')) ?? []
 
   async function approveLeave(formData: FormData) {
     'use server'
@@ -95,7 +95,9 @@ export default async function TeamLeavePage() {
   }
 
   function typeLabel(type: string) {
-    return type === 'unscheduled' ? 'Sick / Emergency' : 'Scheduled'
+    if (type === 'UL') return 'Unscheduled'
+    if (type === 'SL') return 'Scheduled'
+    return type
   }
 
   return (

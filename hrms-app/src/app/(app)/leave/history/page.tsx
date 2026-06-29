@@ -30,7 +30,9 @@ export default async function LeaveHistoryPage() {
   }
 
   function typeLabel(type: string) {
-    return type === 'unscheduled' ? 'Sick / Emergency' : 'Scheduled'
+    if (type === 'UL') return 'Unscheduled'
+    if (type === 'SL') return 'Scheduled'
+    return type
   }
 
   return (
