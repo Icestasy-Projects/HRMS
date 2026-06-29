@@ -47,7 +47,7 @@ export default async function LeaveRequestPage({
     const start = new Date(startDate)
     const end = new Date(endDate)
     const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
-    const isUnscheduled = leaveType === 'unscheduled'
+    const isUnscheduled = leaveType === 'UL'
     const daysCount = isHalfDay ? (isUnscheduled ? 0.75 : 0.5) : diffDays
 
     const { data: newRequest, error: insertError } = await supabase

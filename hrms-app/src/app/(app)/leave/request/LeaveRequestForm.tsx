@@ -9,10 +9,13 @@ interface LeaveRequestFormProps {
 }
 
 export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance, onSubmit }: LeaveRequestFormProps) {
-  const [leaveType, setLeaveType] = useState<'scheduled' | 'unscheduled'>('scheduled')
+  const [leaveType, setLeaveType] = useState<'SL' | 'UL'>('SL')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [isHalfDay, setIsHalfDay] = useState(false)
+
+  const sameDay = !!startDate && startDate === endDate
+  const halfDayDisabled = !sameDay
 
   function calcDays() {
     if (!startDate || !endDate) return 0
@@ -20,12 +23,12 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
     const end = new Date(endDate)
     if (end < start) return 0
     const diff = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
-    if (isHalfDay) return leaveType === 'unscheduled' ? 0.75 : 0.5
+    if (isHalfDay && sameDay) return leaveType === 'UL' ? 0.75 : 0.5
     return diff
   }
 
   const days = calcDays()
-  const balance = leaveType === 'scheduled' ? scheduledBalance : unscheduledBalance
+  const balance = leaveType === 'SL' ? scheduledBalance : unscheduledBalance
   const remaining = balance - days
 
   return (
@@ -38,31 +41,30 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
           Leave Type
         </label>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {(['scheduled', 'unscheduled'] as const).map(t => (
+          {([['SL', 'Scheduled'], ['UL', 'Unscheduled']] as const).map(([val, label]) => (
             <button
-              key={t}
+              key={val}
               type="button"
-              onClick={() => setLeaveType(t)}
+              onClick={() => { setLeaveType(val); setIsHalfDay(false) }}
               style={{
                 flex: 1,
                 padding: '0.75rem',
                 borderRadius: '0.75rem',
-                border: `1px solid ${leaveType === t ? 'var(--primary)' : 'var(--border)'}`,
-                background: leaveType === t ? 'rgba(139,47,201,0.2)' : 'var(--surface2)',
-                color: leaveType === t ? 'var(--primary-h)' : 'var(--muted)',
+                border: `1px solid ${leaveType === val ? 'var(--primary)' : 'var(--border)'}`,
+                background: leaveType === val ? 'rgba(139,47,201,0.2)' : 'var(--surface2)',
+                color: leaveType === val ? 'var(--primary-h)' : 'var(--muted)',
                 cursor: 'pointer',
-                fontWeight: leaveType === t ? 600 : 400,
-                textTransform: 'capitalize',
+                fontWeight: leaveType === val ? 600 : 400,
                 minHeight: '44px',
               }}
             >
-              {t}
+              {label}
             </button>
           ))}
         </div>
         <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginTop: '0.375rem' }}>
           Balance: {balance} day{balance !== 1 ? 's' : ''}
-          {leaveType === 'unscheduled' && ' · Auto-approved'}
+          {leaveType === 'UL' && ' · Auto-approved'}
         </p>
       </div>
 
@@ -77,7 +79,11 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
             type="date"
             required
             value={startDate}
-            onChange={e => { setStartDate(e.target.value); if (!endDate) setEndDate(e.target.value) }}
+            onChange={e => {
+              setStartDate(e.target.value)
+              if (!endDate) setEndDate(e.target.value)
+              setIsHalfDay(false)
+            }}
             style={{
               width: '100%',
               background: 'var(--surface2)',
@@ -86,6 +92,7 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
               padding: '0.75rem 1rem',
               color: 'var(--text)',
               outline: 'none',
+              boxSizing: 'border-box',
             }}
           />
         </div>
@@ -98,7 +105,7 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
             type="date"
             required
             value={endDate}
-            onChange={e => setEndDate(e.target.value)}
+            onChange={e => { setEndDate(e.target.value); setIsHalfDay(false) }}
             min={startDate}
             style={{
               width: '100%',
@@ -108,30 +115,36 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
               padding: '0.75rem 1rem',
               color: 'var(--text)',
               outline: 'none',
+              boxSizing: 'border-box',
             }}
           />
         </div>
       </div>
 
-      {/* Half day */}
+      {/* Half day — only enabled when start === end */}
       <label
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.75rem',
-          cursor: 'pointer',
-          color: 'var(--text)',
+          cursor: halfDayDisabled ? 'not-allowed' : 'pointer',
+          color: halfDayDisabled ? 'var(--muted)' : 'var(--text)',
           fontSize: '0.9rem',
+          opacity: halfDayDisabled ? 0.5 : 1,
         }}
       >
         <input
           name="is_half_day"
           type="checkbox"
-          checked={isHalfDay}
+          checked={isHalfDay && sameDay}
+          disabled={halfDayDisabled}
           onChange={e => setIsHalfDay(e.target.checked)}
           style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
         />
         Half day only
+        {halfDayDisabled && startDate && endDate && (
+          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>(same day only)</span>
+        )}
       </label>
 
       {/* Reason */}
@@ -151,23 +164,22 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
             color: 'var(--text)',
             outline: 'none',
             resize: 'vertical',
+            boxSizing: 'border-box',
           }}
         />
       </div>
 
       {/* Preview */}
       {days > 0 && (
-        <div
-          style={{
-            background: 'var(--surface2)',
-            border: '1px solid var(--border)',
-            borderRadius: '0.75rem',
-            padding: '0.875rem 1rem',
-            fontSize: '0.875rem',
-          }}
-        >
+        <div style={{
+          background: 'var(--surface2)',
+          border: '1px solid var(--border)',
+          borderRadius: '0.75rem',
+          padding: '0.875rem 1rem',
+          fontSize: '0.875rem',
+        }}>
           <p style={{ color: 'var(--text)', margin: '0 0 0.25rem' }}>
-            Deducting <strong>{days}</strong> day{days !== 1 ? 's' : ''} from {leaveType} leave
+            Deducting <strong>{days}</strong> day{days !== 1 ? 's' : ''} from {leaveType === 'SL' ? 'scheduled' : 'unscheduled'} leave
           </p>
           <p style={{ color: remaining >= 0 ? 'var(--success)' : 'var(--danger)', margin: 0 }}>
             Remaining after: <strong>{remaining}</strong> day{remaining !== 1 ? 's' : ''}
@@ -189,7 +201,7 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
           minHeight: '44px',
         }}
       >
-        {leaveType === 'unscheduled' ? 'Submit (Auto-approved)' : 'Submit Request'}
+        {leaveType === 'UL' ? 'Submit (Auto-approved)' : 'Submit Request'}
       </button>
     </form>
   )
