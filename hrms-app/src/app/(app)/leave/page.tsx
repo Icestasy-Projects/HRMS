@@ -21,8 +21,8 @@ export default async function LeavePage() {
   const { data: finalBalance, error: rpcError } = await admin
     .rpc('get_or_create_leave_balance', { p_employee_id: employee.id })
 
-  const carryWarn = finalBalance ? carryforwardWarning(finalBalance.scheduled_balance) : null
-  const unpaidWarn = finalBalance ? unpaidLeaveWarning(finalBalance.scheduled_balance, finalBalance.unscheduled_balance) : null
+  const carryWarn = finalBalance ? carryforwardWarning(finalBalance.sl_remaining) : null
+  const unpaidWarn = finalBalance ? unpaidLeaveWarning(finalBalance.sl_remaining, finalBalance.ul_remaining) : null
 
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto' }}>
@@ -54,12 +54,6 @@ export default async function LeavePage() {
         </div>
       )}
 
-      {rpcError && (
-        <div style={{ fontSize: '0.75rem', color: 'red', marginBottom: '0.5rem', wordBreak: 'break-all' }}>
-          RPC Error: {rpcError.message} | empId: {employee.id}
-        </div>
-      )}
-
       {finalBalance ? (
         <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '1.75rem' }}>
           <div style={{
@@ -68,10 +62,10 @@ export default async function LeavePage() {
             padding: '1.5rem', boxShadow: 'var(--shadow)',
           }}>
             <p style={{ color: 'var(--primary)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.75rem' }}>
-              {balanceLabel(finalBalance.scheduled_balance, finalBalance.scheduled_total, 'scheduled')}
+              {balanceLabel(finalBalance.sl_remaining, finalBalance.sl_total, 'scheduled')}
             </p>
-            <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{finalBalance.scheduled_balance}</p>
-            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.375rem 0 0' }}>of {finalBalance.scheduled_total ?? '—'} days</p>
+            <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{finalBalance.sl_remaining}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.375rem 0 0' }}>of {finalBalance.sl_total ?? '—'} days</p>
           </div>
 
           <div style={{
@@ -79,10 +73,10 @@ export default async function LeavePage() {
             borderRadius: '0.75rem', padding: '1.5rem', boxShadow: 'var(--shadow)',
           }}>
             <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.75rem' }}>
-              {balanceLabel(finalBalance.unscheduled_balance, finalBalance.unscheduled_total, 'unscheduled')}
+              {balanceLabel(finalBalance.ul_remaining, finalBalance.ul_total, 'unscheduled')}
             </p>
-            <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{finalBalance.unscheduled_balance}</p>
-            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.375rem 0 0' }}>of {finalBalance.unscheduled_total ?? '—'} days</p>
+            <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{finalBalance.ul_remaining}</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.375rem 0 0' }}>of {finalBalance.ul_total ?? '—'} days</p>
           </div>
         </div>
       ) : (

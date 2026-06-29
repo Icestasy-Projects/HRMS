@@ -50,9 +50,9 @@ export default async function TeamLeavePage() {
 
     await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
 
-    const { data: bal } = await supabase.from('leave_balances').select('*').eq('employee_id', req.employee_id).single()
+    const { data: bal } = await supabase.from('leave_balances').select('*').eq('user_id', req.employee_id).single()
     if (bal) {
-      await supabase.from('leave_balances').update({ scheduled_balance: bal.scheduled_balance - req.days_count }).eq('employee_id', req.employee_id)
+      await supabase.from('leave_balances').update({ sl_used: bal.sl_used + req.days_count }).eq('user_id', req.employee_id)
     }
 
     await supabase.from('notifications').insert({

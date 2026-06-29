@@ -105,11 +105,11 @@ export default async function LeaveRequestPage({
     }
 
     if (isUnscheduled) {
-      const { data: bal } = await supabase.from('leave_balances').select('*').eq('employee_id', emp.id).single()
+      const { data: bal } = await supabase.from('leave_balances').select('*').eq('user_id', emp.id).single()
       if (bal) {
         await supabase.from('leave_balances')
-          .update({ unscheduled_balance: bal.unscheduled_balance - daysCount })
-          .eq('employee_id', emp.id)
+          .update({ ul_used: bal.ul_used + daysCount })
+          .eq('user_id', emp.id)
       }
       if (emp.department_id) {
         const { data: dept } = await supabase.from('departments').select('manager_id').eq('id', emp.department_id).single()
@@ -158,8 +158,8 @@ export default async function LeaveRequestPage({
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
         <LeaveRequestForm
-          scheduledBalance={balance?.scheduled_balance ?? 0}
-          unscheduledBalance={balance?.unscheduled_balance ?? 0}
+          scheduledBalance={balance?.sl_remaining ?? 0}
+          unscheduledBalance={balance?.ul_remaining ?? 0}
           holidays={holidays}
           onSubmit={submitLeave}
         />

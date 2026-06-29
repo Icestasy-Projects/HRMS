@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   const { data: leaveBalance } = await supabase
     .from('leave_balances')
     .select('*')
-    .eq('employee_id', employee.id)
+    .eq('user_id', employee.id)
     .single()
 
   const isAdmin = employee.role === 'admin' || employee.role === 'super_admin'
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
             borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
           }}>
             <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Scheduled Leave</p>
-            <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{leaveBalance.scheduled_balance}</p>
+            <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{leaveBalance.sl_remaining}</p>
             <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>days remaining</p>
           </div>
         )}
@@ -199,7 +199,7 @@ export default async function DashboardPage() {
             borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
           }}>
             <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Sick / Emergency</p>
-            <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{leaveBalance.unscheduled_balance}</p>
+            <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{leaveBalance.ul_remaining}</p>
             <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>days remaining</p>
           </div>
         )}
