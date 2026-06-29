@@ -14,10 +14,12 @@ export async function GET() {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Clean up any duplicate leave requests
-  await supabase.rpc('exec_sql' as never, {
-    sql: `DELETE FROM public.leave_requests a USING public.leave_requests b WHERE a.id > b.id AND a.employee_id = b.employee_id AND a.start_date = b.start_date`
-  }).catch(() => null)
+  // Clean up any duplicate leave requests (best-effort)
+  try {
+    await supabase.rpc('exec_sql' as never, {
+      sql: `DELETE FROM public.leave_requests a USING public.leave_requests b WHERE a.id > b.id AND a.employee_id = b.employee_id AND a.start_date = b.start_date`
+    })
+  } catch { /* ignore */ }
 
   const results = []
 
