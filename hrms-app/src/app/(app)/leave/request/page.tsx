@@ -44,6 +44,25 @@ export default async function LeaveRequestPage({
     const isHalfDay = formData.get('is_half_day') === 'on'
     const reason = formData.get('reason') as string
 
+    // Half day must have same start and end date
+    if (isHalfDay && startDate !== endDate) {
+      redirect(`/leave/request?error=${encodeURIComponent('Half day leave must have the same start and end date.')}`)
+    }
+
+    // Check for existing leave on any overlapping date
+    const { data: overlapping } = await supabase
+      .from('leave_requests')
+      .select('id')
+      .eq('employee_id', emp.id)
+      .neq('status', 'rejected')
+      .lte('start_date', endDate)
+      .gte('end_date', startDate)
+      .limit(1)
+
+    if (overlapping && overlapping.length > 0) {
+      redirect(`/leave/request?error=${encodeURIComponent('You already have a leave request on one or more of these dates.')}`)
+    }
+
     const start = new Date(startDate)
     const end = new Date(endDate)
     const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
