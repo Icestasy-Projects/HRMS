@@ -24,15 +24,15 @@ export default async function LeaveRequestPage({
 
   if (!employee) redirect('/login')
 
-  // Auto-create leave balance if missing (defaults: 12 SL, 6 UL)
-  let { data: balance } = await supabase
+  // Auto-create leave balance if missing (defaults: 18 SL, 6 UL)
+  const admin = createAdminClient()
+  let { data: balance } = await admin
     .from('leave_balances')
     .select('*')
     .eq('employee_id', employee.id)
     .single()
 
   if (!balance) {
-    const admin = createAdminClient()
     const { data: created } = await admin
       .from('leave_balances')
       .insert({ employee_id: employee.id, scheduled_balance: 18, scheduled_total: 18, unscheduled_balance: 6, unscheduled_total: 6 })

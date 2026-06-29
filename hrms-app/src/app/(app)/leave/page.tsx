@@ -17,14 +17,14 @@ export default async function LeavePage() {
 
   if (!employee) redirect('/login')
 
-  let { data: balance } = await supabase
+  const admin = createAdminClient()
+  let { data: balance } = await admin
     .from('leave_balances')
     .select('*')
     .eq('employee_id', employee.id)
     .single()
 
   if (!balance) {
-    const admin = createAdminClient()
     const { data: created } = await admin
       .from('leave_balances')
       .insert({ employee_id: employee.id, scheduled_balance: 18, scheduled_total: 18, unscheduled_balance: 6, unscheduled_total: 6 })
