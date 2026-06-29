@@ -8,7 +8,10 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>
 }) {
   const params = await searchParams
-  const errorMsg = params?.error
+  const rawError = params?.error
+  const errorMsg = rawError && rawError !== '{}' && rawError !== '[object Object]'
+    ? rawError
+    : rawError ? 'Invalid email or password. Please try again.' : null
 
   async function signIn(formData: FormData) {
     'use server'
