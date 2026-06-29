@@ -35,7 +35,7 @@ export default async function LeaveRequestPage({
     const admin = createAdminClient()
     const { data: created } = await admin
       .from('leave_balances')
-      .insert({ employee_id: employee.id, scheduled_balance: 12, scheduled_total: 12, unscheduled_balance: 6, unscheduled_total: 6 })
+      .insert({ employee_id: employee.id, scheduled_balance: 18, scheduled_total: 18, unscheduled_balance: 6, unscheduled_total: 6 })
       .select()
       .single()
     balance = created

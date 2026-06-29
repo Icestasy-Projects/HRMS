@@ -49,7 +49,7 @@ export async function GET() {
     // Upsert leave_balances
     await supabase.from('leave_balances').upsert({
       employee_id: u.id,
-      scheduled_balance: 12, scheduled_total: 12,
+      scheduled_balance: 18, scheduled_total: 18,
       unscheduled_balance: 6, unscheduled_total: 6,
     }, { onConflict: 'employee_id' })
 
