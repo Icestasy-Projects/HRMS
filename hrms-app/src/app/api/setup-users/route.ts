@@ -20,6 +20,7 @@ export async function GET() {
   })
 
   const results = []
+  const debug = { supabaseUrl, serviceKeyPrefix: serviceKey.slice(0, 30) }
 
   for (const u of USERS) {
     // PATCH password directly using known ID
@@ -55,5 +56,5 @@ export async function GET() {
     results.push({ email: u.email, role: u.role, password: u.password, status: 'ok' })
   }
 
-  return NextResponse.json({ results })
+  return NextResponse.json({ debug, results })
 }
