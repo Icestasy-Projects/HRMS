@@ -32,7 +32,7 @@ export default async function TeamLeavePage() {
   const { data: allRequests, error: fetchError } = empIds.length > 0
     ? await supabase
         .from('leave_requests')
-        .select('*, users(name, email)')
+        .select('*, employee:users!leave_requests_employee_id_fkey(name, email)')
         .in('employee_id', empIds)
         .order('requested_at', { ascending: false })
     : { data: [], error: null }
@@ -171,11 +171,11 @@ export default async function TeamLeavePage() {
                         background: 'var(--primary-l)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: 'var(--primary)', fontWeight: 700, fontSize: '12px',
                       }}>
-                        {req.users?.name?.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                        {req.employee?.name?.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <p style={{ color: 'var(--text)', fontWeight: 700, margin: 0, fontSize: '0.95rem' }}>{req.users?.name}</p>
-                        <p style={{ color: 'var(--muted)', fontSize: '0.75rem', margin: 0 }}>{req.users?.email}</p>
+                        <p style={{ color: 'var(--text)', fontWeight: 700, margin: 0, fontSize: '0.95rem' }}>{req.employee?.name}</p>
+                        <p style={{ color: 'var(--muted)', fontSize: '0.75rem', margin: 0 }}>{req.employee?.email}</p>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: req.reason ? '0.5rem' : 0 }}>
@@ -258,7 +258,7 @@ export default async function TeamLeavePage() {
                   alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{req.users?.name}</p>
+                    <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{req.employee?.name}</p>
                     <p style={{ color: 'var(--muted)', fontSize: '0.82rem', margin: '0.2rem 0 0', textTransform: 'capitalize' }}>
                       {typeLabel(req.leave_type)} · {req.start_date} → {req.end_date} · {req.days_count} day{req.days_count !== 1 ? 's' : ''}
                     </p>
