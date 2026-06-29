@@ -11,7 +11,6 @@ type NavItem = { label: string; href: string; badge?: number }
 function getNavItems(role: string): NavItem[] {
   if (role === 'super_admin') return [
     { label: 'Home', href: '/dashboard' },
-    { label: 'Attendance', href: '/attendance' },
     { label: 'Team', href: '/team' },
     { label: 'Manage', href: '/manage' },
   ]
