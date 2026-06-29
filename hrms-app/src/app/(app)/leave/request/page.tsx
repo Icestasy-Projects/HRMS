@@ -24,22 +24,9 @@ export default async function LeaveRequestPage({
 
   if (!employee) redirect('/login')
 
-  // Auto-create leave balance if missing (defaults: 18 SL, 6 UL)
   const admin = createAdminClient()
-  let { data: balance } = await admin
-    .from('leave_balances')
-    .select('*')
-    .eq('employee_id', employee.id)
-    .single()
-
-  if (!balance) {
-    const { data: created } = await admin
-      .from('leave_balances')
-      .insert({ employee_id: employee.id, scheduled_balance: 18, scheduled_total: 18, unscheduled_balance: 6, unscheduled_total: 6 })
-      .select()
-      .single()
-    balance = created
-  }
+  const { data: balance } = await admin
+    .rpc('get_or_create_leave_balance', { p_employee_id: employee.id })
 
   // Fetch public holidays for the year
   const year = new Date().getFullYear()

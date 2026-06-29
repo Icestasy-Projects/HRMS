@@ -18,24 +18,8 @@ export default async function LeavePage() {
   if (!employee) redirect('/login')
 
   const admin = createAdminClient()
-  const { data: balance, error: balanceError } = await admin
-    .from('leave_balances')
-    .select('*')
-    .eq('employee_id', employee.id)
-    .maybeSingle()
-
-  let insertError: string | null = null
-  let finalBalance = balance
-  if (!balance) {
-    const { data: created, error: ie } = await admin
-      .from('leave_balances')
-      .insert({ employee_id: employee.id, scheduled_balance: 18, scheduled_total: 18, unscheduled_balance: 6, unscheduled_total: 6 })
-      .select().single()
-    if (ie) insertError = ie.message
-    finalBalance = created
-  }
-
-  const debugInfo = `empId:${employee.id} | selectErr:${balanceError?.message ?? 'none'} | insertErr:${insertError ?? 'none'} | balance:${finalBalance ? 'found' : 'null'}`
+  const { data: finalBalance } = await admin
+    .rpc('get_or_create_leave_balance', { p_employee_id: employee.id })
 
   const carryWarn = finalBalance ? carryforwardWarning(finalBalance.scheduled_balance) : null
   const unpaidWarn = finalBalance ? unpaidLeaveWarning(finalBalance.scheduled_balance, finalBalance.unscheduled_balance) : null
@@ -69,8 +53,6 @@ export default async function LeavePage() {
           ⚠️ {unpaidWarn}
         </div>
       )}
-
-      <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '0.5rem', wordBreak: 'break-all' }}>{debugInfo}</div>
 
       {finalBalance ? (
         <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '1.75rem' }}>
