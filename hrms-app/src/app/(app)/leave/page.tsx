@@ -18,7 +18,7 @@ export default async function LeavePage() {
   if (!employee) redirect('/login')
 
   const admin = createAdminClient()
-  const { data: finalBalance } = await admin
+  const { data: finalBalance, error: rpcError } = await admin
     .rpc('get_or_create_leave_balance', { p_employee_id: employee.id })
 
   const carryWarn = finalBalance ? carryforwardWarning(finalBalance.scheduled_balance) : null
@@ -51,6 +51,12 @@ export default async function LeavePage() {
           color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 500,
         }}>
           ⚠️ {unpaidWarn}
+        </div>
+      )}
+
+      {rpcError && (
+        <div style={{ fontSize: '0.75rem', color: 'red', marginBottom: '0.5rem', wordBreak: 'break-all' }}>
+          RPC Error: {rpcError.message} | empId: {employee.id}
         </div>
       )}
 
