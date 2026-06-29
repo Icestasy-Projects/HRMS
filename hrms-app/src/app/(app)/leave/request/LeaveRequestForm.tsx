@@ -20,7 +20,8 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
     const end = new Date(endDate)
     if (end < start) return 0
     const diff = Math.round((end.getTime() - start.getTime()) / 86400000) + 1
-    return isHalfDay ? 0.5 : diff
+    if (isHalfDay) return leaveType === 'unscheduled' ? 0.75 : 0.5
+    return diff
   }
 
   const days = calcDays()
