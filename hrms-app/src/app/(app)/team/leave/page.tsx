@@ -34,7 +34,7 @@ export default async function TeamLeavePage() {
         .from('leave_requests')
         .select('*, users(name, email)')
         .in('employee_id', empIds)
-        .order('created_at', { ascending: false })
+        .order('requested_at', { ascending: false })
     : { data: [], error: null }
 
   const pending = allRequests?.filter(r => r.status === 'pending' && r.leave_type === 'scheduled') ?? []

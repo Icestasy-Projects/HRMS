@@ -20,7 +20,7 @@ export default async function LeaveHistoryPage() {
     .from('leave_requests')
     .select('*')
     .eq('employee_id', employee.id)
-    .order('created_at', { ascending: false })
+    .order('requested_at', { ascending: false })
 
   function statusColor(status: string) {
     if (status === 'approved') return 'var(--success)'
