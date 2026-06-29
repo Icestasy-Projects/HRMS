@@ -91,16 +91,17 @@ export default async function DashboardPage() {
       : todayLog.clock_out ? 'var(--success)' : 'var(--primary)'
     : 'var(--muted)'
 
+  const isSuperAdmin = employee.role === 'super_admin'
   type Worklet = { label: string; href: string; icon: string; badge?: number; show?: boolean }
   const worklets: Worklet[] = [
-    { label: 'Time & Attendance', href: '/attendance', icon: '◷', show: true },
-    { label: 'My Leave', href: '/leave', icon: '🌿', show: true },
-    { label: 'Leave History', href: '/leave/history', icon: '📋', show: true },
-    { label: 'My Attendance Log', href: '/attendance/history', icon: '📅', show: true },
+    { label: 'Time & Attendance', href: '/attendance', icon: '◷', show: !isSuperAdmin },
+    { label: 'My Leave', href: '/leave', icon: '🌿', show: !isSuperAdmin },
+    { label: 'Leave History', href: '/leave/history', icon: '📋', show: !isSuperAdmin },
+    { label: 'My Attendance Log', href: '/attendance/history', icon: '📅', show: !isSuperAdmin },
     { label: 'Notifications', href: '/notifications', icon: '🔔', show: true },
     { label: 'Team', href: '/team', icon: '👥', show: isAdmin },
     { label: 'Leave Requests', href: '/team/leave', icon: '✅', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
-    { label: 'Manage', href: '/manage', icon: '⚙', show: employee.role === 'super_admin' },
+    { label: 'Manage', href: '/manage', icon: '⚙', show: isSuperAdmin },
   ].filter(w => w.show)
 
   return (
@@ -169,6 +170,7 @@ export default async function DashboardPage() {
 
       {/* Quick stats row */}
       <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+        {!isSuperAdmin && (
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
@@ -181,8 +183,9 @@ export default async function DashboardPage() {
             </p>
           )}
         </div>
+        )}
 
-        {leaveBalance && (
+        {!isSuperAdmin && leaveBalance && (
           <div style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
@@ -193,7 +196,7 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {leaveBalance && (
+        {!isSuperAdmin && leaveBalance && (
           <div style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
