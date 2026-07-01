@@ -234,6 +234,12 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
                     <p style={{ fontSize: '12px', color: 'var(--muted)', textTransform: 'capitalize', margin: '2px 0 0' }}>{role.replace('_', ' ')}</p>
                   </div>
                   <div style={{ padding: '0.375rem' }}>
+                    <Link href="/profile" onClick={() => setAvatarMenuOpen(false)} style={{
+                      display: 'block', width: '100%', padding: '0.625rem 0.875rem', borderRadius: '0.5rem',
+                      color: 'var(--text)', fontSize: '14px', fontWeight: 500, textDecoration: 'none',
+                    }}>
+                      Change Password
+                    </Link>
                     <button onClick={signOut} style={{
                       width: '100%', padding: '0.625rem 0.875rem', borderRadius: '0.5rem',
                       border: 'none', background: 'transparent', color: 'var(--danger)',
