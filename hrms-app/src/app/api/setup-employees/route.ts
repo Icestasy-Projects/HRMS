@@ -59,7 +59,7 @@ export async function GET() {
         results.push({ email: u.email, status: 'create_error', message: createBody?.msg ?? JSON.stringify(createBody) })
         continue
       }
-      authUser = createBody
+      authUser = createBody as typeof authUser
     } else {
       // Update password
       await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUser.id}`, {
@@ -72,6 +72,8 @@ export async function GET() {
         body: JSON.stringify({ password: 'Emp@12345', email_confirm: true }),
       })
     }
+
+    if (!authUser?.id) { results.push({ email: u.email, status: 'no_id' }); continue }
 
     // Upsert public.users
     await supabase.from('users').upsert({
