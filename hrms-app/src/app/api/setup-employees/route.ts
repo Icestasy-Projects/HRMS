@@ -39,47 +39,38 @@ export async function GET() {
     let authUser = users?.find(au => au.email === u.email)
 
     if (!authUser) {
-      // Create via admin API
-      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-          'apikey': serviceKey,
-        },
-        body: JSON.stringify({
-          email: u.email,
-          password: 'Emp@12345',
-          email_confirm: true,
-          user_metadata: { name: u.name, role: u.role, employee_type: 'white_collar' },
-        }),
+      // Create via SDK admin API
+      const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+        email: u.email,
+        password: 'Emp@12345',
+        email_confirm: true,
+        user_metadata: { name: u.name, role: u.role, employee_type: 'white_collar' },
       })
-      const createBody = await createRes.json()
-      if (!createRes.ok) {
-        results.push({ email: u.email, status: 'create_error', message: createBody?.msg ?? JSON.stringify(createBody) })
+      if (createErr || !created?.user) {
+        results.push({ email: u.email, status: 'create_error', message: createErr?.message ?? 'no user returned' })
         continue
       }
-      authUser = createBody as typeof authUser
+      authUser = created.user
     } else {
       // Update password
-      await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUser.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-          'apikey': serviceKey,
-        },
-        body: JSON.stringify({ password: 'Emp@12345', email_confirm: true }),
+      await supabase.auth.admin.updateUserById(authUser.id, {
+        password: 'Emp@12345',
+        email_confirm: true,
       })
     }
 
     if (!authUser?.id) { results.push({ email: u.email, status: 'no_id' }); continue }
 
     // Upsert public.users
-    await supabase.from('users').upsert({
+    const { error: upsertErr } = await supabase.from('users').upsert({
       id: authUser.id, email: u.email, name: u.name,
       role: u.role, employee_type: 'white_collar', is_active: true,
     }, { onConflict: 'id' })
+
+    if (upsertErr) {
+      results.push({ email: u.email, status: 'upsert_error', message: upsertErr.message })
+      continue
+    }
 
     // Upsert leave_balances
     await supabase.from('leave_balances').upsert({
