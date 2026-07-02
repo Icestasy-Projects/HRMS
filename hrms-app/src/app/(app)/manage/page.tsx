@@ -22,7 +22,7 @@ export default async function ManagePage() {
     .eq('id', user.id)
     .single()
 
-  if (!employee || employee.role !== 'super_admin') redirect('/dashboard')
+  if (!employee || !['super_admin', 'sub_super_admin'].includes(employee.role)) redirect('/dashboard')
 
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto' }}>

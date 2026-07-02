@@ -13,7 +13,7 @@ export default async function TeamLeavePage() {
     .eq('id', user.id)
     .single()
 
-  if (!employee || (employee.role !== 'admin' && employee.role !== 'super_admin')) {
+  if (!employee || (!['admin','super_admin','sub_super_admin'].includes(employee.role))) {
     redirect('/dashboard')
   }
 

@@ -8,7 +8,7 @@ export default async function ManageEmployeesPage() {
   if (!user) redirect('/login')
 
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!me || me.role !== 'super_admin') redirect('/dashboard')
+  if (!me || !['super_admin','sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
   const { data: employees } = await supabase
     .from('users')

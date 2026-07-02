@@ -8,7 +8,7 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
   if (!user) redirect('/login')
 
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!me || me.role !== 'super_admin') redirect('/dashboard')
+  if (!me || !['super_admin','sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
   const { data: emp } = await supabase.from('users').select('*').eq('id', id).single()
   if (!emp) redirect('/manage/employees')
