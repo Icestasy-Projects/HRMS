@@ -157,25 +157,6 @@ App runs at `http://localhost:3000`
 
 ---
 
-## Database Migrations Required
-
-Run these once in the Supabase SQL editor (Icestasy Project HR):
-
-```sql
--- Add sub_super_admin role
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'sub_super_admin';
-
--- Add manager relationship
-ALTER TABLE public.users
-  ADD COLUMN IF NOT EXISTS manager_id uuid REFERENCES public.users(id) ON DELETE SET NULL;
-
--- Add first-login password change flag
-ALTER TABLE public.users
-  ADD COLUMN IF NOT EXISTS must_change_password boolean DEFAULT false;
-```
-
----
-
 ## Default Credentials (Development / Onboarding)
 
 | Purpose | Email | Password |
@@ -233,7 +214,7 @@ hrms-app/
 |---------|--------|
 | Auth & roles | ✅ Done |
 | Dashboard | ✅ Done |
-| Attendance | ✅ Done |
+| Attendance | 🚧 Work in Progress |
 | Leave management | ✅ Done |
 | Team view | ✅ Done |
 | Employee management | ✅ Done |
