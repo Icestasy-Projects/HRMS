@@ -34,7 +34,10 @@ export default async function DashboardPage() {
     .eq('user_id', employee.id)
     .single()
 
-  const isAdmin = employee.role === 'admin' || employee.role === 'super_admin'
+  const isSuperAdmin = employee.role === 'super_admin'
+  const isSubSuperAdmin = employee.role === 'sub_super_admin'
+  const isAdmin = employee.role === 'admin' || isSuperAdmin || isSubSuperAdmin
+  const hasPersonalCards = !isSuperAdmin
 
   let pendingLeaveCount = 0
   if (isAdmin) {
@@ -91,17 +94,16 @@ export default async function DashboardPage() {
       : todayLog.clock_out ? 'var(--success)' : 'var(--primary)'
     : 'var(--muted)'
 
-  const isSuperAdmin = employee.role === 'super_admin'
   type Worklet = { label: string; href: string; icon: string; badge?: number; show?: boolean }
   const worklets: Worklet[] = [
-    { label: 'Time & Attendance', href: '/attendance', icon: '◷', show: !isSuperAdmin },
-    { label: 'My Leave', href: '/leave', icon: '🌿', show: !isSuperAdmin },
-    { label: 'Leave History', href: '/leave/history', icon: '📋', show: !isSuperAdmin },
-    { label: 'My Attendance Log', href: '/attendance/history', icon: '📅', show: !isSuperAdmin },
+    { label: 'Time & Attendance', href: '/attendance', icon: '◷', show: hasPersonalCards },
+    { label: 'My Leave', href: '/leave', icon: '🌿', show: hasPersonalCards },
+    { label: 'Leave History', href: '/leave/history', icon: '📋', show: hasPersonalCards },
+    { label: 'My Attendance Log', href: '/attendance/history', icon: '📅', show: hasPersonalCards },
     { label: 'Notifications', href: '/notifications', icon: '🔔', show: true },
     { label: 'Team', href: '/team', icon: '👥', show: isAdmin },
     { label: 'Leave Requests', href: '/team/leave', icon: '✅', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
-    { label: 'Manage', href: '/manage', icon: '⚙', show: isSuperAdmin },
+    { label: 'Manage', href: '/manage', icon: '⚙', show: isSuperAdmin || isSubSuperAdmin },
   ].filter(w => w.show)
 
   return (
@@ -170,7 +172,7 @@ export default async function DashboardPage() {
 
       {/* Quick stats row */}
       <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-        {!isSuperAdmin && (
+        {hasPersonalCards && (
         <div style={{
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
@@ -185,7 +187,7 @@ export default async function DashboardPage() {
         </div>
         )}
 
-        {!isSuperAdmin && leaveBalance && (
+        {hasPersonalCards && leaveBalance && (
           <div style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
@@ -196,7 +198,7 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {!isSuperAdmin && leaveBalance && (
+        {hasPersonalCards && leaveBalance && (
           <div style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',

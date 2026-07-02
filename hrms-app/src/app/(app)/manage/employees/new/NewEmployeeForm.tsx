@@ -28,9 +28,10 @@ export default function NewEmployeeForm({
   const superAdmins = managers.filter(m => m.role === 'super_admin')
   const defaultManagerId = superAdmins[0]?.id ?? ''
 
-  // For admin/super_admin: auto-assign to first super_admin, no picker
-  // For employee: show all admins + super_admins
+  // super_admin = no manager; admin/sub_super_admin = auto super_admin; employee = pick from list
   const showManagerPicker = role === 'employee'
+  const noManager = role === 'super_admin'
+  const autoManager = role === 'admin' || role === 'sub_super_admin'
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -40,9 +41,10 @@ export default function NewEmployeeForm({
     const form = e.currentTarget
     const data = new FormData(form)
 
-    // For admin roles, default manager is the first super_admin
-    if (!showManagerPicker) {
+    if (autoManager) {
       data.set('manager_id', defaultManagerId)
+    } else if (noManager) {
+      data.set('manager_id', '')
     }
 
     const res = await fetch('/api/employees/create', {
@@ -90,28 +92,37 @@ export default function NewEmployeeForm({
           <select name="role" required value={role} onChange={e => setRole(e.target.value)} style={inputStyle}>
             <option value="employee">Employee</option>
             <option value="admin">Admin</option>
+            <option value="sub_super_admin">Sub Super Admin</option>
             <option value="super_admin">Super Admin</option>
           </select>
         </div>
 
-        {showManagerPicker ? (
+        {showManagerPicker && (
           <div>
             <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>Manager</label>
             <select name="manager_id" style={inputStyle}>
               <option value="">No Manager</option>
               {managers.map(m => (
                 <option key={m.id} value={m.id}>
-                  {m.name} ({m.role === 'super_admin' ? 'Super Admin' : 'Admin'})
+                  {m.name} ({m.role === 'super_admin' ? 'Super Admin' : m.role === 'sub_super_admin' ? 'Sub Super Admin' : 'Admin'})
                 </option>
               ))}
             </select>
           </div>
-        ) : (
+        )}
+
+        {autoManager && (
           <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.75rem 1rem' }}>
             <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--muted)' }}>
-              Manager: <strong style={{ color: 'var(--text)' }}>
-                {superAdmins[0]?.name ?? 'Super Admin'} (Super Admin)
-              </strong> — auto-assigned
+              Manager: <strong style={{ color: 'var(--text)' }}>{superAdmins[0]?.name ?? 'Super Admin'} (Super Admin)</strong> — auto-assigned
+            </p>
+          </div>
+        )}
+
+        {noManager && (
+          <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.75rem 1rem' }}>
+            <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--muted)' }}>
+              Manager: <strong style={{ color: 'var(--text)' }}>None</strong> — top of hierarchy
             </p>
           </div>
         )}

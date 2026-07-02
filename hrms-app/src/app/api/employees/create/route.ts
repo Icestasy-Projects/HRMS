@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!me || me.role !== 'super_admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!me || !['super_admin','sub_super_admin'].includes(me.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const form = await req.formData()
   const name = form.get('name') as string
