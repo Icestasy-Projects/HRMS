@@ -2,13 +2,16 @@
 export function countWorkdays(startDate: string, endDate: string, holidays: string[] = []): number {
   const holidaySet = new Set(holidays)
   let count = 0
-  const cur = new Date(startDate)
-  const end = new Date(endDate)
+  // Parse as UTC to avoid local-timezone day shifts
+  const [sy, sm, sd] = startDate.split('-').map(Number)
+  const [ey, em, ed] = endDate.split('-').map(Number)
+  const cur = new Date(Date.UTC(sy, sm - 1, sd))
+  const end = new Date(Date.UTC(ey, em - 1, ed))
   while (cur <= end) {
-    const day = cur.getDay()
+    const day = cur.getUTCDay()
     const iso = cur.toISOString().split('T')[0]
     if (day !== 0 && day !== 6 && !holidaySet.has(iso)) count++
-    cur.setDate(cur.getDate() + 1)
+    cur.setUTCDate(cur.getUTCDate() + 1)
   }
   return count
 }
