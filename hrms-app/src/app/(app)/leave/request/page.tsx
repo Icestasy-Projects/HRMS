@@ -105,11 +105,13 @@ export default async function LeaveRequestPage({
     }
 
     if (isUnscheduled) {
-      const { data: bal } = await supabase.from('leave_balances').select('*').eq('user_id', emp.id).single()
+      const balYear = new Date(startDate).getFullYear()
+      const { data: bal } = await supabase.from('leave_balances').select('*')
+        .eq('user_id', emp.id).eq('year', balYear).single()
       if (bal) {
         await supabase.from('leave_balances')
           .update({ ul_used: bal.ul_used + daysCount })
-          .eq('user_id', emp.id)
+          .eq('user_id', emp.id).eq('year', balYear)
       }
       if (emp.department_id) {
         const { data: dept } = await supabase.from('departments').select('manager_id').eq('id', emp.department_id).single()
