@@ -46,7 +46,7 @@ export default async function TeamLeavePage() {
     const supabase = await createClient()
 
     const { data: req } = await supabase.from('leave_requests').select('*').eq('id', requestId).single()
-    if (!req) return
+    if (!req || req.status !== 'pending') return
 
     await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
 
