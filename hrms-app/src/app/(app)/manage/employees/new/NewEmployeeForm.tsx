@@ -28,10 +28,10 @@ export default function NewEmployeeForm({
   const superAdmins = managers.filter(m => m.role === 'super_admin')
   const defaultManagerId = superAdmins[0]?.id ?? ''
 
-  // super_admin = no manager; admin/sub_super_admin = auto super_admin; employee = pick from list
-  const showManagerPicker = role === 'employee'
+  // super_admin = no manager; sub_super_admin = auto super_admin; admin/employee = pick from list
+  const showManagerPicker = role === 'employee' || role === 'admin'
   const noManager = role === 'super_admin'
-  const autoManager = role === 'admin' || role === 'sub_super_admin'
+  const autoManager = role === 'sub_super_admin'
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -104,7 +104,7 @@ export default function NewEmployeeForm({
               <option value="">No Manager</option>
               {managers.map(m => (
                 <option key={m.id} value={m.id}>
-                  {m.name} ({m.role === 'super_admin' ? 'Super Admin' : m.role === 'sub_super_admin' ? 'Sub Super Admin' : 'Admin'})
+                  {m.name} ({m.role === 'super_admin' ? 'Super Admin' : m.role === 'sub_super_admin' ? 'Sub Super Admin' : m.role === 'admin' ? 'Admin' : m.role})
                 </option>
               ))}
             </select>

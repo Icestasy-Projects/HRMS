@@ -15,7 +15,7 @@ export default async function NewEmployeePage() {
   const { data: managers } = await supabase
     .from('users')
     .select('id, name, role')
-    .in('role', ['admin', 'super_admin'])
+    .in('role', ['admin', 'sub_super_admin', 'super_admin'])
     .eq('is_active', true)
     .order('name')
 
