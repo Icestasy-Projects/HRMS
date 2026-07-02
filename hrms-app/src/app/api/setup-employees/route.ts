@@ -31,65 +31,70 @@ export async function GET() {
     auth: { autoRefreshToken: false, persistSession: false }
   })
 
+  // Fetch all auth users once
+  const { data: listData, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+  if (listErr) {
+    return NextResponse.json({ error: 'Failed to list users', detail: listErr.message }, { status: 500 })
+  }
+  const existingUsers = listData?.users ?? []
+
   const results = []
 
   for (const u of USERS) {
-    // Check if auth user already exists
-    const { data: { users } } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-    let authUser = users?.find(au => au.email === u.email)
+    const existing = existingUsers.find(au => au.email === u.email)
 
-    if (!authUser) {
-      // Create via admin API
-      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-          'apikey': serviceKey,
-        },
-        body: JSON.stringify({
-          email: u.email,
-          password: 'Emp@12345',
-          email_confirm: true,
-          user_metadata: { name: u.name, role: u.role, employee_type: 'white_collar' },
-        }),
+    if (existing) {
+      // User exists in auth — update their metadata and password
+      await supabase.auth.admin.updateUserById(existing.id, {
+        password: 'Emp@12345',
+        user_metadata: { name: u.name, role: u.role, employee_type: 'white_collar' },
       })
-      const createBody = await createRes.json()
-      if (!createRes.ok) {
-        results.push({ email: u.email, status: 'create_error', message: createBody?.msg ?? JSON.stringify(createBody) })
+
+      // Upsert public.users
+      const { error: uErr } = await supabase.from('users').upsert({
+        id: existing.id, email: u.email, name: u.name,
+        role: u.role, employee_type: 'white_collar', is_active: true,
+      }, { onConflict: 'id' })
+
+      // Upsert leave_balances
+      await supabase.from('leave_balances').upsert({
+        user_id: existing.id,
+        year: new Date().getFullYear(),
+        sl_total: 18, sl_used: 0,
+        ul_total: 6, ul_used: 0,
+      }, { onConflict: 'user_id,year' })
+
+      results.push({ email: u.email, name: u.name, role: u.role, status: 'synced', id: existing.id, upsert_error: uErr?.message })
+    } else {
+      // User does not exist — try to create
+      const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+        email: u.email,
+        password: 'Emp@12345',
+        email_confirm: true,
+        user_metadata: { name: u.name, role: u.role, employee_type: 'white_collar' },
+      })
+
+      if (createErr || !created?.user) {
+        results.push({ email: u.email, status: 'create_error', message: createErr?.message })
         continue
       }
-      authUser = createBody as typeof authUser
-    } else {
-      // Update password
-      await fetch(`${supabaseUrl}/auth/v1/admin/users/${authUser.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
-          'apikey': serviceKey,
-        },
-        body: JSON.stringify({ password: 'Emp@12345', email_confirm: true }),
-      })
+
+      const uid = created.user.id
+
+      await supabase.from('users').upsert({
+        id: uid, email: u.email, name: u.name,
+        role: u.role, employee_type: 'white_collar', is_active: true,
+      }, { onConflict: 'id' })
+
+      await supabase.from('leave_balances').upsert({
+        user_id: uid,
+        year: new Date().getFullYear(),
+        sl_total: 18, sl_used: 0,
+        ul_total: 6, ul_used: 0,
+      }, { onConflict: 'user_id,year' })
+
+      results.push({ email: u.email, name: u.name, role: u.role, status: 'created', id: uid })
     }
-
-    if (!authUser?.id) { results.push({ email: u.email, status: 'no_id' }); continue }
-
-    // Upsert public.users
-    await supabase.from('users').upsert({
-      id: authUser.id, email: u.email, name: u.name,
-      role: u.role, employee_type: 'white_collar', is_active: true,
-    }, { onConflict: 'id' })
-
-    // Upsert leave_balances
-    await supabase.from('leave_balances').upsert({
-      user_id: authUser.id,
-      year: new Date().getFullYear(),
-      sl_total: 18, sl_used: 0,
-      ul_total: 6, ul_used: 0,
-    }, { onConflict: 'user_id,year' })
-
-    results.push({ email: u.email, name: u.name, role: u.role, status: 'ok', id: authUser.id })
   }
 
   return NextResponse.json({ results })

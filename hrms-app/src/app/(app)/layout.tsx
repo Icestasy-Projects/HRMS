@@ -9,6 +9,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: employee } = await supabase.from('users').select('*').eq('id', user.id).single()
 
+  if (employee?.must_change_password) {
+    redirect('/set-password')
+  }
+
   if (!employee) {
     async function signOut() {
       'use server'
