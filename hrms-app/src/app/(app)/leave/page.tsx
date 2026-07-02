@@ -18,8 +18,39 @@ export default async function LeavePage() {
   if (!employee) redirect('/login')
 
   const admin = createAdminClient()
-  const { data: finalBalance, error: rpcError } = await admin
-    .rpc('get_or_create_leave_balance', { p_employee_id: employee.id })
+  const currentYear = new Date().getFullYear()
+
+  // Ensure balance row exists
+  await admin.rpc('get_or_create_leave_balance', { p_employee_id: employee.id })
+
+  // Fetch totals
+  const { data: balRow } = await admin
+    .from('leave_balances')
+    .select('sl_total, ul_total')
+    .eq('user_id', employee.id)
+    .eq('year', currentYear)
+    .single()
+
+  // Compute used from actual approved leave requests (single source of truth)
+  const { data: approvedLeaves } = await supabase
+    .from('leave_requests')
+    .select('leave_type, days_count')
+    .eq('employee_id', employee.id)
+    .eq('status', 'approved')
+    .gte('start_date', `${currentYear}-01-01`)
+    .lte('start_date', `${currentYear}-12-31`)
+
+  const slUsed = approvedLeaves?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+  const ulUsed = approvedLeaves?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+
+  const slTotal = balRow?.sl_total ?? 18
+  const ulTotal = balRow?.ul_total ?? 6
+  const finalBalance = balRow ? {
+    sl_total: slTotal,
+    ul_total: ulTotal,
+    sl_remaining: slTotal - slUsed,
+    ul_remaining: ulTotal - ulUsed,
+  } : null
 
   const carryWarn = finalBalance ? carryforwardWarning(finalBalance.sl_remaining) : null
   const unpaidWarn = finalBalance ? unpaidLeaveWarning(finalBalance.sl_remaining, finalBalance.ul_remaining) : null

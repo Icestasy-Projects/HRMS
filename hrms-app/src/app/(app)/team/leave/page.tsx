@@ -50,18 +50,6 @@ export default async function TeamLeavePage() {
 
     await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
 
-    const currentYear = new Date().getFullYear()
-    const { data: bal } = await supabase
-      .from('leave_balances').select('*')
-      .eq('user_id', req.employee_id).eq('year', currentYear).single()
-    if (bal) {
-      const updateField = req.leave_type === 'UL'
-        ? { ul_used: bal.ul_used + req.days_count }
-        : { sl_used: bal.sl_used + req.days_count }
-      await supabase.from('leave_balances').update(updateField)
-        .eq('user_id', req.employee_id).eq('year', currentYear)
-    }
-
     await supabase.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',

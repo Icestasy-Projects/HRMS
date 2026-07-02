@@ -12,13 +12,15 @@ interface LeaveRequestFormProps {
 function countWorkdays(start: string, end: string, holidays: string[]): number {
   const holidaySet = new Set(holidays)
   let count = 0
-  const cur = new Date(start)
-  const endD = new Date(end)
+  const [sy, sm, sd] = start.split('-').map(Number)
+  const [ey, em, ed] = end.split('-').map(Number)
+  const cur = new Date(Date.UTC(sy, sm - 1, sd))
+  const endD = new Date(Date.UTC(ey, em - 1, ed))
   while (cur <= endD) {
-    const day = cur.getDay()
+    const day = cur.getUTCDay()
     const iso = cur.toISOString().split('T')[0]
     if (day !== 0 && day !== 6 && !holidaySet.has(iso)) count++
-    cur.setDate(cur.getDate() + 1)
+    cur.setUTCDate(cur.getUTCDate() + 1)
   }
   return count
 }
