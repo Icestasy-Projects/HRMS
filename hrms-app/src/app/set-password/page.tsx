@@ -110,10 +110,19 @@ export default function SetPasswordPage() {
               placeholder="Repeat new password"
               style={{
                 width: '100%', background: 'var(--surface2)',
-                border: '1px solid var(--border)', borderRadius: '0.75rem',
+                border: `1px solid ${confirm.length > 0 ? (confirm === newPass ? '#16a34a' : 'var(--danger)') : 'var(--border)'}`,
+                borderRadius: '0.75rem',
                 padding: '0.75rem 1rem', color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
               }}
             />
+            {confirm.length > 0 && (
+              <p style={{
+                marginTop: '0.375rem', fontSize: '0.8rem', fontWeight: 500,
+                color: confirm === newPass ? '#16a34a' : 'var(--danger)',
+              }}>
+                {confirm === newPass ? '✓ Passwords match' : '✗ Passwords do not match'}
+              </p>
+            )}
           </div>
 
           <button
