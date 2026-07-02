@@ -25,8 +25,30 @@ export default async function LeaveRequestPage({
   if (!employee) redirect('/login')
 
   const admin = createAdminClient()
-  const { data: balance } = await admin
-    .rpc('get_or_create_leave_balance', { p_employee_id: employee.id })
+  await admin.rpc('get_or_create_leave_balance', { p_employee_id: employee.id })
+
+  const reqYear = new Date().getFullYear()
+  const { data: balRow } = await admin
+    .from('leave_balances')
+    .select('sl_total, ul_total')
+    .eq('user_id', employee.id)
+    .eq('year', reqYear)
+    .single()
+
+  const { data: approvedForBalance } = await supabase
+    .from('leave_requests')
+    .select('leave_type, days_count')
+    .eq('employee_id', employee.id)
+    .eq('status', 'approved')
+    .gte('start_date', `${reqYear}-01-01`)
+    .lte('start_date', `${reqYear}-12-31`)
+
+  const slUsedNow = approvedForBalance?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+  const ulUsedNow = approvedForBalance?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+  const balance = {
+    sl_remaining: (balRow?.sl_total ?? 18) - slUsedNow,
+    ul_remaining: (balRow?.ul_total ?? 6) - ulUsedNow,
+  }
 
   // Fetch public holidays for the year
   const year = new Date().getFullYear()
@@ -105,14 +127,6 @@ export default async function LeaveRequestPage({
     }
 
     if (isUnscheduled) {
-      const balYear = new Date(startDate).getFullYear()
-      const { data: bal } = await supabase.from('leave_balances').select('*')
-        .eq('user_id', emp.id).eq('year', balYear).single()
-      if (bal) {
-        await supabase.from('leave_balances')
-          .update({ ul_used: bal.ul_used + daysCount })
-          .eq('user_id', emp.id).eq('year', balYear)
-      }
       if (emp.department_id) {
         const { data: dept } = await supabase.from('departments').select('manager_id').eq('id', emp.department_id).single()
         if (dept?.manager_id && dept.manager_id !== emp.id) {
