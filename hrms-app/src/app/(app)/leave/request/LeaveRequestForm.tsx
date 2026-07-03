@@ -78,7 +78,7 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
       </div>
 
       {/* Date range */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
         <div>
           <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>Start Date</label>
           <input

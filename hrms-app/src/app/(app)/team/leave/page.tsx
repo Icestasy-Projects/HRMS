@@ -1,5 +1,5 @@
 import Breadcrumb from '@/components/Breadcrumb'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { sendLeaveDecisionEmail } from '@/lib/email'
 
@@ -45,6 +45,7 @@ export default async function TeamLeavePage() {
     'use server'
     const requestId = formData.get('request_id') as string
     const supabase = await createClient()
+    const adminClient = createAdminClient()
 
     const { data: req } = await supabase.from('leave_requests').select('*').eq('id', requestId).single()
     if (!req || req.status !== 'pending') return
@@ -55,7 +56,7 @@ export default async function TeamLeavePage() {
     await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
 
     const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
-    await supabase.from('notifications').insert({
+    await adminClient.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',
       title: '✅ Leave Approved',
@@ -84,6 +85,7 @@ export default async function TeamLeavePage() {
     'use server'
     const requestId = formData.get('request_id') as string
     const supabase = await createClient()
+    const adminClient = createAdminClient()
 
     const { data: req } = await supabase.from('leave_requests').select('*').eq('id', requestId).single()
     if (!req || req.status !== 'pending') return
@@ -94,7 +96,7 @@ export default async function TeamLeavePage() {
     await supabase.from('leave_requests').update({ status: 'rejected' }).eq('id', requestId)
 
     const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
-    await supabase.from('notifications').insert({
+    await adminClient.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',
       title: '❌ Leave Rejected',

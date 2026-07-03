@@ -63,6 +63,7 @@ export default async function LeaveRequestPage({
   async function submitLeave(formData: FormData) {
     'use server'
     const supabase = await createClient()
+    const adminClient = createAdminClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
@@ -96,9 +97,9 @@ export default async function LeaveRequestPage({
     // Count workdays (skip weekends + public holidays)
     const yr = new Date(startDate).getFullYear()
     const { data: hRows } = await supabase
-      .from('holidays').select('date')
-      .gte('date', `${yr}-01-01`).lte('date', `${yr}-12-31`)
-    const hList = hRows?.map((h: { date: string }) => h.date) ?? []
+      .from('holidays').select('holiday_date')
+      .gte('holiday_date', `${yr}-01-01`).lte('holiday_date', `${yr}-12-31`)
+    const hList = hRows?.map((h: { holiday_date: string }) => h.holiday_date) ?? []
 
     const isUnscheduled = leaveType === 'UL'
     const workdays = countWorkdays(startDate, endDate, hList)
@@ -150,14 +151,13 @@ export default async function LeaveRequestPage({
 
     if (isUnscheduled) {
       for (const mid of managersToNotify) {
-        await supabase.from('notifications').insert({
+        await adminClient.from('notifications').insert({
           recipient_id: mid, type: 'fyi',
           title: 'Unscheduled Leave Taken',
           message: `${emp.name} has taken ${daysCount} day(s) of unscheduled leave from ${startDate} to ${endDate}.`,
           related_id: newRequest.id,
         })
       }
-      // Send emails to all managers
       for (const mgr of managerUsers ?? []) {
         try {
           await sendLeaveAppliedEmail({
@@ -168,14 +168,13 @@ export default async function LeaveRequestPage({
       }
     } else {
       for (const mid of managersToNotify) {
-        await supabase.from('notifications').insert({
+        await adminClient.from('notifications').insert({
           recipient_id: mid, type: 'action_needed',
           title: 'Leave Request Pending Approval',
           message: `${emp.name} has requested ${daysCount} day(s) of scheduled leave from ${startDate} to ${endDate}. Please review and approve or reject.`,
           related_id: newRequest.id,
         })
       }
-      // Send emails to all managers
       for (const mgr of managerUsers ?? []) {
         try {
           await sendLeaveAppliedEmail({
