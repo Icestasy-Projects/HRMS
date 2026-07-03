@@ -111,7 +111,7 @@ export default async function OnboardingPage() {
                       <div>
                         <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{emp.name}</p>
                         <p style={{ color: 'var(--muted)', fontSize: '0.75rem', margin: '0.1rem 0 0' }}>
-                          {roleLabel(emp.role)}{emp.departments ? ` · ${(emp.departments as { name: string }).name}` : ''}
+                          {roleLabel(emp.role)}{emp.departments && !Array.isArray(emp.departments) ? ` · ${(emp.departments as { name: string }).name}` : ''}
                         </p>
                       </div>
                       {pct !== null ? (
