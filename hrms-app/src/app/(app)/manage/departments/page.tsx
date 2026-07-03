@@ -12,10 +12,13 @@ export default async function DepartmentsPage() {
   const admin = createAdminClient()
   const { data: departments } = await admin
     .from('departments')
-    .select('*, users!departments_manager_id_fkey(name)')
+    .select('id, name, manager_id')
     .order('name')
 
   const { data: allUsers } = await admin.from('users').select('id, name').eq('is_active', true).order('name')
+
+  // Build manager name lookup
+  const userMap = new Map(allUsers?.map(u => [u.id, u.name]) ?? [])
 
   async function createDepartment(formData: FormData) {
     'use server'
@@ -67,9 +70,9 @@ export default async function DepartmentsPage() {
           >
             <div>
               <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>{dept.name}</p>
-              {dept.users && (
+              {dept.manager_id && userMap.get(dept.manager_id) && (
                 <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
-                  Manager: {(dept.users as { name: string }).name}
+                  Manager: {userMap.get(dept.manager_id)}
                 </p>
               )}
             </div>
