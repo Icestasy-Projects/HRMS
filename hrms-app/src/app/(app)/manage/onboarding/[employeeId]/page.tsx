@@ -98,9 +98,10 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
                   <p style={{ fontWeight: 700, color: 'var(--text)', margin: 0 }}>{template.name}</p>
                 </div>
                 {templateTasks.map((task: Record<string, unknown>, idx: number) => {
-                  const prog = progressMap.get(String(task.id))
+                  const t = task as Record<string, string>
+                  const prog = progressMap.get(t.id)
                   const done = prog?.completed ?? false
-                  const canToggle = isHR || (task.assigned_to === 'employee' && isSelf)
+                  const canToggle = isHR || (t.assigned_to === 'employee' && isSelf)
                   return (
                     <div key={String(task.id)} style={{
                       display: 'flex', alignItems: 'flex-start', gap: '0.875rem',
@@ -109,7 +110,7 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
                       opacity: done ? 0.7 : 1,
                     }}>
                       <form action={toggleTask} style={{ flexShrink: 0, marginTop: '2px' }}>
-                        <input type="hidden" name="task_item_id" value={String(task.id)} />
+                        <input type="hidden" name="task_item_id" value={t.id} />
                         <input type="hidden" name="currently_done" value={done ? '1' : '0'} />
                         <button type={canToggle ? 'submit' : 'button'} style={{
                           width: '20px', height: '20px', borderRadius: '50%',
@@ -124,19 +125,19 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
                       </form>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem', textDecoration: done ? 'line-through' : 'none' }}>
-                          {String(task.title)}
+                          {t.title}
                         </p>
-                        {task.description && (
-                          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>{String(task.description)}</p>
+                        {t.description && (
+                          <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>{t.description}</p>
                         )}
                         <span style={{
                           display: 'inline-block', marginTop: '0.3rem',
-                          background: task.assigned_to === 'employee' ? '#dbeafe' : '#ede9fe',
-                          color: task.assigned_to === 'employee' ? '#1e40af' : '#6d28d9',
+                          background: t.assigned_to === 'employee' ? '#dbeafe' : '#ede9fe',
+                          color: t.assigned_to === 'employee' ? '#1e40af' : '#6d28d9',
                           borderRadius: '999px', padding: '0.1rem 0.5rem',
                           fontSize: '0.68rem', fontWeight: 600,
                         }}>
-                          {task.assigned_to === 'employee' ? 'Employee' : 'HR'} task
+                          {t.assigned_to === 'employee' ? 'Employee' : 'HR'} task
                         </span>
                       </div>
                     </div>
