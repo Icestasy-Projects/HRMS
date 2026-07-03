@@ -1,7 +1,5 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const FROM = process.env.EMAIL_FROM ?? 'HRMS <noreply@icestasyprojects.com>'
 
 export async function sendLeaveAppliedEmail({
@@ -45,6 +43,7 @@ export async function sendLeaveAppliedEmail({
       </div>
     </div>`
 
+  const resend = new Resend(process.env.RESEND_API_KEY)
   await resend.emails.send({ from: FROM, to: managerEmail, subject, html })
 }
 
@@ -88,6 +87,7 @@ export async function sendLeaveDecisionEmail({
       </div>
     </div>`
 
+  const resend = new Resend(process.env.RESEND_API_KEY)
   await resend.emails.send({ from: FROM, to: employeeEmail, subject, html })
 }
 
