@@ -102,7 +102,7 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
                   const done = prog?.completed ?? false
                   const canToggle = isHR || (t.assigned_to === 'employee' && isSelf)
                   return (
-                    <div key={String(task.id)} style={{
+                    <div key={t.id} style={{
                       display: 'flex', alignItems: 'flex-start', gap: '0.875rem',
                       padding: '0.875rem 1.25rem',
                       borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
