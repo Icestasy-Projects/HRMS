@@ -1,6 +1,7 @@
 import Breadcrumb from '@/components/Breadcrumb'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { sendLeaveDecisionEmail } from '@/lib/email'
 
 export default async function TeamLeavePage() {
   const supabase = await createClient()
@@ -62,6 +63,20 @@ export default async function TeamLeavePage() {
       related_id: requestId,
     })
 
+    // Send email to employee
+    const { data: emp } = await supabase.from('users').select('email, name').eq('id', req.employee_id).single()
+    if (emp) {
+      try {
+        await sendLeaveDecisionEmail({
+          employeeEmail: emp.email, employeeName: emp.name,
+          managerName: approver?.name ?? '',
+          approved: true,
+          leaveType: req.leave_type,
+          startDate: req.start_date, endDate: req.end_date, daysCount: req.days_count,
+        })
+      } catch {}
+    }
+
     redirect('/team/leave')
   }
 
@@ -86,6 +101,20 @@ export default async function TeamLeavePage() {
       message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) has been rejected${approver ? ` by ${approver.name}` : ''}.`,
       related_id: requestId,
     })
+
+    // Send email to employee
+    const { data: emp } = await supabase.from('users').select('email, name').eq('id', req.employee_id).single()
+    if (emp) {
+      try {
+        await sendLeaveDecisionEmail({
+          employeeEmail: emp.email, employeeName: emp.name,
+          managerName: approver?.name ?? '',
+          approved: false,
+          leaveType: req.leave_type,
+          startDate: req.start_date, endDate: req.end_date, daysCount: req.days_count,
+        })
+      } catch {}
+    }
 
     redirect('/team/leave')
   }
