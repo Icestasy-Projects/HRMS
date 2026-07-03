@@ -217,21 +217,26 @@ export default function TeamCalendar() {
                 <>
                   {/* Department header row */}
                   <tr key={`dept-${group.deptId}`}>
-                    <td
-                      colSpan={daysInMonth + 1}
-                      style={{
-                        background: 'linear-gradient(90deg, var(--primary-l), var(--surface))',
-                        borderTop: '1px solid var(--border)',
-                        borderBottom: '1px solid var(--border)',
-                        padding: '0.45rem 1rem',
-                        fontWeight: 700, fontSize: '0.72rem',
-                        color: 'var(--primary)',
-                        textTransform: 'uppercase', letterSpacing: '0.07em',
-                        position: 'sticky', left: 0,
-                      }}
-                    >
+                    <td style={{
+                      position: 'sticky', left: 0, zIndex: 2,
+                      background: 'var(--primary-l)',
+                      borderTop: '1px solid var(--border)',
+                      borderBottom: '1px solid var(--border)',
+                      borderRight: '2px solid var(--border)',
+                      padding: '0.45rem 1rem',
+                      fontWeight: 700, fontSize: '0.72rem',
+                      color: 'var(--primary)',
+                      textTransform: 'uppercase', letterSpacing: '0.07em',
+                      whiteSpace: 'nowrap',
+                      minWidth: `${nameColW}px`, width: `${nameColW}px`,
+                    }}>
                       {group.deptName}
                     </td>
+                    <td colSpan={daysInMonth} style={{
+                      background: 'var(--primary-l)',
+                      borderTop: '1px solid var(--border)',
+                      borderBottom: '1px solid var(--border)',
+                    }} />
                   </tr>
                   {group.emps.map((emp, empIdx) => {
                     const empLeaves = leaveMap.get(emp.id)
