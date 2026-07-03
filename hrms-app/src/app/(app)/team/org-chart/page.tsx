@@ -28,7 +28,7 @@ export default async function OrgChartPage() {
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>Reporting hierarchy across the organisation</p>
       </div>
-      <OrgChart users={users ?? []} />
+      <OrgChart users={(users ?? []) as unknown as Array<{ id: string; name: string; role: string; department_id: string | null; manager_id: string | null; email: string; departments?: { name: string } | null }>} />
     </div>
   )
 }
