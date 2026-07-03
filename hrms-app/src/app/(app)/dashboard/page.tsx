@@ -103,6 +103,7 @@ export default async function DashboardPage() {
     { label: 'Notifications', href: '/notifications', icon: '🔔', show: true },
     { label: 'Team Calendar', href: '/team/calendar', icon: '📅', show: true },
     { label: 'Team', href: '/team', icon: '👥', show: isAdmin },
+    { label: 'Org Chart', href: '/team/org-chart', icon: '🌳', show: isAdmin },
     { label: 'Leave Requests', href: '/team/leave', icon: '✅', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
     { label: 'Manage', href: '/manage', icon: '⚙', show: isSuperAdmin || isSubSuperAdmin },
   ].filter(w => w.show)
