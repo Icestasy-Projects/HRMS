@@ -7,6 +7,8 @@ const tiles = [
   { label: 'Employees', href: '/manage/employees', desc: 'View and manage all staff', icon: '👥' },
   { label: 'Add Employee', href: '/manage/employees/new', desc: 'Onboard a new team member', icon: '➕' },
   { label: 'Departments', href: '/manage/departments', desc: 'Manage departments and managers', icon: '🏢' },
+  { label: 'Onboarding', href: '/manage/onboarding', desc: 'Templates and new hire progress', icon: '🎯' },
+  { label: 'Positions', href: '/manage/positions', desc: 'Track roles and headcount planning', icon: '📌' },
   { label: 'Leave Policy', href: '/manage/policy', desc: 'Configure leave entitlements', icon: '📋' },
   { label: 'Holidays', href: '/manage/holidays', desc: 'Manage public holidays', icon: '📅' },
 ]

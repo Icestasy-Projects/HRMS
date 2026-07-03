@@ -83,7 +83,15 @@ export default async function TeamPage({
             fontWeight: 600, fontSize: '0.875rem', minHeight: '40px',
             display: 'flex', alignItems: 'center', gap: '0.375rem',
           }}>
-            📅 Calendar
+            📅 Team Calendar
+          </Link>
+          <Link href="/team/org-chart" style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            color: 'var(--text)', borderRadius: '0.5rem', padding: '0.5rem 1rem',
+            fontWeight: 600, fontSize: '0.875rem', minHeight: '40px',
+            display: 'flex', alignItems: 'center', gap: '0.375rem',
+          }}>
+            🌳 Org Chart
           </Link>
           {employee.role === 'super_admin' && departments && departments.length > 0 && (
             <TeamFilter departments={departments} currentDept={filterDept} />
