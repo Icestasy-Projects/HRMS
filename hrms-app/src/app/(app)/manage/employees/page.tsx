@@ -58,11 +58,7 @@ export default async function ManageEmployeesPage() {
                 display: 'flex', alignItems: 'center',
                 justifyContent: 'space-between', gap: '0.75rem',
                 borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
-                cursor: 'pointer', transition: 'background 0.1s',
-              }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface2)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
+              }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
                   <div style={{
                     width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
