@@ -37,7 +37,7 @@ export default async function TeamPage({
     .order('name')
 
   if (employee.role === 'admin') {
-    teamQuery = teamQuery.eq('department_id', employee.department_id)
+    teamQuery = teamQuery.eq('manager_id', employee.id)
   } else if (filterDept) {
     teamQuery = teamQuery.eq('department_id', filterDept)
   }
