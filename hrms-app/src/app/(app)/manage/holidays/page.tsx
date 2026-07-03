@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 export default async function HolidaysPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -12,14 +14,16 @@ export default async function HolidaysPage() {
   const { data: holidays } = await supabase
     .from('holiday_calendar')
     .select('*')
-    .order('date', { ascending: true })
+    .order('holiday_date', { ascending: true })
 
   async function addHoliday(formData: FormData) {
     'use server'
     const supabase = await createClient()
     await supabase.from('holiday_calendar').insert({
       name: formData.get('name') as string,
-      date: formData.get('date') as string,
+      holiday_date: formData.get('date') as string,
+      type: 'public',
+      year: new Date(formData.get('date') as string).getFullYear(),
     })
     redirect('/manage/holidays')
   }
@@ -69,7 +73,7 @@ export default async function HolidaysPage() {
             <div>
               <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>{h.name}</p>
               <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
-                {new Date(h.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}
+                {new Date(h.holiday_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
             <form action={deleteHoliday}>
