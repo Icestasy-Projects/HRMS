@@ -69,15 +69,13 @@ export default async function TeamLeavePage() {
     // Send email to employee
     const { data: emp } = await supabase.from('users').select('email, name').eq('id', req.employee_id).single()
     if (emp) {
-      try {
-        await sendLeaveDecisionEmail({
-          employeeEmail: emp.email, employeeName: emp.name,
-          managerName: approver?.name ?? '',
-          approved: true,
-          leaveType: req.leave_type,
-          startDate: req.start_date, endDate: req.end_date, daysCount: req.days_count,
-        })
-      } catch {}
+      await sendLeaveDecisionEmail({
+        employeeEmail: emp.email, employeeName: emp.name,
+        managerName: approver?.name ?? '',
+        approved: true,
+        leaveType: req.leave_type,
+        startDate: req.start_date, endDate: req.end_date, daysCount: req.days_count,
+      })
     }
 
     redirect('/team/leave')
@@ -111,15 +109,13 @@ export default async function TeamLeavePage() {
     // Send email to employee
     const { data: emp } = await supabase.from('users').select('email, name').eq('id', req.employee_id).single()
     if (emp) {
-      try {
-        await sendLeaveDecisionEmail({
-          employeeEmail: emp.email, employeeName: emp.name,
-          managerName: approver?.name ?? '',
-          approved: false,
-          leaveType: req.leave_type,
-          startDate: req.start_date, endDate: req.end_date, daysCount: req.days_count,
-        })
-      } catch {}
+      await sendLeaveDecisionEmail({
+        employeeEmail: emp.email, employeeName: emp.name,
+        managerName: approver?.name ?? '',
+        approved: false,
+        leaveType: req.leave_type,
+        startDate: req.start_date, endDate: req.end_date, daysCount: req.days_count,
+      })
     }
 
     redirect('/team/leave')

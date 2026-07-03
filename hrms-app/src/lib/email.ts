@@ -43,8 +43,13 @@ export async function sendLeaveAppliedEmail({
       </div>
     </div>`
 
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[email] RESEND_API_KEY is not set — skipping sendLeaveAppliedEmail')
+    return
+  }
   const resend = new Resend(process.env.RESEND_API_KEY)
-  await resend.emails.send({ from: FROM, to: managerEmail, subject, html })
+  const { error } = await resend.emails.send({ from: FROM, to: managerEmail, subject, html })
+  if (error) console.error('[email] sendLeaveAppliedEmail failed:', error)
 }
 
 export async function sendLeaveDecisionEmail({
@@ -87,8 +92,13 @@ export async function sendLeaveDecisionEmail({
       </div>
     </div>`
 
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[email] RESEND_API_KEY is not set — skipping sendLeaveDecisionEmail')
+    return
+  }
   const resend = new Resend(process.env.RESEND_API_KEY)
-  await resend.emails.send({ from: FROM, to: employeeEmail, subject, html })
+  const { error } = await resend.emails.send({ from: FROM, to: employeeEmail, subject, html })
+  if (error) console.error('[email] sendLeaveDecisionEmail failed:', error)
 }
 
 function row(label: string, value: string) {
