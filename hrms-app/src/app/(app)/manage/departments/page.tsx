@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
 export default async function DepartmentsPage() {
@@ -9,12 +9,13 @@ export default async function DepartmentsPage() {
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
   if (!me || !['super_admin','sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
-  const { data: departments } = await supabase
+  const admin = createAdminClient()
+  const { data: departments } = await admin
     .from('departments')
     .select('*, users!departments_manager_id_fkey(name)')
     .order('name')
 
-  const { data: allUsers } = await supabase.from('users').select('id, name').order('name')
+  const { data: allUsers } = await admin.from('users').select('id, name').eq('is_active', true).order('name')
 
   async function createDepartment(formData: FormData) {
     'use server'
