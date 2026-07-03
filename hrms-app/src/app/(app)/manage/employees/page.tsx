@@ -52,46 +52,52 @@ export default async function ManageEmployeesPage() {
           borderRadius: '0.75rem', overflow: 'hidden', boxShadow: 'var(--shadow)',
         }}>
           {employees.map((emp: { id: string; name: string; email: string; role: string; employee_type: string; departments?: { name: string } }, idx: number) => (
-            <div key={emp.id} style={{
-              padding: '0.875rem 1.25rem',
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between', gap: '0.75rem',
-              borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--primary-l)', border: '1px solid var(--border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--primary)', fontWeight: 700, fontSize: '12px',
-                }}>
-                  {emp.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+            <Link key={emp.id} href={`/manage/employees/${emp.id}/view`} style={{ textDecoration: 'none' }}>
+              <div style={{
+                padding: '0.875rem 1.25rem',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', gap: '0.75rem',
+                borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
+                cursor: 'pointer', transition: 'background 0.1s',
+              }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface2)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                    background: 'var(--primary-l)', border: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--primary)', fontWeight: 700, fontSize: '12px',
+                  }}>
+                    {emp.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{emp.name}</p>
+                    <p style={{ color: 'var(--muted)', fontSize: '0.78rem', margin: '0.2rem 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {emp.email} · {emp.departments ? (emp.departments as { name: string }).name : 'No dept'} · {emp.employee_type?.replace('_', ' ')}
+                    </p>
+                  </div>
                 </div>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{emp.name}</p>
-                  <p style={{ color: 'var(--muted)', fontSize: '0.78rem', margin: '0.2rem 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {emp.email} · {emp.departments ? (emp.departments as { name: string }).name : 'No dept'} · {emp.employee_type?.replace('_', ' ')}
-                  </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
+                  <span style={{
+                    background: 'rgba(124,47,201,0.12)', color: 'var(--primary)',
+                    borderRadius: '999px', padding: '0.2rem 0.625rem',
+                    fontSize: '0.72rem', fontWeight: 600, textTransform: 'capitalize',
+                  }}>
+                    {emp.role?.replace('_', ' ')}
+                  </span>
+                  <Link href={`/manage/employees/${emp.id}`} onClick={e => e.stopPropagation()} style={{
+                    background: 'transparent', border: '1px solid var(--border)',
+                    borderRadius: '0.5rem', padding: '0.375rem 0.75rem',
+                    color: 'var(--text)', fontSize: '0.8rem', minHeight: '36px',
+                    display: 'flex', alignItems: 'center',
+                  }}>
+                    Edit
+                  </Link>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
-                <span style={{
-                  background: 'rgba(124,47,201,0.12)', color: 'var(--primary)',
-                  borderRadius: '999px', padding: '0.2rem 0.625rem',
-                  fontSize: '0.72rem', fontWeight: 600, textTransform: 'capitalize',
-                }}>
-                  {emp.role?.replace('_', ' ')}
-                </span>
-                <Link href={`/manage/employees/${emp.id}`} style={{
-                  background: 'transparent', border: '1px solid var(--border)',
-                  borderRadius: '0.5rem', padding: '0.375rem 0.75rem',
-                  color: 'var(--text)', fontSize: '0.8rem', minHeight: '36px',
-                  display: 'flex', alignItems: 'center',
-                }}>
-                  Edit
-                </Link>
-              </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
