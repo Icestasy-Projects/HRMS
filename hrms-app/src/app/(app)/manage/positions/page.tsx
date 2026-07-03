@@ -98,25 +98,25 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {positions.map((pos: Record<string, unknown>) => {
-            const isEditing = editId === String(pos.id)
-            const dept = pos.departments as { name: string } | null
-            const filled = pos.department_id ? (deptHeadcount.get(String(pos.department_id)) ?? 0) : 0
-            const headcount = Number(pos.headcount)
-            const isActive = Boolean(pos.is_active)
+          {(positions as Array<{ id: string; title: string; department_id: string | null; headcount: number; description: string | null; is_active: boolean; departments: { name: string } | null }>).map((pos) => {
+            const isEditing = editId === pos.id
+            const dept = pos.departments
+            const filled = pos.department_id ? (deptHeadcount.get(pos.department_id) ?? 0) : 0
+            const headcount = pos.headcount
+            const isActive = pos.is_active
 
             return (
               <div key={String(pos.id)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.875rem', overflow: 'hidden' }}>
                 {isEditing ? (
                   <form action={updatePosition} style={{ padding: '1rem', display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-                    <input type="hidden" name="id" value={String(pos.id)} />
-                    <input name="title" type="text" required defaultValue={String(pos.title)} style={inputStyle} />
-                    <select name="department_id" defaultValue={String(pos.department_id ?? '')} style={inputStyle}>
+                    <input type="hidden" name="id" value={pos.id} />
+                    <input name="title" type="text" required defaultValue={pos.title} style={inputStyle} />
+                    <select name="department_id" defaultValue={pos.department_id ?? ''} style={inputStyle}>
                       <option value="">No department</option>
                       {departments?.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
-                    <input name="headcount" type="number" min="1" defaultValue={String(pos.headcount)} style={inputStyle} />
-                    <input name="description" type="text" defaultValue={String(pos.description ?? '')} placeholder="Description" style={inputStyle} />
+                    <input name="headcount" type="number" min="1" defaultValue={String(headcount)} style={inputStyle} />
+                    <input name="description" type="text" defaultValue={pos.description ?? ''} placeholder="Description" style={inputStyle} />
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button type="submit" style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', flex: 1 }}>Save</button>
                       <a href="/manage/positions" style={{ background: 'var(--surface2)', color: 'var(--muted)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.5rem 1rem', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none', textAlign: 'center', flex: 1 }}>Cancel</a>
@@ -126,14 +126,14 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1.25rem' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <p style={{ color: 'var(--text)', fontWeight: 700, margin: 0 }}>{String(pos.title)}</p>
+                        <p style={{ color: 'var(--text)', fontWeight: 700, margin: 0 }}>{pos.title}</p>
                         {!isActive && (
                           <span style={{ background: '#fee2e2', color: '#991b1b', borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: 600 }}>Inactive</span>
                         )}
                       </div>
                       <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>
                         {dept?.name ?? 'No department'} · {headcount} headcount
-                        {pos.description ? ` · ${String(pos.description)}` : ''}
+                        {pos.description ? ` · ${pos.description}` : ''}
                       </p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
@@ -141,9 +141,9 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
                         <p style={{ color: 'var(--text)', fontWeight: 700, margin: 0, fontSize: '1.1rem' }}>{filled}</p>
                         <p style={{ color: 'var(--muted)', fontSize: '0.68rem', margin: 0 }}>of {headcount} filled</p>
                       </div>
-                      <a href={`?edit=${String(pos.id)}`} style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none' }}>Edit</a>
+                      <a href={`?edit=${pos.id}`} style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none' }}>Edit</a>
                       <form action={toggleActive}>
-                        <input type="hidden" name="id" value={String(pos.id)} />
+                        <input type="hidden" name="id" value={pos.id} />
                         <input type="hidden" name="is_active" value={String(isActive)} />
                         <button type="submit" style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>
                           {isActive ? 'Deactivate' : 'Activate'}

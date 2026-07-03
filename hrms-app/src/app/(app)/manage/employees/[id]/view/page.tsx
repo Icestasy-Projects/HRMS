@@ -218,22 +218,22 @@ export default async function EmployeeProfilePage({ params }: { params: Promise<
           {section('Compensation History')}
           {salaryHistory && salaryHistory.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-              {salaryHistory.map((s: Record<string, unknown>, idx: number) => (
-                <div key={String(s.id)} style={{
+              {(salaryHistory as Array<{ id: string; amount: number; reason?: string; notes?: string; effective_date?: string; created_at: string }>).map((s, idx) => (
+                <div key={s.id} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
                   padding: '0.625rem 0', borderBottom: idx < salaryHistory.length - 1 ? '1px solid var(--border)' : 'none',
                   gap: '0.5rem',
                 }}>
                   <div>
                     <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.875rem' }}>
-                      ₹{Number(s.amount).toLocaleString('en-IN')}
+                      ₹{s.amount.toLocaleString('en-IN')}
                     </p>
                     <p style={{ color: 'var(--muted)', fontSize: '0.75rem', margin: '0.1rem 0 0' }}>
-                      {String(s.reason ?? s.notes ?? 'Salary adjustment')}
+                      {s.reason ?? s.notes ?? 'Salary adjustment'}
                     </p>
                   </div>
                   <p style={{ color: 'var(--muted)', fontSize: '0.75rem', margin: 0, whiteSpace: 'nowrap' }}>
-                    {formatDate(String(s.effective_date ?? s.created_at))}
+                    {formatDate(s.effective_date ?? s.created_at)}
                   </p>
                 </div>
               ))}

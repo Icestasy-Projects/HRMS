@@ -75,15 +75,15 @@ export default async function OnboardingPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {templates.map((t: Record<string, unknown>) => {
-                const taskCount = (t.onboarding_task_items as { count: number }[] | null)?.[0]?.count ?? 0
+              {(templates as Array<{ id: string; name: string; role: string; onboarding_task_items: { count: number }[] | null }>).map((t) => {
+                const taskCount = t.onboarding_task_items?.[0]?.count ?? 0
                 return (
-                  <Link key={String(t.id)} href={`/manage/onboarding/templates/${t.id}`} style={{ textDecoration: 'none' }}>
+                  <Link key={t.id} href={`/manage/onboarding/templates/${t.id}`} style={{ textDecoration: 'none' }}>
                     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.875rem', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
                       <div>
-                        <p style={{ color: 'var(--text)', fontWeight: 700, margin: 0 }}>{String(t.name)}</p>
+                        <p style={{ color: 'var(--text)', fontWeight: 700, margin: 0 }}>{t.name}</p>
                         <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>
-                          {roleLabel(String(t.role))} · {taskCount} tasks
+                          {roleLabel(t.role)} · {taskCount} tasks
                         </p>
                       </div>
                       <span style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Edit →</span>

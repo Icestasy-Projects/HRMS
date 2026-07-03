@@ -74,8 +74,8 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
           </div>
         ) : (
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.875rem', overflow: 'hidden' }}>
-            {tasks.map((task: Record<string, unknown>, idx: number) => (
-              <div key={String(task.id)} style={{
+            {tasks.map((task: Record<string, string>, idx: number) => (
+              <div key={task.id} style={{
                 display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
                 padding: '0.875rem 1.25rem',
                 borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
@@ -89,8 +89,8 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
                   {idx + 1}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{String(task.title)}</p>
-                  {task.description && <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>{String(task.description)}</p>}
+                  <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{task.title}</p>
+                  {task.description && <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.2rem 0 0' }}>{task.description}</p>}
                   <span style={{
                     display: 'inline-block', marginTop: '0.3rem',
                     background: task.assigned_to === 'employee' ? '#dbeafe' : '#ede9fe',
@@ -102,7 +102,7 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
                   </span>
                 </div>
                 <form action={deleteTask}>
-                  <input type="hidden" name="task_id" value={String(task.id)} />
+                  <input type="hidden" name="task_id" value={task.id} />
                   <button type="submit" style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem', lineHeight: 1 }}>✕</button>
                 </form>
               </div>

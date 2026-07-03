@@ -97,8 +97,7 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
                 <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
                   <p style={{ fontWeight: 700, color: 'var(--text)', margin: 0 }}>{template.name}</p>
                 </div>
-                {templateTasks.map((task: Record<string, unknown>, idx: number) => {
-                  const t = task as Record<string, string>
+                {(templateTasks as Array<{ id: string; title: string; description?: string; assigned_to: string; template_id: string; sort_order: number }>).map((t, idx) => {
                   const prog = progressMap.get(t.id)
                   const done = prog?.completed ?? false
                   const canToggle = isHR || (t.assigned_to === 'employee' && isSelf)
