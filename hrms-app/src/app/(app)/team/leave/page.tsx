@@ -48,13 +48,17 @@ export default async function TeamLeavePage() {
     const { data: req } = await supabase.from('leave_requests').select('*').eq('id', requestId).single()
     if (!req || req.status !== 'pending') return
 
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: approver } = user ? await supabase.from('users').select('name').eq('id', user.id).single() : { data: null }
+
     await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
 
+    const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
     await supabase.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',
-      title: 'Leave Approved',
-      message: `Your leave request from ${req.start_date} to ${req.end_date} has been approved.`,
+      title: '✅ Leave Approved',
+      message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) has been approved${approver ? ` by ${approver.name}` : ''}.`,
       related_id: requestId,
     })
 
@@ -67,15 +71,19 @@ export default async function TeamLeavePage() {
     const supabase = await createClient()
 
     const { data: req } = await supabase.from('leave_requests').select('*').eq('id', requestId).single()
-    if (!req) return
+    if (!req || req.status !== 'pending') return
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: approver } = user ? await supabase.from('users').select('name').eq('id', user.id).single() : { data: null }
 
     await supabase.from('leave_requests').update({ status: 'rejected' }).eq('id', requestId)
 
+    const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
     await supabase.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',
-      title: 'Leave Rejected',
-      message: `Your leave request from ${req.start_date} to ${req.end_date} has been rejected.`,
+      title: '❌ Leave Rejected',
+      message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) has been rejected${approver ? ` by ${approver.name}` : ''}.`,
       related_id: requestId,
     })
 

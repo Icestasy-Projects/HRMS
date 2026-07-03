@@ -126,27 +126,38 @@ export default async function LeaveRequestPage({
       redirect(`/leave/request?error=${encodeURIComponent(insertError?.message ?? 'Failed to submit leave request')}`)
     }
 
+    // Notify manager (use direct manager_id on employee record)
+    const managersToNotify: string[] = []
+    if (emp.manager_id && emp.manager_id !== emp.id) {
+      managersToNotify.push(emp.manager_id)
+    } else {
+      // No direct manager — notify all super admins / sub super admins
+      const { data: admins } = await supabase
+        .from('users')
+        .select('id')
+        .in('role', ['super_admin', 'sub_super_admin'])
+        .eq('is_active', true)
+        .neq('id', emp.id)
+      admins?.forEach(a => managersToNotify.push(a.id))
+    }
+
     if (isUnscheduled) {
-      if (emp.department_id) {
-        const { data: dept } = await supabase.from('departments').select('manager_id').eq('id', emp.department_id).single()
-        if (dept?.manager_id && dept.manager_id !== emp.id) {
-          await supabase.from('notifications').insert({
-            recipient_id: dept.manager_id, type: 'fyi', title: 'Unscheduled Leave Taken',
-            message: `${emp.name} has taken ${daysCount} day(s) of unscheduled leave from ${startDate} to ${endDate}.`,
-            related_id: newRequest.id,
-          })
-        }
+      for (const mid of managersToNotify) {
+        await supabase.from('notifications').insert({
+          recipient_id: mid, type: 'fyi',
+          title: 'Unscheduled Leave Taken',
+          message: `${emp.name} has taken ${daysCount} day(s) of unscheduled leave from ${startDate} to ${endDate}.`,
+          related_id: newRequest.id,
+        })
       }
     } else {
-      if (emp.department_id) {
-        const { data: dept } = await supabase.from('departments').select('manager_id').eq('id', emp.department_id).single()
-        if (dept?.manager_id && dept.manager_id !== emp.id) {
-          await supabase.from('notifications').insert({
-            recipient_id: dept.manager_id, type: 'action_needed', title: 'Leave Request Pending Approval',
-            message: `${emp.name} has requested ${daysCount} day(s) of scheduled leave from ${startDate} to ${endDate}.`,
-            related_id: newRequest.id,
-          })
-        }
+      for (const mid of managersToNotify) {
+        await supabase.from('notifications').insert({
+          recipient_id: mid, type: 'action_needed',
+          title: 'Leave Request Pending Approval',
+          message: `${emp.name} has requested ${daysCount} day(s) of scheduled leave from ${startDate} to ${endDate}. Please review and approve or reject.`,
+          related_id: newRequest.id,
+        })
       }
     }
 
