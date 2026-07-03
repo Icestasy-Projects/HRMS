@@ -178,7 +178,7 @@ export default async function EmployeeProfilePage({ params }: { params: Promise<
                     </div>
                     <div>
                       <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.82rem' }}>{r.name}</p>
-                      <p style={{ color: 'var(--muted)', fontSize: '0.72rem', margin: 0 }}>{roleLabel(r.role)}{r.departments ? ` · ${(r.departments as { name: string }).name}` : ''}</p>
+                      <p style={{ color: 'var(--muted)', fontSize: '0.72rem', margin: 0 }}>{roleLabel(r.role)}{r.departments && !Array.isArray(r.departments) ? ` · ${(r.departments as { name: string }).name}` : ''}</p>
                     </div>
                   </div>
                 </Link>
