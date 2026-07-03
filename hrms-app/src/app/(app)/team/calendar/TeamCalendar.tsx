@@ -3,10 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-interface Props {
-  role: string
-  departmentId: string | null
-}
 
 interface Employee {
   id: string
@@ -25,6 +21,7 @@ interface LeaveRequest {
   start_date: string
   end_date: string
   leave_type: string
+  status: string
 }
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -32,7 +29,7 @@ const DAY_ABBR = ['Su','Mo','Tu','We','Th','Fr','Sa']
 
 function pad(n: number) { return String(n).padStart(2, '0') }
 
-export default function TeamCalendar({ role, departmentId }: Props) {
+export default function TeamCalendar() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -48,22 +45,12 @@ export default function TeamCalendar({ role, departmentId }: Props) {
     const firstDay = `${year}-${pad(month + 1)}-01`
     const lastDay = `${year}-${pad(month + 1)}-${pad(daysInMonth)}`
 
-    let empQuery = supabase
-      .from('users')
-      .select('id, name, department_id, role')
-      .eq('is_active', true)
-      .order('name')
-
-    if (role === 'admin' && departmentId) {
-      empQuery = empQuery.eq('department_id', departmentId)
-    }
-
     const [{ data: emps }, { data: depts }, { data: leaveData }] = await Promise.all([
-      empQuery,
+      supabase.from('users').select('id, name, department_id, role').eq('is_active', true).order('name'),
       supabase.from('departments').select('id, name').order('name'),
       supabase.from('leave_requests')
-        .select('employee_id, start_date, end_date, leave_type')
-        .eq('status', 'approved')
+        .select('employee_id, start_date, end_date, leave_type, status')
+        .in('status', ['approved', 'pending'])
         .lte('start_date', lastDay)
         .gte('end_date', firstDay),
     ])
@@ -72,7 +59,7 @@ export default function TeamCalendar({ role, departmentId }: Props) {
     setDepartments(depts ?? [])
     setLeaves(leaveData ?? [])
     setLoading(false)
-  }, [year, month, role, departmentId])
+  }, [year, month])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -114,7 +101,8 @@ export default function TeamCalendar({ role, departmentId }: Props) {
     grouped[grouped.length - 1].emps.push(emp)
   }
 
-  // Build leave map: empId -> dateStr -> leave_type
+  // Build leave map: empId -> dateStr -> status ('approved' | 'pending')
+  // approved takes priority over pending if both exist on same date
   const leaveMap = new Map<string, Map<string, string>>()
   for (const lr of leaves) {
     if (!leaveMap.has(lr.employee_id)) leaveMap.set(lr.employee_id, new Map())
@@ -124,7 +112,10 @@ export default function TeamCalendar({ role, departmentId }: Props) {
     const cur = new Date(Date.UTC(sy, sm - 1, sd))
     const end = new Date(Date.UTC(ey, em - 1, ed))
     while (cur <= end) {
-      empMap.set(cur.toISOString().split('T')[0], lr.leave_type)
+      const key = cur.toISOString().split('T')[0]
+      if (lr.status === 'approved' || !empMap.has(key)) {
+        empMap.set(key, lr.status)
+      }
       cur.setUTCDate(cur.getUTCDate() + 1)
     }
   }
@@ -163,12 +154,13 @@ export default function TeamCalendar({ role, departmentId }: Props) {
         {/* Legend */}
         <div style={{ display: 'flex', gap: '0.75rem', marginLeft: '0.5rem', flexWrap: 'wrap' }}>
           {[
-            { label: 'Scheduled Leave', bg: '#fde68a', color: '#92400e' },
-            { label: 'Unscheduled Leave', bg: '#fecaca', color: '#991b1b' },
-            { label: 'Weekend', bg: 'var(--surface2)', color: 'var(--muted)' },
+            { label: 'Available', bg: '#bbf7d0', border: '#86efac' },
+            { label: 'Leave Pending', bg: '#fde68a', border: '#fcd34d' },
+            { label: 'Leave Approved', bg: '#fecaca', border: '#fca5a5' },
+            { label: 'Weekend', bg: 'var(--surface2)', border: 'var(--border)' },
           ].map(l => (
             <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.78rem', color: 'var(--muted)' }}>
-              <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: l.bg, display: 'inline-block', flexShrink: 0, border: '1px solid rgba(0,0,0,0.08)' }} />
+              <span style={{ width: '14px', height: '14px', borderRadius: '3px', background: l.bg, display: 'inline-block', flexShrink: 0, border: `1px solid ${l.border}` }} />
               {l.label}
             </span>
           ))}
@@ -265,13 +257,12 @@ export default function TeamCalendar({ role, departmentId }: Props) {
                           const isWeekend = dow === 0 || dow === 6
                           const isToday = year === todayY && month === todayM && d === todayD
 
-                          let bg = 'transparent'
+                          let bg = '#bbf7d0'  // green = available
                           let textColor = 'transparent'
                           let cellText = ''
-                          if (leaveType === 'SL') { bg = '#fde68a'; textColor = '#92400e'; cellText = 'SL' }
-                          else if (leaveType === 'UL') { bg = '#fecaca'; textColor = '#991b1b'; cellText = 'UL' }
-                          else if (isWeekend) bg = 'rgba(0,0,0,0.03)'
-                          if (isToday && !leaveType) bg = 'rgba(139,47,201,0.06)'
+                          if (leaveType === 'pending') { bg = '#fde68a'; textColor = '#92400e'; cellText = '?' }
+                          else if (leaveType === 'approved') { bg = '#fecaca'; textColor = '#991b1b'; cellText = '✕' }
+                          else if (isWeekend) bg = 'rgba(0,0,0,0.04)'
 
                           return (
                             <td key={d} style={{

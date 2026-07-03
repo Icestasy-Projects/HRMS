@@ -9,14 +9,12 @@ export default async function TeamCalendarPage() {
   if (!user) redirect('/login')
 
   const { data: employee } = await supabase.from('users').select('role, department_id').eq('id', user.id).single()
-  if (!employee || !['admin', 'super_admin', 'sub_super_admin'].includes(employee.role)) {
-    redirect('/dashboard')
-  }
+  if (!employee) redirect('/dashboard')
 
   return (
     <div style={{ maxWidth: '100%', margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Team', href: '/team' }, { label: 'Calendar' }]} />
+        <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Calendar' }]} />
         <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
           Team Availability
         </h1>
@@ -24,10 +22,7 @@ export default async function TeamCalendarPage() {
           Monthly leave calendar — all departments
         </p>
       </div>
-      <TeamCalendar
-        role={employee.role}
-        departmentId={employee.department_id ?? null}
-      />
+      <TeamCalendar />
     </div>
   )
 }

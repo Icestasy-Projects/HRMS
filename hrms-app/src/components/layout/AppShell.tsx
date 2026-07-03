@@ -31,6 +31,7 @@ function getNavItems(role: string): NavItem[] {
     { label: 'Home', href: '/dashboard' },
     { label: 'Attendance', href: '/attendance' },
     { label: 'Leave', href: '/leave' },
+    { label: 'Calendar', href: '/team/calendar' },
   ]
 }
 
