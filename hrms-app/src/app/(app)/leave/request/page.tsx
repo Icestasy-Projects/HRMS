@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { countWorkdays } from '@/lib/leave'
 import LeaveRequestForm from './LeaveRequestForm'
+import { sendLeaveAppliedEmail } from '@/lib/email'
 
 export default async function LeaveRequestPage({
   searchParams,
@@ -141,6 +142,12 @@ export default async function LeaveRequestPage({
       admins?.forEach(a => managersToNotify.push(a.id))
     }
 
+    // Fetch manager details for email
+    const managerIds = managersToNotify
+    const { data: managerUsers } = managerIds.length > 0
+      ? await supabase.from('users').select('id, name, email').in('id', managerIds)
+      : { data: [] }
+
     if (isUnscheduled) {
       for (const mid of managersToNotify) {
         await supabase.from('notifications').insert({
@@ -150,6 +157,15 @@ export default async function LeaveRequestPage({
           related_id: newRequest.id,
         })
       }
+      // Send emails to all managers
+      for (const mgr of managerUsers ?? []) {
+        try {
+          await sendLeaveAppliedEmail({
+            managerEmail: mgr.email, managerName: mgr.name, employeeName: emp.name,
+            leaveType, startDate, endDate, daysCount, reason, isUnscheduled: true,
+          })
+        } catch {}
+      }
     } else {
       for (const mid of managersToNotify) {
         await supabase.from('notifications').insert({
@@ -158,6 +174,15 @@ export default async function LeaveRequestPage({
           message: `${emp.name} has requested ${daysCount} day(s) of scheduled leave from ${startDate} to ${endDate}. Please review and approve or reject.`,
           related_id: newRequest.id,
         })
+      }
+      // Send emails to all managers
+      for (const mgr of managerUsers ?? []) {
+        try {
+          await sendLeaveAppliedEmail({
+            managerEmail: mgr.email, managerName: mgr.name, employeeName: emp.name,
+            leaveType, startDate, endDate, daysCount, reason, isUnscheduled: false,
+          })
+        } catch {}
       }
     }
 
