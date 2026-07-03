@@ -38,8 +38,8 @@ export default async function TeamLeavePage() {
         .order('requested_at', { ascending: false })
     : { data: [], error: null }
 
-  const pending = allRequests?.filter(r => r.status === 'pending' && r.leave_type === 'SL') ?? []
-  const others = allRequests?.filter(r => !(r.status === 'pending' && r.leave_type === 'SL')) ?? []
+  const pending = allRequests?.filter(r => r.status === 'pending' && r.leave_type === 'SL' && r.employee_id !== user.id) ?? []
+  const others = allRequests?.filter(r => !(r.status === 'pending' && r.leave_type === 'SL' && r.employee_id !== user.id)) ?? []
 
   async function approveLeave(formData: FormData) {
     'use server'
@@ -51,7 +51,9 @@ export default async function TeamLeavePage() {
     if (!req || req.status !== 'pending') return
 
     const { data: { user } } = await supabase.auth.getUser()
-    const { data: approver } = user ? await supabase.from('users').select('name').eq('id', user.id).single() : { data: null }
+    if (!user || req.employee_id === user.id) return  // cannot approve own leave
+
+    const { data: approver } = await supabase.from('users').select('name').eq('id', user.id).single()
 
     await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
 
@@ -91,7 +93,9 @@ export default async function TeamLeavePage() {
     if (!req || req.status !== 'pending') return
 
     const { data: { user } } = await supabase.auth.getUser()
-    const { data: approver } = user ? await supabase.from('users').select('name').eq('id', user.id).single() : { data: null }
+    if (!user || req.employee_id === user.id) return  // cannot reject own leave
+
+    const { data: approver } = await supabase.from('users').select('name').eq('id', user.id).single()
 
     await supabase.from('leave_requests').update({ status: 'rejected' }).eq('id', requestId)
 
