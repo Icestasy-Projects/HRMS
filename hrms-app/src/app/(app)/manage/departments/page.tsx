@@ -1,5 +1,7 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
 
 export default async function DepartmentsPage() {
   const supabase = await createClient()
@@ -9,13 +11,12 @@ export default async function DepartmentsPage() {
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
   if (!me || !['super_admin','sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
-  const admin = createAdminClient()
-  const { data: departments } = await admin
+  const { data: departments, error: deptError } = await supabase
     .from('departments')
-    .select('id, name, manager_id')
+    .select('*')
     .order('name')
 
-  const { data: allUsers } = await admin.from('users').select('id, name').eq('is_active', true).order('name')
+  const { data: allUsers } = await supabase.from('users').select('id, name').eq('is_active', true).order('name')
 
   // Build manager name lookup
   const userMap = new Map(allUsers?.map(u => [u.id, u.name]) ?? [])
@@ -42,6 +43,11 @@ export default async function DepartmentsPage() {
 
       {/* Existing departments */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
+        {deptError && (
+          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '1rem', padding: '1rem 1.25rem', color: '#991b1b', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+            Error: {deptError.message}
+          </div>
+        )}
         {(!departments || departments.length === 0) ? (
           <div
             style={{
