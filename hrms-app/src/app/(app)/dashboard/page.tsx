@@ -216,7 +216,7 @@ export default async function DashboardPage() {
             border: `1px solid ${pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--border)'}`,
             borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
           }}>
-            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Pending Leaves</p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Pending Leave Approvals</p>
             <p style={{ color: pendingLeaveCount > 0 ? 'var(--warning)' : 'var(--text)', fontWeight: 800, fontSize: '1.75rem', margin: 0, lineHeight: 1 }}>{pendingLeaveCount}</p>
             {pendingLeaveCount > 0 ? (
               <Link href="/team/leave" style={{ color: 'var(--warning)', fontSize: '0.78rem', fontWeight: 600, marginTop: '0.25rem', display: 'block' }}>Review now →</Link>
