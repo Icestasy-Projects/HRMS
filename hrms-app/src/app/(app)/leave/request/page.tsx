@@ -159,12 +159,10 @@ export default async function LeaveRequestPage({
         })
       }
       for (const mgr of managerUsers ?? []) {
-        try {
-          await sendLeaveAppliedEmail({
+        await sendLeaveAppliedEmail({
             managerEmail: mgr.email, managerName: mgr.name, employeeName: emp.name,
             leaveType, startDate, endDate, daysCount, reason, isUnscheduled: true,
           })
-        } catch {}
       }
     } else {
       for (const mid of managersToNotify) {
@@ -176,12 +174,10 @@ export default async function LeaveRequestPage({
         })
       }
       for (const mgr of managerUsers ?? []) {
-        try {
-          await sendLeaveAppliedEmail({
+        await sendLeaveAppliedEmail({
             managerEmail: mgr.email, managerName: mgr.name, employeeName: emp.name,
             leaveType, startDate, endDate, daysCount, reason, isUnscheduled: false,
           })
-        } catch {}
       }
     }
 
