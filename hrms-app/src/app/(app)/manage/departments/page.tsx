@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DepartmentsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -11,7 +13,7 @@ export default async function DepartmentsPage() {
 
   const { data: departments, error: deptError } = await supabase
     .from('departments')
-    .select('id, name, manager_id')
+    .select('*')
     .order('name')
 
   const { data: allUsers } = await supabase.from('users').select('id, name').eq('is_active', true).order('name')
