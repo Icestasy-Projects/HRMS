@@ -24,8 +24,8 @@ export default async function DashboardPage() {
   const { data: todayLog } = await supabase
     .from('attendance_logs')
     .select('*')
-    .eq('employee_id', employee.id)
-    .eq('date', today)
+    .eq('user_id', employee.id)
+    .eq('work_date', today)
     .single()
 
   const { data: leaveBalance } = await supabase
@@ -60,18 +60,20 @@ export default async function DashboardPage() {
     pendingLeaveCount = count ?? 0
   }
 
+  const isHalfDay = todayLog?.day_status === 'half_day'
+
   const attStatus = todayLog
-    ? todayLog.is_half_day
+    ? isHalfDay
       ? 'Half Day'
-      : todayLog.clock_out
+      : todayLog.check_out
         ? 'Complete'
         : 'Clocked In'
     : 'Not clocked in'
 
   const attColor = todayLog
-    ? todayLog.is_half_day
+    ? isHalfDay
       ? 'var(--warning)'
-      : todayLog.clock_out
+      : todayLog.check_out
         ? 'var(--success)'
         : 'var(--primary)'
     : 'var(--muted)'
@@ -80,18 +82,18 @@ export default async function DashboardPage() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   const attStatusLabel = todayLog
-    ? todayLog.is_half_day ? 'Half Day'
-      : todayLog.clock_out ? 'Complete' : 'Clocked In'
+    ? isHalfDay ? 'Half Day'
+      : todayLog.check_out ? 'Complete' : 'Clocked In'
     : 'Not clocked in'
 
   const attBadgeBg = todayLog
-    ? todayLog.is_half_day ? '#fef3c7'
-      : todayLog.clock_out ? '#dcfce7' : 'var(--primary-l)'
+    ? isHalfDay ? '#fef3c7'
+      : todayLog.check_out ? '#dcfce7' : 'var(--primary-l)'
     : 'var(--surface2)'
 
   const attBadgeColor = todayLog
-    ? todayLog.is_half_day ? 'var(--warning)'
-      : todayLog.clock_out ? 'var(--success)' : 'var(--primary)'
+    ? isHalfDay ? 'var(--warning)'
+      : todayLog.check_out ? 'var(--success)' : 'var(--primary)'
     : 'var(--muted)'
 
   type Worklet = { label: string; href: string; icon: string; badge?: number; show?: boolean }
@@ -136,7 +138,7 @@ export default async function DashboardPage() {
           whiteSpace: 'nowrap', alignSelf: 'flex-start',
         }}>
           {attStatusLabel}
-          {todayLog && !todayLog.clock_out && ` · ${formatTime(todayLog.clock_in)}`}
+          {todayLog && !todayLog.check_out && ` · ${formatTime(todayLog.check_in)}`}
         </span>
       </div>
 
@@ -184,7 +186,7 @@ export default async function DashboardPage() {
           <p style={{ color: attColor, fontWeight: 700, fontSize: '1rem', margin: 0 }}>{attStatus}</p>
           {todayLog && (
             <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>
-              {formatTime(todayLog.clock_in)}{todayLog.clock_out ? ` → ${formatTime(todayLog.clock_out)}` : ' · Active'}
+              {formatTime(todayLog.check_in)}{todayLog.check_out ? ` → ${formatTime(todayLog.check_out)}` : ' · Active'}
             </p>
           )}
         </div>
