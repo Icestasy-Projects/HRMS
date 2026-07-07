@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 
 interface User {
@@ -33,6 +33,18 @@ function buildTree(users: User[]): TreeNode[] {
   return roots
 }
 
+function collectConnections(nodes: TreeNode[]): Array<{ parentId: string; childId: string }> {
+  const out: Array<{ parentId: string; childId: string }> = []
+  function walk(node: TreeNode) {
+    for (const child of node.children) {
+      out.push({ parentId: node.id, childId: child.id })
+      walk(child)
+    }
+  }
+  nodes.forEach(walk)
+  return out
+}
+
 const ROLE_COLORS: Record<string, { bg: string; color: string; border: string }> = {
   super_admin:     { bg: '#ede9fe', color: '#6d28d9', border: '#c4b5fd' },
   sub_super_admin: { bg: '#fce7f3', color: '#9d174d', border: '#f9a8d4' },
@@ -50,74 +62,90 @@ function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
-function OrgNode({ node, depth, onSelect }: { node: TreeNode; depth: number; onSelect: (u: User) => void }) {
+function OrgNode({
+  node, depth, onSelect, onToggle,
+}: {
+  node: TreeNode
+  depth: number
+  onSelect: (u: User) => void
+  onToggle: () => void
+}) {
   const [collapsed, setCollapsed] = useState(false)
   const rc = ROLE_COLORS[node.role] ?? ROLE_COLORS.employee
   const hasChildren = node.children.length > 0
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-      {/* Card */}
-      <div style={{ position: 'relative' }}>
-        <div
-          onClick={() => onSelect(node)}
-          style={{
-            background: 'var(--surface)',
-            border: `2px solid ${rc.border}`,
-            borderRadius: '0.875rem',
-            padding: '0.875rem 1rem',
-            minWidth: '160px',
-            maxWidth: '200px',
-            textAlign: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            position: 'relative',
-            zIndex: 1,
-            cursor: 'pointer',
-            transition: 'box-shadow 0.15s, transform 0.15s',
-          }}
-          onMouseEnter={e => {
-            ;(e.currentTarget as HTMLDivElement).style.boxShadow = `0 4px 16px ${rc.border}80`
-            ;(e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'
-          }}
-          onMouseLeave={e => {
-            ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'
-            ;(e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'
-          }}
-        >
-          <div style={{
-            width: '40px', height: '40px', borderRadius: '50%',
-            background: rc.bg, color: rc.color,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: '14px', margin: '0 auto 0.5rem',
-            border: `2px solid ${rc.border}`,
-          }}>
-            {initials(node.name)}
-          </div>
-          <p style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)', margin: 0, lineHeight: 1.3 }}>{node.name}</p>
-          <span style={{
-            display: 'inline-block', marginTop: '0.35rem',
-            background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`,
-            borderRadius: '999px', padding: '0.1rem 0.5rem',
-            fontSize: '0.65rem', fontWeight: 600,
-          }}>
-            {roleLabel(node.role)}
-          </span>
-          {node.departments && (
-            <p style={{ color: 'var(--muted)', fontSize: '0.68rem', margin: '0.25rem 0 0' }}>
-              {(node.departments as { name: string }).name}
-            </p>
-          )}
-        </div>
+  function toggle() {
+    setCollapsed(c => !c)
+    // Re-measure after React re-renders
+    requestAnimationFrame(onToggle)
+  }
 
-        {/* Expand/collapse toggle */}
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* Card */}
+      <div
+        data-nodeid={node.id}
+        onClick={() => onSelect(node)}
+        style={{
+          background: 'var(--surface)',
+          border: `2px solid ${rc.border}`,
+          borderRadius: '0.875rem',
+          padding: '0.875rem 1rem',
+          minWidth: '160px',
+          maxWidth: '200px',
+          textAlign: 'center',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          cursor: 'pointer',
+          position: 'relative',
+          transition: 'box-shadow 0.15s, transform 0.15s',
+          userSelect: 'none',
+        }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLDivElement
+          el.style.boxShadow = `0 4px 16px ${rc.border}90`
+          el.style.transform = 'translateY(-2px)'
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLDivElement
+          el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'
+          el.style.transform = 'translateY(0)'
+        }}
+      >
+        <div style={{
+          width: '40px', height: '40px', borderRadius: '50%',
+          background: rc.bg, color: rc.color,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: '14px', margin: '0 auto 0.5rem',
+          border: `2px solid ${rc.border}`,
+        }}>
+          {initials(node.name)}
+        </div>
+        <p style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)', margin: 0, lineHeight: 1.3 }}>
+          {node.name}
+        </p>
+        <span style={{
+          display: 'inline-block', marginTop: '0.35rem',
+          background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`,
+          borderRadius: '999px', padding: '0.1rem 0.5rem',
+          fontSize: '0.65rem', fontWeight: 600,
+        }}>
+          {roleLabel(node.role)}
+        </span>
+        {node.departments && (
+          <p style={{ color: 'var(--muted)', fontSize: '0.68rem', margin: '0.25rem 0 0' }}>
+            {(node.departments as { name: string }).name}
+          </p>
+        )}
+
+        {/* Collapse toggle */}
         {hasChildren && (
           <button
-            onClick={e => { e.stopPropagation(); setCollapsed(c => !c) }}
+            onClick={e => { e.stopPropagation(); toggle() }}
             style={{
-              position: 'absolute', bottom: '-14px', left: '50%', transform: 'translateX(-50%)',
-              width: '24px', height: '24px', borderRadius: '50%',
+              position: 'absolute', bottom: '-13px', left: '50%', transform: 'translateX(-50%)',
+              width: '22px', height: '22px', borderRadius: '50%',
               background: rc.bg, border: `2px solid ${rc.border}`,
-              color: rc.color, fontSize: '12px', fontWeight: 700,
+              color: rc.color, fontSize: '11px', fontWeight: 700,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               zIndex: 2, lineHeight: 1,
             }}
@@ -127,29 +155,22 @@ function OrgNode({ node, depth, onSelect }: { node: TreeNode; depth: number; onS
         )}
       </div>
 
-      {/* Connector line down */}
-      {hasChildren && !collapsed && (
-        <div style={{ width: '2px', height: '22px', background: 'var(--border)', flexShrink: 0 }} />
-      )}
-
-      {/* Children row */}
-      {hasChildren && !collapsed && (
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', position: 'relative' }}>
-          {/* Horizontal connector bar — only when >1 child */}
-          {node.children.length > 1 && (
-            <div style={{
-              position: 'absolute', top: 0,
-              height: '2px', background: 'var(--border)',
-              // span from center of first child to center of last child
-              left: `calc(50% - (${node.children.length - 1} * (160px + 1.5rem) / 2))`,
-              width: `calc((${node.children.length - 1}) * (160px + 1.5rem))`,
-            }} />
-          )}
+      {/* Children — rendered in DOM but invisible when collapsed so SVG can still measure */}
+      {hasChildren && (
+        <div style={{
+          display: collapsed ? 'none' : 'flex',
+          gap: '2rem',
+          alignItems: 'flex-start',
+          marginTop: '40px',
+        }}>
           {node.children.map(child => (
-            <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: '2px', height: '20px', background: 'var(--border)' }} />
-              <OrgNode node={child} depth={depth + 1} onSelect={onSelect} />
-            </div>
+            <OrgNode
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              onSelect={onSelect}
+              onToggle={onToggle}
+            />
           ))}
         </div>
       )}
@@ -161,22 +182,13 @@ function DetailPanel({ user, onClose }: { user: User; onClose: () => void }) {
   const rc = ROLE_COLORS[user.role] ?? ROLE_COLORS.employee
   return (
     <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 100,
-        }}
-      />
-      {/* Panel */}
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 100 }} />
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0, width: '320px', maxWidth: '90vw',
         background: 'var(--surface)', borderLeft: '1px solid var(--border)',
         zIndex: 101, display: 'flex', flexDirection: 'column',
-        boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
-        overflowY: 'auto',
+        boxShadow: '-4px 0 24px rgba(0,0,0,0.15)', overflowY: 'auto',
       }}>
-        {/* Header */}
         <div style={{
           background: `linear-gradient(135deg, ${rc.border}, ${rc.bg})`,
           padding: '1.5rem',
@@ -187,8 +199,7 @@ function DetailPanel({ user, onClose }: { user: User; onClose: () => void }) {
               width: '52px', height: '52px', borderRadius: '50%',
               background: 'rgba(255,255,255,0.8)', color: rc.color,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 800, fontSize: '18px', border: `2px solid ${rc.border}`,
-              flexShrink: 0,
+              fontWeight: 800, fontSize: '18px', border: `2px solid ${rc.border}`, flexShrink: 0,
             }}>
               {initials(user.name)}
             </div>
@@ -210,7 +221,6 @@ function DetailPanel({ user, onClose }: { user: User; onClose: () => void }) {
           }}>✕</button>
         </div>
 
-        {/* Details */}
         <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {[
             { label: 'Email', value: user.email },
@@ -218,10 +228,7 @@ function DetailPanel({ user, onClose }: { user: User; onClose: () => void }) {
             { label: 'Employee Type', value: user.employee_type ? user.employee_type.replace('_', ' ') : '—' },
             { label: 'Status', value: user.is_active !== false ? 'Active' : 'Inactive' },
           ].map(row => (
-            <div key={row.label} style={{
-              background: 'var(--surface2)', borderRadius: '0.625rem',
-              padding: '0.625rem 0.875rem',
-            }}>
+            <div key={row.label} style={{ background: 'var(--surface2)', borderRadius: '0.625rem', padding: '0.625rem 0.875rem' }}>
               <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>
                 {row.label}
               </p>
@@ -232,7 +239,6 @@ function DetailPanel({ user, onClose }: { user: User; onClose: () => void }) {
           ))}
         </div>
 
-        {/* View full profile */}
         <div style={{ padding: '0 1.25rem 1.25rem', marginTop: 'auto' }}>
           <Link href={`/manage/employees/${user.id}/view`} style={{
             display: 'block', textAlign: 'center',
@@ -249,18 +255,78 @@ function DetailPanel({ user, onClose }: { user: User; onClose: () => void }) {
 }
 
 export default function OrgChart({ users }: { users: User[] }) {
-  const roots = buildTree(users)
+  const roots = useMemo(() => buildTree(users), [users])
+  const connections = useMemo(() => collectConnections(roots), [roots])
   const [selected, setSelected] = useState<User | null>(null)
+  const [lines, setLines] = useState<Array<{ x1: number; y1: number; x2: number; y2: number }>>([])
+  const [svgSize, setSvgSize] = useState({ w: 2000, h: 1000 })
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const measure = useCallback(() => {
+    const container = containerRef.current
+    if (!container) return
+    const cr = container.getBoundingClientRect()
+    const sl = container.scrollLeft
+    const st = container.scrollTop
+
+    const newLines: typeof lines = []
+    for (const { parentId, childId } of connections) {
+      const pEl = container.querySelector(`[data-nodeid="${parentId}"]`)
+      const cEl = container.querySelector(`[data-nodeid="${childId}"]`)
+      if (!pEl || !cEl) continue
+      const pr = pEl.getBoundingClientRect()
+      const ch = cEl.getBoundingClientRect()
+      // Skip if child is not visible (collapsed)
+      if (ch.width === 0 && ch.height === 0) continue
+      newLines.push({
+        x1: pr.left - cr.left + sl + pr.width / 2,
+        y1: pr.bottom - cr.top + st,
+        x2: ch.left - cr.left + sl + ch.width / 2,
+        y2: ch.top - cr.top + st,
+      })
+    }
+    setLines(newLines)
+    setSvgSize({ w: container.scrollWidth, h: container.scrollHeight })
+  }, [connections])
+
+  useEffect(() => {
+    measure()
+    window.addEventListener('resize', measure)
+    const ro = new ResizeObserver(measure)
+    if (containerRef.current) ro.observe(containerRef.current)
+    return () => { window.removeEventListener('resize', measure); ro.disconnect() }
+  }, [measure])
 
   return (
     <>
-      <div style={{ overflowX: 'auto', padding: '1rem 0 2rem' }}>
-        <div style={{ display: 'flex', gap: '3rem', justifyContent: 'center', minWidth: 'max-content', padding: '0 2rem' }}>
+      <div ref={containerRef} style={{ overflowX: 'auto', position: 'relative', padding: '2rem' }}>
+        {/* SVG connector lines */}
+        <svg style={{
+          position: 'absolute', top: 0, left: 0,
+          width: svgSize.w, height: svgSize.h,
+          pointerEvents: 'none', zIndex: 0, overflow: 'visible',
+        }}>
+          {lines.map((l, i) => {
+            const midY = (l.y1 + l.y2) / 2
+            return (
+              <g key={i}>
+                <line x1={l.x1} y1={l.y1} x2={l.x1} y2={midY} stroke="var(--border)" strokeWidth={2} />
+                <line x1={l.x1} y1={midY} x2={l.x2} y2={midY} stroke="var(--border)" strokeWidth={2} />
+                <line x1={l.x2} y1={midY} x2={l.x2} y2={l.y2} stroke="var(--border)" strokeWidth={2} />
+              </g>
+            )
+          })}
+        </svg>
+
+        {/* Tree nodes */}
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '3rem', justifyContent: 'center', minWidth: 'max-content' }}>
           {roots.map(root => (
-            <OrgNode key={root.id} node={root} depth={0} onSelect={setSelected} />
+            <OrgNode key={root.id} node={root} depth={0} onSelect={setSelected} onToggle={measure} />
           ))}
         </div>
-        <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+
+        {/* Legend */}
+        <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
           {Object.entries(ROLE_COLORS).map(([role, c]) => (
             <span key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: 'var(--muted)' }}>
               <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: c.bg, border: `1px solid ${c.border}`, display: 'inline-block' }} />
