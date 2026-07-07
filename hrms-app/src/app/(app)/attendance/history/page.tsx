@@ -18,8 +18,8 @@ export default async function AttendanceHistoryPage() {
   const { data: logs } = await supabase
     .from('attendance_logs')
     .select('*')
-    .eq('employee_id', employee.id)
-    .order('date', { ascending: false })
+    .eq('user_id', employee.id)
+    .order('work_date', { ascending: false })
     .limit(60)
 
   return (
@@ -44,12 +44,13 @@ export default async function AttendanceHistoryPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
           {logs.map(log => {
-            const badgeColor = log.is_half_day
+            const isHalf = log.day_status === 'half_day'
+            const badgeColor = isHalf
               ? 'var(--warning)'
-              : log.clock_out
+              : log.check_out
                 ? 'var(--success)'
                 : 'var(--primary)'
-            const badgeLabel = log.is_half_day ? 'Half Day' : log.clock_out ? 'Present' : 'In Progress'
+            const badgeLabel = isHalf ? 'Half Day' : log.check_out ? 'Present' : 'In Progress'
 
             return (
               <div
@@ -67,10 +68,10 @@ export default async function AttendanceHistoryPage() {
               >
                 <div>
                   <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0 }}>
-                    {new Date(log.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {new Date(log.work_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                   </p>
                   <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.25rem 0 0' }}>
-                    {formatTime(log.clock_in)} → {formatTime(log.clock_out)}
+                    {formatTime(log.check_in)} → {formatTime(log.check_out)}
                   </p>
                 </div>
                 <span

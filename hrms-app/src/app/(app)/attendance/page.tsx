@@ -29,20 +29,20 @@ export default async function AttendancePage({
   const { data: todayLog } = await supabase
     .from('attendance_logs')
     .select('*')
-    .eq('employee_id', employee.id)
-    .eq('date', today)
+    .eq('user_id', employee.id)
+    .eq('work_date', today)
     .single()
 
-  const isClockedIn = todayLog && !todayLog.clock_out
-  const isDone = todayLog && todayLog.clock_out
+  const isClockedIn = todayLog && !todayLog.check_out
+  const isDone = todayLog && todayLog.check_out
 
   const scheduleType = employee.employee_type === 'blue_collar' ? 'blue_collar' : 'white_collar'
   const schedule = SCHEDULE[scheduleType]
 
   let hoursWorked: string | null = null
-  if (todayLog?.clock_in) {
-    const inTime = new Date(`${today}T${todayLog.clock_in}`)
-    const outTime = todayLog.clock_out ? new Date(`${today}T${todayLog.clock_out}`) : new Date()
+  if (todayLog?.check_in) {
+    const inTime = new Date(`${today}T${todayLog.check_in}`)
+    const outTime = todayLog.check_out ? new Date(`${today}T${todayLog.check_out}`) : new Date()
     const diffMins = Math.max(0, Math.floor((outTime.getTime() - inTime.getTime()) / 60000))
     const h = Math.floor(diffMins / 60)
     const m = diffMins % 60
@@ -65,28 +65,26 @@ export default async function AttendancePage({
     const { data: existing } = await supabase
       .from('attendance_logs')
       .select('*')
-      .eq('employee_id', emp.id)
-      .eq('date', today)
+      .eq('user_id', emp.id)
+      .eq('work_date', today)
       .single()
 
     if (!existing) {
       const { isHalfDay } = computeAttendanceStatus(timeStr, null)
       const { error } = await supabase.from('attendance_logs').insert({
-        employee_id: emp.id,
-        date: today,
-        clock_in: timeStr,
-        status: isHalfDay ? 'half_day' : 'present',
-        is_half_day: isHalfDay,
+        user_id: emp.id,
+        work_date: today,
+        check_in: timeStr,
+        day_status: isHalfDay ? 'half_day' : 'present',
       })
       if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
-    } else if (!existing.clock_out) {
-      const { isHalfDay } = computeAttendanceStatus(existing.clock_in, timeStr)
+    } else if (!existing.check_out) {
+      const { isHalfDay } = computeAttendanceStatus(existing.check_in, timeStr)
       const { error } = await supabase
         .from('attendance_logs')
         .update({
-          clock_out: timeStr,
-          is_half_day: isHalfDay,
-          status: isHalfDay ? 'half_day' : 'present',
+          check_out: timeStr,
+          day_status: isHalfDay ? 'half_day' : 'present',
         })
         .eq('id', existing.id)
       if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
@@ -97,7 +95,8 @@ export default async function AttendancePage({
 
   const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
-  const statusLabel = isDone ? 'Day Complete' : isClockedIn ? 'Clocked In' : 'Not Clocked In'
+  const isHalfDay = todayLog?.day_status === 'half_day'
+  const statusLabel = isDone ? (isHalfDay ? 'Half Day' : 'Day Complete') : isClockedIn ? 'Clocked In' : 'Not Clocked In'
   const statusColor = isDone ? 'var(--success)' : isClockedIn ? 'var(--primary)' : 'var(--muted)'
   const statusBg = isDone ? 'var(--success-l)' : isClockedIn ? 'var(--primary-l)' : 'var(--surface2)'
 
@@ -145,12 +144,12 @@ export default async function AttendancePage({
           <div style={{ display: 'flex', justifyContent: 'center', gap: '2.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             <div>
               <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.25rem' }}>In</p>
-              <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '2rem', margin: 0, lineHeight: 1 }}>{formatTime(todayLog.clock_in)}</p>
+              <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '2rem', margin: 0, lineHeight: 1 }}>{formatTime(todayLog.check_in)}</p>
             </div>
-            {todayLog.clock_out ? (
+            {todayLog.check_out ? (
               <div>
                 <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.25rem' }}>Out</p>
-                <p style={{ color: 'var(--success)', fontWeight: 800, fontSize: '2rem', margin: 0, lineHeight: 1 }}>{formatTime(todayLog.clock_out)}</p>
+                <p style={{ color: 'var(--success)', fontWeight: 800, fontSize: '2rem', margin: 0, lineHeight: 1 }}>{formatTime(todayLog.check_out)}</p>
               </div>
             ) : (
               <div>
@@ -158,7 +157,7 @@ export default async function AttendancePage({
                 <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '2rem', margin: 0, lineHeight: 1 }}>{hoursWorked ?? '--'}</p>
               </div>
             )}
-            {todayLog.clock_out && hoursWorked && (
+            {todayLog.check_out && hoursWorked && (
               <div>
                 <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.25rem' }}>Hours</p>
                 <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '2rem', margin: 0, lineHeight: 1 }}>{hoursWorked}</p>
@@ -169,7 +168,7 @@ export default async function AttendancePage({
           <p style={{ color: 'var(--muted)', fontSize: '1rem', margin: '0 0 1rem' }}>You haven&apos;t clocked in yet today.</p>
         )}
 
-        {todayLog?.is_half_day && (
+        {isHalfDay && (
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
             background: 'var(--warning-l)', border: '1px solid var(--warning)',
