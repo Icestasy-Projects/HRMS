@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus } from '@/lib/attendance'
+import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST } from '@/lib/attendance'
 import Link from 'next/link'
 import Breadcrumb from '@/components/Breadcrumb'
 
@@ -24,7 +24,7 @@ export default async function AttendancePage({
 
   if (!employee) redirect('/login')
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayIST()
 
   const { data: todayLog } = await supabase
     .from('attendance_logs')
@@ -42,7 +42,7 @@ export default async function AttendancePage({
   let hoursWorked: string | null = null
   if (todayLog?.check_in) {
     const inTime = new Date(`${today}T${todayLog.check_in}`)
-    const outTime = todayLog.check_out ? new Date(`${today}T${todayLog.check_out}`) : new Date()
+    const outTime = todayLog.check_out ? new Date(`${today}T${todayLog.check_out}`) : nowIST()
     const diffMins = Math.max(0, Math.floor((outTime.getTime() - inTime.getTime()) / 60000))
     const h = Math.floor(diffMins / 60)
     const m = diffMins % 60
@@ -58,9 +58,8 @@ export default async function AttendancePage({
     const { data: emp } = await supabase.from('users').select('*').eq('id', user.id).single()
     if (!emp) return
 
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
-    const timeStr = now.toTimeString().slice(0, 8)
+    const today = todayIST()
+    const timeStr = timeIST()
 
     const { data: existing } = await supabase
       .from('attendance_logs')
@@ -93,7 +92,7 @@ export default async function AttendancePage({
     redirect('/attendance')
   }
 
-  const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+  const todayFormatted = nowIST().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' })
 
   const isHalfDay = todayLog?.day_status === 'half_day'
   const statusLabel = isDone ? (isHalfDay ? 'Half Day' : 'Day Complete') : isClockedIn ? 'Clocked In' : 'Not Clocked In'

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { formatTime } from '@/lib/attendance'
+import { formatTime, todayIST, nowIST } from '@/lib/attendance'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -16,9 +16,10 @@ export default async function DashboardPage() {
 
   if (!employee) redirect('/login')
 
-  const today = new Date().toISOString().split('T')[0]
-  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
-  const dateFull = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const today = todayIST()
+  const istNow = nowIST()
+  const dayName = istNow.toLocaleDateString('en-IN', { weekday: 'long', timeZone: 'Asia/Kolkata' })
+  const dateFull = istNow.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Kolkata' })
   const firstName = employee.name.split(' ')[0]
 
   const { data: todayLog } = await supabase
@@ -78,7 +79,7 @@ export default async function DashboardPage() {
         : 'var(--primary)'
     : 'var(--muted)'
 
-  const hour = new Date().getHours()
+  const hour = istNow.getUTCHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
   const attStatusLabel = todayLog
