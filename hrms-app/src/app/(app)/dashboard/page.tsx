@@ -60,7 +60,7 @@ export default async function DashboardPage() {
     pendingLeaveCount = count ?? 0
   }
 
-  const isHalfDay = todayLog?.day_status === 'half_day'
+  const isHalfDay = todayLog?.day_status?.includes('half_day')
 
   const attStatus = todayLog
     ? isHalfDay

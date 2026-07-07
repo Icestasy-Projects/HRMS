@@ -44,7 +44,7 @@ export default async function AttendanceHistoryPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
           {logs.map(log => {
-            const isHalf = log.day_status === 'half_day'
+            const isHalf = log.day_status?.includes('half_day')
             const badgeColor = isHalf
               ? 'var(--warning)'
               : log.check_out
