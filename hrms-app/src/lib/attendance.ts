@@ -1,3 +1,16 @@
+// IST = UTC+5:30
+export function nowIST(): Date {
+  return new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+}
+
+export function todayIST(): string {
+  return nowIST().toISOString().slice(0, 10)
+}
+
+export function timeIST(): string {
+  return nowIST().toISOString().slice(11, 19)
+}
+
 export const HALF_DAY_LATE_CUTOFF = '13:30'
 export const HALF_DAY_EARLY_CUTOFF = '14:30'
 
