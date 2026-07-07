@@ -12,7 +12,7 @@ export async function GET() {
   const resend = new Resend(key)
   const { data, error } = await resend.emails.send({
     from,
-    to: 'icestasyprojects@gmail.com',
+    to: 'dcostat4@gmail.com',
     subject: '[HRMS] Test email ✅',
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
