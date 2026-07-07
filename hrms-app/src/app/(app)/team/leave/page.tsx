@@ -121,6 +121,37 @@ export default async function TeamLeavePage() {
     redirect('/team/leave')
   }
 
+  async function revertLeave(formData: FormData) {
+    'use server'
+    const requestId = formData.get('request_id') as string
+    const supabase = await createClient()
+    const adminClient = createAdminClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data: me } = await supabase.from('users').select('role, name').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
+
+    const { data: req } = await supabase.from('leave_requests').select('*').eq('id', requestId).single()
+    if (!req || req.status === 'pending') return
+
+    await supabase.from('leave_requests').update({ status: 'pending' }).eq('id', requestId)
+
+    const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
+    await adminClient.from('notifications').insert({
+      recipient_id: req.employee_id,
+      type: 'fyi',
+      title: 'Leave Request Reverted',
+      message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) has been reverted to pending by ${me.name}. It will be reviewed again.`,
+      related_id: requestId,
+    })
+
+    redirect('/team/leave')
+  }
+
+  const isSuperAdmin = ['super_admin', 'sub_super_admin'].includes(employee.role)
+
   function statusColor(status: string) {
     if (status === 'approved') return 'var(--success)'
     if (status === 'pending') return 'var(--warning)'
@@ -284,6 +315,7 @@ export default async function TeamLeavePage() {
           }}>
             {others.map((req, idx) => {
               const sc = statusColor(req.status)
+              const canRevert = isSuperAdmin && req.status !== 'pending'
               return (
                 <div key={req.id} style={{
                   padding: '0.875rem 1.25rem',
@@ -297,14 +329,34 @@ export default async function TeamLeavePage() {
                       {typeLabel(req.leave_type)} · {req.start_date} → {req.end_date} · {req.days_count} day{req.days_count !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <span style={{
-                    background: `${sc}18`, color: sc, border: `1px solid ${sc}`,
-                    borderRadius: '999px', padding: '0.25rem 0.75rem',
-                    fontSize: '0.72rem', fontWeight: 600,
-                    whiteSpace: 'nowrap', textTransform: 'capitalize', flexShrink: 0,
-                  }}>
-                    {req.status}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    <span style={{
+                      background: `${sc}18`, color: sc, border: `1px solid ${sc}`,
+                      borderRadius: '999px', padding: '0.25rem 0.75rem',
+                      fontSize: '0.72rem', fontWeight: 600,
+                      whiteSpace: 'nowrap', textTransform: 'capitalize',
+                    }}>
+                      {req.status}
+                    </span>
+                    {canRevert && (
+                      <form action={revertLeave}>
+                        <input type="hidden" name="request_id" value={req.id} />
+                        <button type="submit" style={{
+                          background: 'transparent',
+                          border: '1px solid var(--muted)',
+                          borderRadius: '0.5rem',
+                          padding: '0.25rem 0.625rem',
+                          color: 'var(--muted)',
+                          cursor: 'pointer',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                        }}>
+                          Revert
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               )
             })}
