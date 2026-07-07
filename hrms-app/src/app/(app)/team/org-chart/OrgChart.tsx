@@ -266,8 +266,6 @@ export default function OrgChart({ users }: { users: User[] }) {
     const container = containerRef.current
     if (!container) return
     const cr = container.getBoundingClientRect()
-    const sl = container.scrollLeft
-    const st = container.scrollTop
 
     const newLines: typeof lines = []
     for (const { parentId, childId } of connections) {
@@ -276,17 +274,16 @@ export default function OrgChart({ users }: { users: User[] }) {
       if (!pEl || !cEl) continue
       const pr = pEl.getBoundingClientRect()
       const ch = cEl.getBoundingClientRect()
-      // Skip if child is not visible (collapsed)
       if (ch.width === 0 && ch.height === 0) continue
       newLines.push({
-        x1: pr.left - cr.left + sl + pr.width / 2,
-        y1: pr.bottom - cr.top + st,
-        x2: ch.left - cr.left + sl + ch.width / 2,
-        y2: ch.top - cr.top + st,
+        x1: pr.left - cr.left + pr.width / 2,
+        y1: pr.bottom - cr.top,
+        x2: ch.left - cr.left + ch.width / 2,
+        y2: ch.top - cr.top,
       })
     }
     setLines(newLines)
-    setSvgSize({ w: container.scrollWidth, h: container.scrollHeight })
+    setSvgSize({ w: container.offsetWidth, h: container.offsetHeight })
   }, [connections])
 
   useEffect(() => {
@@ -299,41 +296,45 @@ export default function OrgChart({ users }: { users: User[] }) {
 
   return (
     <>
-      <div ref={containerRef} style={{ overflowX: 'auto', position: 'relative', padding: '2rem' }}>
-        {/* SVG connector lines */}
-        <svg style={{
-          position: 'absolute', top: 0, left: 0,
-          width: svgSize.w, height: svgSize.h,
-          pointerEvents: 'none', zIndex: 0, overflow: 'visible',
-        }}>
-          {lines.map((l, i) => {
-            const midY = (l.y1 + l.y2) / 2
-            return (
-              <g key={i}>
-                <line x1={l.x1} y1={l.y1} x2={l.x1} y2={midY} stroke="var(--border)" strokeWidth={2} />
-                <line x1={l.x1} y1={midY} x2={l.x2} y2={midY} stroke="var(--border)" strokeWidth={2} />
-                <line x1={l.x2} y1={midY} x2={l.x2} y2={l.y2} stroke="var(--border)" strokeWidth={2} />
-              </g>
-            )
-          })}
-        </svg>
+      {/* Outer scroll wrapper */}
+      <div style={{ overflowX: 'auto', overflowY: 'visible', width: '100%' }}>
+        {/* Inner content — this is what we measure */}
+        <div ref={containerRef} style={{ position: 'relative', padding: '2rem', width: 'max-content', minWidth: '100%' }}>
+          {/* SVG connector lines — sized to match content div */}
+          <svg style={{
+            position: 'absolute', top: 0, left: 0,
+            width: '100%', height: '100%',
+            pointerEvents: 'none', zIndex: 0, overflow: 'visible',
+          }}>
+            {lines.map((l, i) => {
+              const midY = (l.y1 + l.y2) / 2
+              return (
+                <g key={i}>
+                  <line x1={l.x1} y1={l.y1} x2={l.x1} y2={midY} stroke="var(--border)" strokeWidth={2} />
+                  <line x1={l.x1} y1={midY} x2={l.x2} y2={midY} stroke="var(--border)" strokeWidth={2} />
+                  <line x1={l.x2} y1={midY} x2={l.x2} y2={l.y2} stroke="var(--border)" strokeWidth={2} />
+                </g>
+              )
+            })}
+          </svg>
 
-        {/* Tree nodes */}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '3rem', justifyContent: 'center', minWidth: 'max-content' }}>
-          {roots.map(root => (
-            <OrgNode key={root.id} node={root} depth={0} onSelect={setSelected} onToggle={measure} />
-          ))}
-        </div>
+          {/* Tree nodes */}
+          <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '3rem', justifyContent: 'center' }}>
+            {roots.map(root => (
+              <OrgNode key={root.id} node={root} depth={0} onSelect={setSelected} onToggle={measure} />
+            ))}
+          </div>
 
-        {/* Legend */}
-        <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {Object.entries(ROLE_COLORS).map(([role, c]) => (
-            <span key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: 'var(--muted)' }}>
-              <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: c.bg, border: `1px solid ${c.border}`, display: 'inline-block' }} />
-              {roleLabel(role)}
-            </span>
-          ))}
-          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>· Click card to view details · Click −/+ to collapse</span>
+          {/* Legend */}
+          <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {Object.entries(ROLE_COLORS).map(([role, c]) => (
+              <span key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: 'var(--muted)' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: c.bg, border: `1px solid ${c.border}`, display: 'inline-block' }} />
+                {roleLabel(role)}
+              </span>
+            ))}
+            <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>· Click card to view details · Click −/+ to collapse</span>
+          </div>
         </div>
       </div>
 
