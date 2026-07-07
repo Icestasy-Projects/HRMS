@@ -19,12 +19,22 @@ export const SCHEDULE = {
   blue_collar: { days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], hours_per_day: 8 },
 }
 
-export function computeAttendanceStatus(checkIn: string, checkOut: string | null): { dayStatus: string; isHalfDay: boolean } {
+export function computeAttendanceStatus(
+  checkIn: string,
+  checkOut: string | null,
+  hasScheduledHalfDay = false,
+): { dayStatus: string; isHalfDay: boolean } {
   const isLate = checkIn > HALF_DAY_LATE_CUTOFF
   const isEarlyOut = checkOut ? checkOut < HALF_DAY_EARLY_CUTOFF : false
 
-  if (isLate) return { dayStatus: 'unscheduled_half_day_first_off', isHalfDay: true }
-  if (isEarlyOut) return { dayStatus: 'unscheduled_half_day_second_off', isHalfDay: true }
+  if (isLate) return {
+    dayStatus: hasScheduledHalfDay ? 'scheduled_half_day_first_off' : 'unscheduled_half_day_first_off',
+    isHalfDay: true,
+  }
+  if (isEarlyOut) return {
+    dayStatus: hasScheduledHalfDay ? 'scheduled_half_day_second_off' : 'unscheduled_half_day_second_off',
+    isHalfDay: true,
+  }
   return { dayStatus: 'present', isHalfDay: false }
 }
 

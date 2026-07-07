@@ -61,6 +61,18 @@ export default async function AttendancePage({
     const today = todayIST()
     const timeStr = timeIST()
 
+    // Check for an approved scheduled half-day leave covering today
+    const { data: scheduledLeave } = await supabase
+      .from('leave_requests')
+      .select('id')
+      .eq('employee_id', emp.id)
+      .eq('status', 'approved')
+      .eq('is_half_day', true)
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .maybeSingle()
+    const hasScheduledHalfDay = !!scheduledLeave
+
     const { data: existing } = await supabase
       .from('attendance_logs')
       .select('*')
@@ -69,7 +81,7 @@ export default async function AttendancePage({
       .single()
 
     if (!existing) {
-      const { dayStatus } = computeAttendanceStatus(timeStr, null)
+      const { dayStatus } = computeAttendanceStatus(timeStr, null, hasScheduledHalfDay)
       const { error } = await supabase.from('attendance_logs').insert({
         user_id: emp.id,
         work_date: today,
@@ -78,7 +90,7 @@ export default async function AttendancePage({
       })
       if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
     } else if (!existing.check_out) {
-      const { dayStatus } = computeAttendanceStatus(existing.check_in, timeStr)
+      const { dayStatus } = computeAttendanceStatus(existing.check_in, timeStr, hasScheduledHalfDay)
       const { error } = await supabase
         .from('attendance_logs')
         .update({
