@@ -101,6 +101,7 @@ export default async function DashboardPage() {
     { label: 'Leave History', href: '/leave/history', icon: '📋', show: hasPersonalCards },
     { label: 'My Attendance Log', href: '/attendance/history', icon: '📅', show: hasPersonalCards },
     { label: 'Notifications', href: '/notifications', icon: '🔔', show: true },
+    { label: 'Public Holidays', href: '/holidays', icon: '📅', show: true },
     { label: 'Team Calendar', href: '/team/calendar', icon: '📅', show: true },
     { label: 'Team', href: '/team', icon: '👥', show: isAdmin },
     { label: 'Org Chart', href: '/team/org-chart', icon: '🌳', show: isAdmin },
