@@ -69,21 +69,21 @@ export default async function AttendancePage({
       .single()
 
     if (!existing) {
-      const { isHalfDay } = computeAttendanceStatus(timeStr, null)
+      const { dayStatus } = computeAttendanceStatus(timeStr, null)
       const { error } = await supabase.from('attendance_logs').insert({
         user_id: emp.id,
         work_date: today,
         check_in: timeStr,
-        day_status: isHalfDay ? 'half_day' : 'present',
+        day_status: dayStatus,
       })
       if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
     } else if (!existing.check_out) {
-      const { isHalfDay } = computeAttendanceStatus(existing.check_in, timeStr)
+      const { dayStatus } = computeAttendanceStatus(existing.check_in, timeStr)
       const { error } = await supabase
         .from('attendance_logs')
         .update({
           check_out: timeStr,
-          day_status: isHalfDay ? 'half_day' : 'present',
+          day_status: dayStatus,
         })
         .eq('id', existing.id)
       if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
@@ -94,7 +94,7 @@ export default async function AttendancePage({
 
   const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
-  const isHalfDay = todayLog?.day_status === 'half_day'
+  const isHalfDay = todayLog?.day_status?.includes('half_day')
   const statusLabel = isDone ? (isHalfDay ? 'Half Day' : 'Day Complete') : isClockedIn ? 'Clocked In' : 'Not Clocked In'
   const statusColor = isDone ? 'var(--success)' : isClockedIn ? 'var(--primary)' : 'var(--muted)'
   const statusBg = isDone ? 'var(--success-l)' : isClockedIn ? 'var(--primary-l)' : 'var(--surface2)'
