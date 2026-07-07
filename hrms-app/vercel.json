@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/attendance-flagging",
-      "schedule": "0 11 * * 1-6"
-    }
-  ]
-}
