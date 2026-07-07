@@ -92,7 +92,7 @@ export default async function AttendancePage({
     redirect('/attendance')
   }
 
-  const todayFormatted = nowIST().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' })
+  const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
   const isHalfDay = todayLog?.day_status === 'half_day'
   const statusLabel = isDone ? (isHalfDay ? 'Half Day' : 'Day Complete') : isClockedIn ? 'Clocked In' : 'Not Clocked In'
