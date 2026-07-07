@@ -15,7 +15,7 @@ export default async function OrgChartPage() {
 
   const { data: users } = await supabase
     .from('users')
-    .select('id, name, role, department_id, manager_id, email, departments(name)')
+    .select('id, name, role, department_id, manager_id, email, employee_type, is_active, departments(name)')
     .eq('is_active', true)
     .order('name')
 
@@ -28,7 +28,7 @@ export default async function OrgChartPage() {
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>Reporting hierarchy across the organisation</p>
       </div>
-      <OrgChart users={(users ?? []) as unknown as Array<{ id: string; name: string; role: string; department_id: string | null; manager_id: string | null; email: string; departments?: { name: string } | null }>} />
+      <OrgChart users={(users ?? []) as unknown as Array<{ id: string; name: string; role: string; department_id: string | null; manager_id: string | null; email: string; employee_type?: string; is_active?: boolean; departments?: { name: string } | null }>} />
     </div>
   )
 }
