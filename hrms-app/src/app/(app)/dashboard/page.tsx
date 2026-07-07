@@ -28,11 +28,28 @@ export default async function DashboardPage() {
     .eq('work_date', today)
     .single()
 
-  const { data: leaveBalance } = await supabase
+  const currentYear = new Date().getFullYear()
+  const { data: balRow } = await supabase
     .from('leave_balances')
-    .select('*')
+    .select('sl_total, ul_total')
     .eq('user_id', employee.id)
+    .eq('year', currentYear)
     .single()
+
+  const { data: approvedLeaves } = await supabase
+    .from('leave_requests')
+    .select('leave_type, days_count')
+    .eq('employee_id', employee.id)
+    .eq('status', 'approved')
+    .gte('start_date', `${currentYear}-01-01`)
+    .lte('start_date', `${currentYear}-12-31`)
+
+  const slUsed = approvedLeaves?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+  const ulUsed = approvedLeaves?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+  const leaveBalance = balRow ? {
+    sl_remaining: (balRow.sl_total ?? 18) - slUsed,
+    ul_remaining: (balRow.ul_total ?? 6) - ulUsed,
+  } : null
 
   const isSuperAdmin = employee.role === 'super_admin'
   const isSubSuperAdmin = employee.role === 'sub_super_admin'
