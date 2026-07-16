@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatTime, todayIST } from '@/lib/attendance'
+import WorkletGrid from '@/components/WorkletGrid'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -113,19 +114,19 @@ export default async function DashboardPage() {
       : todayLog.check_out ? 'var(--success)' : 'var(--primary)'
     : 'var(--muted)'
 
-  type Worklet = { label: string; href: string; icon: string; badge?: number; show?: boolean }
+  type Worklet = { label: string; href: string; badge?: number; show?: boolean }
   const worklets: Worklet[] = [
-    { label: 'Time & Attendance', href: '/attendance', icon: '◷', show: hasPersonalCards },
-    { label: 'My Leave', href: '/leave', icon: '🌿', show: hasPersonalCards },
-    { label: 'Leave History', href: '/leave/history', icon: '📋', show: hasPersonalCards },
-    { label: 'My Attendance Log', href: '/attendance/history', icon: '📅', show: hasPersonalCards },
-    { label: 'Notifications', href: '/notifications', icon: '🔔', show: true },
-    { label: 'Public Holidays', href: '/holidays', icon: '📅', show: true },
-    { label: 'Team Calendar', href: '/team/calendar', icon: '📅', show: true },
-    { label: 'Team', href: '/team', icon: '👥', show: isAdmin },
-    { label: 'Org Chart', href: '/team/org-chart', icon: '🌳', show: isAdmin },
-    { label: 'Leave Requests', href: '/team/leave', icon: '✅', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
-    { label: 'Manage', href: '/manage', icon: '⚙', show: isSuperAdmin || isSubSuperAdmin },
+    { label: 'Time & Attendance', href: '/attendance', show: hasPersonalCards },
+    { label: 'My Leave', href: '/leave', show: hasPersonalCards },
+    { label: 'Leave History', href: '/leave/history', show: hasPersonalCards },
+    { label: 'My Attendance Log', href: '/attendance/history', show: hasPersonalCards },
+    { label: 'Notifications', href: '/notifications', show: true },
+    { label: 'Public Holidays', href: '/holidays', show: true },
+    { label: 'Team Calendar', href: '/team/calendar', show: true },
+    { label: 'Team', href: '/team', show: isAdmin },
+    { label: 'Org Chart', href: '/team/org-chart', show: isAdmin },
+    { label: 'Leave Requests', href: '/team/leave', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
+    { label: 'Manage', href: '/manage', show: isSuperAdmin || isSubSuperAdmin },
   ].filter(w => w.show)
 
   return (
@@ -160,37 +161,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Worklets grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-        gap: '0.875rem',
-        marginBottom: '1.5rem',
-      }}>
-        {worklets.map(w => (
-          <Link key={w.href} href={w.href} style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '0.75rem',
-            padding: '1.125rem 1rem',
-            minHeight: '96px',
-            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between',
-            textDecoration: 'none',
-            boxShadow: 'var(--shadow)',
-            position: 'relative',
-          }}>
-            <span style={{ fontSize: '28px', lineHeight: 1 }}>{w.icon}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
-              <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.8rem', lineHeight: 1.3 }}>{w.label}</span>
-              {w.badge && w.badge > 0 && (
-                <span style={{
-                  background: '#f59e0b', color: '#fff', fontSize: '10px', fontWeight: 700,
-                  borderRadius: '999px', padding: '1px 6px', minWidth: '18px', textAlign: 'center',
-                }}>{w.badge}</span>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
+      <WorkletGrid worklets={worklets} />
 
       {/* Quick stats row */}
       <div style={{ display: 'grid', gap: '0.875rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>

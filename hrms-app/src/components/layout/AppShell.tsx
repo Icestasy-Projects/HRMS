@@ -5,6 +5,7 @@ import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import NavProgress from '@/components/NavProgress'
+import { Home, Clock, Leaf, Users, Bell, Settings } from 'lucide-react'
 
 type NavItem = { label: string; href: string; badge?: number }
 
@@ -103,7 +104,17 @@ function DrawerNavLink({ item, onClose }: { item: NavItem; onClose: () => void }
   )
 }
 
-function BottomNavLink({ item, icon, notifCount }: { item: NavItem; icon: string; notifCount: number }) {
+const BOTTOM_NAV_ICONS: Record<string, React.ReactNode> = {
+  '/dashboard':   <Home size={22} strokeWidth={1.75} />,
+  '/attendance':  <Clock size={22} strokeWidth={1.75} />,
+  '/leave':       <Leaf size={22} strokeWidth={1.75} />,
+  '/team':        <Users size={22} strokeWidth={1.75} />,
+  '/team/calendar': <Users size={22} strokeWidth={1.75} />,
+  '/manage':      <Settings size={22} strokeWidth={1.75} />,
+  '/notifications': <Bell size={22} strokeWidth={1.75} />,
+}
+
+function BottomNavLink({ item, notifCount }: { item: NavItem; notifCount: number }) {
   const pathname = usePathname()
   const { pending } = useLinkStatus()
   const active = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)
@@ -118,7 +129,9 @@ function BottomNavLink({ item, icon, notifCount }: { item: NavItem; icon: string
         minHeight: '56px',
       }}
     >
-      <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{pending ? '·' : icon}</span>
+      <span style={{ lineHeight: 1, opacity: pending ? 0.4 : 1 }}>
+        {BOTTOM_NAV_ICONS[item.href] ?? <Home size={22} strokeWidth={1.75} />}
+      </span>
       <span style={{ fontSize: '0.62rem', fontWeight: active ? 700 : 400, letterSpacing: '0.01em' }}>{item.label}</span>
       {notifCount > 0 && (
         <span style={{
@@ -179,11 +192,29 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
           </button>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
             <div style={{
-              width: '32px', height: '32px', borderRadius: '8px',
-              background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: 800, fontSize: '12px', flexShrink: 0,
-            }}>IC</div>
+              width: '34px', height: '34px', borderRadius: '10px',
+              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Cone */}
+                <path d="M8.5 14L12 22L15.5 14H8.5Z" fill="rgba(255,220,150,0.9)" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" strokeLinejoin="round"/>
+                {/* Cone lines */}
+                <line x1="12" y1="22" x2="10" y2="14" stroke="rgba(255,255,255,0.35)" strokeWidth="0.5"/>
+                <line x1="12" y1="22" x2="14" y2="14" stroke="rgba(255,255,255,0.35)" strokeWidth="0.5"/>
+                {/* Bottom scoop */}
+                <ellipse cx="12" cy="13.5" rx="3.5" ry="2" fill="rgba(255,182,193,0.95)"/>
+                {/* Left scoop */}
+                <circle cx="9.5" cy="11" r="2.8" fill="rgba(255,182,193,0.95)" stroke="rgba(255,255,255,0.3)" strokeWidth="0.3"/>
+                {/* Right scoop */}
+                <circle cx="14.5" cy="11" r="2.8" fill="rgba(200,160,255,0.95)" stroke="rgba(255,255,255,0.3)" strokeWidth="0.3"/>
+                {/* Top scoop */}
+                <circle cx="12" cy="8.5" r="2.8" fill="rgba(255,255,255,0.92)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3"/>
+                {/* Cherry */}
+                <circle cx="12" cy="5.8" r="1.2" fill="#ff6b8a"/>
+                <path d="M12 5.8 Q13.5 4 13 3" stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" fill="none" strokeLinecap="round"/>
+              </svg>
+            </div>
             <span style={{ fontWeight: 700, fontSize: '15px', color: '#fff', letterSpacing: '-0.01em' }}>Icestasy</span>
           </Link>
         </div>
@@ -324,20 +355,10 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
         boxShadow: '0 -2px 12px rgba(124,47,201,0.08)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
-        {navItems.slice(0, 4).map(item => {
-          const icons: Record<string, string> = {
-            '/dashboard': '⊞',
-            '/attendance': '◷',
-            '/leave': '🌿',
-            '/team': '👥',
-            '/manage': '⚙',
-            '/notifications': '🔔',
-          }
-          return (
-            <BottomNavLink key={item.href} item={item} icon={icons[item.href] ?? '●'} notifCount={0} />
-          )
-        })}
-        <BottomNavLink item={{ label: 'Alerts', href: '/notifications' }} icon="🔔" notifCount={notifCount} />
+        {navItems.slice(0, 4).map(item => (
+          <BottomNavLink key={item.href} item={item} notifCount={0} />
+        ))}
+        <BottomNavLink item={{ label: 'Alerts', href: '/notifications' }} notifCount={notifCount} />
       </nav>
 
       <style>{`
