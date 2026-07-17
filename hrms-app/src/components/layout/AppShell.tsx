@@ -215,7 +215,10 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
                 <path d="M12 5.8 Q13.5 4 13 3" stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" fill="none" strokeLinecap="round"/>
               </svg>
             </div>
-            <span style={{ fontWeight: 700, fontSize: '15px', color: '#fff', letterSpacing: '-0.01em' }}>Icestasy</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '14px', color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.1 }}>Icestasy</div>
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.65)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1 }}>HR Portal</div>
+            </div>
           </Link>
         </div>
 
