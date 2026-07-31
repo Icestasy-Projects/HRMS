@@ -128,6 +128,7 @@ export default async function DashboardPage() {
     { label: 'Org Chart', href: '/team/org-chart', show: isAdmin },
     { label: 'Leave Requests', href: '/team/leave', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
     { label: 'Separation Requests', href: '/team/separation', show: isAdmin },
+    { label: 'Leave Overview', href: '/team/leave-overview', show: isSuperAdmin || isSubSuperAdmin || isAdmin },
     { label: 'Salary Calculator', href: '/manage/salary-calculator', show: isSuperAdmin || isSubSuperAdmin || isAdmin },
     { label: 'Manage', href: '/manage', show: isSuperAdmin || isSubSuperAdmin },
   ].filter(w => w.show)
