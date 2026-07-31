@@ -111,11 +111,6 @@ function MobileNode({ node, depth, onSelect, separationMap }: { node: TreeNode; 
             {node.name}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
-            <span style={{
-              background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`,
-              borderRadius: '999px', padding: '0.05rem 0.45rem',
-              fontSize: '0.65rem', fontWeight: 600,
-            }}>{roleLabel(node.role)}</span>
             {sep && <SeparationBadge info={sep} />}
             {node.departments && (
               <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>
@@ -186,11 +181,6 @@ function DesktopNode({ node, depth, onSelect, onToggle, separationMap }: {
           fontWeight: 700, fontSize: '14px', margin: '0 auto 0.5rem',
         }}>{initials(node.name)}</div>
         <p style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)', margin: 0, lineHeight: 1.3 }}>{node.name}</p>
-        <span style={{
-          display: 'inline-block', marginTop: '0.35rem',
-          background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`,
-          borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: 600,
-        }}>{roleLabel(node.role)}</span>
         {sep && <div style={{ marginTop: '0.25rem' }}><SeparationBadge info={sep} /></div>}
         {node.departments && (
           <p style={{ color: 'var(--muted)', fontSize: '0.68rem', margin: '0.25rem 0 0' }}>
@@ -317,17 +307,6 @@ export default function OrgChart({ users, separationMap = {} }: { users: User[];
     return () => { window.removeEventListener('resize', measure); ro.disconnect() }
   }, [measure, isMobile])
 
-  const legend = (
-    <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-      {Object.entries(ROLE_COLORS).map(([role, c]) => (
-        <span key={role} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: 'var(--muted)' }}>
-          <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: c.bg, border: `1px solid ${c.border}`, display: 'inline-block' }} />
-          {roleLabel(role)}
-        </span>
-      ))}
-    </div>
-  )
-
   // ── Mobile layout ──
   if (isMobile) {
     return (
@@ -337,7 +316,6 @@ export default function OrgChart({ users, separationMap = {} }: { users: User[];
             <MobileNode key={root.id} node={root} depth={0} onSelect={setSelected} separationMap={separationMap} />
           ))}
         </div>
-        {legend}
         {selected && <DetailPanel user={selected} onClose={() => setSelected(null)} />}
       </>
     )
@@ -365,7 +343,6 @@ export default function OrgChart({ users, separationMap = {} }: { users: User[];
               <DesktopNode key={root.id} node={root} depth={0} onSelect={setSelected} onToggle={measure} separationMap={separationMap} />
             ))}
           </div>
-          {legend}
         </div>
       </div>
       {selected && <DetailPanel user={selected} onClose={() => setSelected(null)} />}

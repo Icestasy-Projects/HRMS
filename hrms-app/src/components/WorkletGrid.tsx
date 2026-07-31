@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {
   Clock, Leaf, ClipboardList, CalendarDays, Bell,
   CalendarCheck, CalendarRange, Users, Network,
-  CheckSquare, Settings, LogOut, Calculator,
+  CheckSquare, Settings, LogOut, Calculator, BarChart2,
 } from 'lucide-react'
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -20,6 +20,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   '/team/org-chart':          <Network size={26} strokeWidth={1.75} />,
   '/team/leave':              <CheckSquare size={26} strokeWidth={1.75} />,
   '/team/separation':         <LogOut size={26} strokeWidth={1.75} />,
+  '/team/leave-overview':     <BarChart2 size={26} strokeWidth={1.75} />,
   '/manage':                  <Settings size={26} strokeWidth={1.75} />,
   '/manage/salary-calculator':<Calculator size={26} strokeWidth={1.75} />,
 }

@@ -119,7 +119,9 @@ export default async function AttendancePage({
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data: emp } = await supabase.from('users').select('*').eq('id', user.id).single()
+    const admin = createAdminClient()
+
+    const { data: emp } = await admin.from('users').select('*').eq('id', user.id).single()
     if (!emp) return
 
     const today = todayIST()
@@ -131,7 +133,7 @@ export default async function AttendancePage({
     // white_collar: Sat(6)+Sun(0) are off; blue_collar: only Sun(0) is off
     const isWeekendDay = schedType === 'white_collar' ? (dow === 0 || dow === 6) : dow === 0
 
-    const { data: existing } = await supabase
+    const { data: existing } = await admin
       .from('attendance_logs')
       .select('*')
       .eq('user_id', emp.id)
@@ -141,18 +143,17 @@ export default async function AttendancePage({
     if (isWeekendDay) {
       // Weekend: log hours only — try weekend_work status, fall back to present
       if (!existing) {
-        let res = await supabase.from('attendance_logs').insert({
+        let res = await admin.from('attendance_logs').insert({
           user_id: emp.id, work_date: today, check_in: timeStr, day_status: 'weekend_work',
         })
         if (res.error) {
-          // enum may not have weekend_work yet — fall back to present
-          res = await supabase.from('attendance_logs').insert({
+          res = await admin.from('attendance_logs').insert({
             user_id: emp.id, work_date: today, check_in: timeStr, day_status: 'present',
           })
         }
         if (res.error) redirect(`/attendance?error=${encodeURIComponent(res.error.message)}`)
       } else if (!existing.check_out) {
-        const { error } = await supabase
+        const { error } = await admin
           .from('attendance_logs')
           .update({ check_out: timeStr })
           .eq('id', existing.id)
@@ -162,7 +163,7 @@ export default async function AttendancePage({
     }
 
     // Weekday: normal half-day logic
-    const { data: scheduledLeave } = await supabase
+    const { data: scheduledLeave } = await admin
       .from('leave_requests')
       .select('id')
       .eq('employee_id', emp.id)
@@ -175,7 +176,7 @@ export default async function AttendancePage({
 
     if (!existing) {
       const { dayStatus } = computeAttendanceStatus(timeStr, null, hasScheduledHalfDay)
-      const { error } = await supabase.from('attendance_logs').insert({
+      const { error } = await admin.from('attendance_logs').insert({
         user_id: emp.id,
         work_date: today,
         check_in: timeStr,
@@ -187,7 +188,7 @@ export default async function AttendancePage({
       }
     } else if (!existing.check_out) {
       const { dayStatus } = computeAttendanceStatus(existing.check_in, timeStr, hasScheduledHalfDay)
-      const { error } = await supabase
+      const { error } = await admin
         .from('attendance_logs')
         .update({ check_out: timeStr, day_status: dayStatus })
         .eq('id', existing.id)
