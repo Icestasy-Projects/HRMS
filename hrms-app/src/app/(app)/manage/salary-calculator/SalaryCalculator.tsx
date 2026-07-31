@@ -39,7 +39,7 @@ function Section({ title, rows }: { title: string; rows: { label: string; value:
   )
 }
 
-export default function SalaryCalculator() {
+export default function SalaryCalculator({ employees }: { employees: { id: string; name: string }[] }) {
   const [annual, setAnnual] = useState('')
   const [empName, setEmpName] = useState('')
   const [downloading, setDownloading] = useState(false)
@@ -127,20 +127,24 @@ export default function SalaryCalculator() {
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
               Employee Name
             </label>
-            <input
-              type="text"
+            <select
               value={empName}
               onChange={e => setEmpName(e.target.value)}
-              placeholder="e.g. Rahul Sharma"
               style={{
                 width: '100%', padding: '0.875rem 1rem', fontSize: '1rem', fontWeight: 600,
                 border: '2px solid var(--border)', borderRadius: '0.625rem',
-                background: 'var(--bg)', color: 'var(--text)',
+                background: 'var(--bg)', color: empName ? 'var(--text)' : 'var(--muted)',
                 outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box',
+                cursor: 'pointer',
               }}
               onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
               onBlur={e => (e.target.style.borderColor = 'var(--border)')}
-            />
+            >
+              <option value="">— Select employee —</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.name}>{emp.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
