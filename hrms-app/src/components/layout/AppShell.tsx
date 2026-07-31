@@ -192,26 +192,13 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
           </button>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
             <div style={{
-              width: '34px', height: '34px', borderRadius: '10px',
-              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+              width: '34px', height: '34px', borderRadius: '8px',
+              background: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              overflow: 'hidden',
             }}>
-              <svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Chef hat puffy top */}
-                <path d="M24 6C18 6 13 10 13 15.5C13 18 14.2 20.2 16 21.5V24H32V21.5C33.8 20.2 35 18 35 15.5C35 10 30 6 24 6Z" fill="white" fillOpacity="0.92"/>
-                {/* Crown cutout detail */}
-                <path d="M20 15 Q24 11 28 15" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-                {/* Left puff */}
-                <circle cx="15.5" cy="14" r="4" fill="white" fillOpacity="0.85"/>
-                {/* Right puff */}
-                <circle cx="32.5" cy="14" r="4" fill="white" fillOpacity="0.85"/>
-                {/* Top center puff */}
-                <circle cx="24" cy="10" r="4.5" fill="white" fillOpacity="0.95"/>
-                {/* Brim/band */}
-                <rect x="13" y="24" width="22" height="5" rx="1.5" fill="white" fillOpacity="0.8"/>
-                {/* Brim bottom line */}
-                <rect x="11" y="29" width="26" height="2.5" rx="1.25" fill="white" fillOpacity="0.6"/>
-              </svg>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo1.jpeg" alt="Icestasy" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '14px', color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.1 }}>Icestasy</div>
