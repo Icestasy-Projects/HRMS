@@ -7,7 +7,14 @@ import SeparationForm from './SeparationForm'
 
 export const dynamic = 'force-dynamic'
 
-export default async function SeparationPage() {
+export default async function SeparationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const params = await searchParams
+  const errorMsg = params?.error ?? null
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -47,19 +54,48 @@ export default async function SeparationPage() {
 
     const admin = createAdminClient()
     const type = formData.get('type') as string
-    if (!type) return
-    const reason = formData.get('reason') as string
+    if (!type) redirect('/leave/separation?error=Please+select+a+request+type')
+    const reason = (formData.get('reason') as string) || null
     const sabbaticalFrom = formData.get('sabbatical_from') as string | null
     const sabbaticalTo = formData.get('sabbatical_to') as string | null
 
-    await admin.from('separation_requests').insert({
-      employee_id: user.id,
-      type,
-      reason,
-      sabbatical_from: type === 'sabbatical' ? sabbaticalFrom : null,
-      sabbatical_to: type === 'sabbatical' ? sabbaticalTo : null,
-      status: 'pending',
-    })
+    const { data: newReq, error: insertError } = await admin
+      .from('separation_requests')
+      .insert({
+        employee_id: user.id,
+        type,
+        reason,
+        sabbatical_from: type === 'sabbatical' ? sabbaticalFrom : null,
+        sabbatical_to: type === 'sabbatical' ? sabbaticalTo : null,
+        status: 'pending',
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      redirect(`/leave/separation?error=${encodeURIComponent(insertError.message)}`)
+    }
+
+    // Notify all super_admin and sub_super_admin users
+    const { data: emp } = await admin.from('users').select('name').eq('id', user.id).single()
+    const { data: admins } = await admin
+      .from('users')
+      .select('id')
+      .in('role', ['super_admin', 'sub_super_admin'])
+      .eq('is_active', true)
+
+    if (admins && admins.length > 0 && emp) {
+      const typeLabel = type === 'resignation' ? 'Resignation' : 'Sabbatical'
+      await admin.from('notifications').insert(
+        admins.map(a => ({
+          recipient_id: a.id,
+          type: 'action_needed',
+          title: `${typeLabel} Request — ${emp.name}`,
+          message: `${emp.name} has submitted a ${typeLabel.toLowerCase()} request. Please review and take action.`,
+          related_id: newReq?.id ?? null,
+        }))
+      )
+    }
 
     redirect('/leave/separation')
   }
@@ -87,6 +123,16 @@ export default async function SeparationPage() {
           Apply for resignation or sabbatical leave — subject to HR approval
         </p>
       </div>
+
+      {errorMsg && (
+        <div style={{
+          background: 'var(--danger-l)', border: '1px solid var(--danger)',
+          borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
+          color: 'var(--danger)', fontSize: '0.875rem', marginBottom: '1rem',
+        }}>
+          ⚠️ {errorMsg}
+        </div>
+      )}
 
       <SeparationForm
         submitSeparation={submitSeparation}

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import NavProgress from '@/components/NavProgress'
 import { Home, Clock, Leaf, Users, Bell, Settings } from 'lucide-react'
+import { LOGO_DATA_URI } from '@/lib/logo'
 
 type NavItem = { label: string; href: string; badge?: number }
 
@@ -198,7 +199,8 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
               overflow: 'hidden',
             }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo1.jpeg" alt="Icestasy" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={LOGO_DATA_URI} alt="Icestasy" style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '14px', color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.1 }}>Icestasy</div>

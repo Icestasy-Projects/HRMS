@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import ForgotPasswordButton from './ForgotPasswordButton'
+import { LOGO_DATA_URI } from '@/lib/logo'
 
 export default async function LoginPage({
   searchParams,
@@ -77,7 +78,7 @@ export default async function LoginPage({
             boxShadow: 'var(--shadow)',
           }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo1.jpeg" alt="Icestasy" style={{ width: '72px', height: '72px', objectFit: 'contain' }} />
+            <img src={LOGO_DATA_URI} alt="Icestasy" style={{ width: '72px', height: '72px', objectFit: 'contain' }} />
           </div>
           <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
             Icestasy HRMS
