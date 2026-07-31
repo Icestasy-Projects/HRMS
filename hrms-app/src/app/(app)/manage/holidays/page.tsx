@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +12,9 @@ export default async function HolidaysPage() {
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
   if (!me || !['super_admin','sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
-  const { data: holidays } = await supabase
+  const admin = createAdminClient()
+
+  const { data: holidays } = await admin
     .from('holiday_calendar')
     .select('*')
     .order('holiday_date', { ascending: true })
@@ -19,11 +22,15 @@ export default async function HolidaysPage() {
   async function addHoliday(formData: FormData) {
     'use server'
     const supabase = await createClient()
-    await supabase.from('holiday_calendar').insert({
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const admin = createAdminClient()
+    const dateStr = formData.get('date') as string
+    await admin.from('holiday_calendar').insert({
       name: formData.get('name') as string,
-      holiday_date: formData.get('date') as string,
+      holiday_date: dateStr,
       type: 'public',
-      year: new Date(formData.get('date') as string).getFullYear(),
+      year: new Date(dateStr + 'T00:00:00').getFullYear(),
     })
     redirect('/manage/holidays')
   }
@@ -31,7 +38,10 @@ export default async function HolidaysPage() {
   async function deleteHoliday(formData: FormData) {
     'use server'
     const supabase = await createClient()
-    await supabase.from('holiday_calendar').delete().eq('id', formData.get('id'))
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const admin = createAdminClient()
+    await admin.from('holiday_calendar').delete().eq('id', formData.get('id'))
     redirect('/manage/holidays')
   }
 
