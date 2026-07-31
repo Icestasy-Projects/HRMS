@@ -39,9 +39,10 @@ function Section({ title, rows }: { title: string; rows: { label: string; value:
   )
 }
 
-export default function SalaryCalculator({ employees }: { employees: { id: string; name: string }[] }) {
+export default function SalaryCalculator({ employees }: { employees: { id: string; name: string; email: string }[] }) {
   const [annual, setAnnual] = useState('')
   const [empName, setEmpName] = useState('')
+  const selectedEmp = employees.find(e => e.name === empName)
   const [downloading, setDownloading] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
 
@@ -122,7 +123,7 @@ export default function SalaryCalculator({ employees }: { employees: { id: strin
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: '0.75rem', padding: '1.25rem', boxShadow: 'var(--shadow)', marginBottom: '1.5rem',
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', alignItems: 'end' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
               Employee Name
@@ -145,6 +146,11 @@ export default function SalaryCalculator({ employees }: { employees: { id: strin
                 <option key={emp.id} value={emp.name}>{emp.name}</option>
               ))}
             </select>
+            {selectedEmp && (
+              <p style={{ margin: '0.375rem 0 0', fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 500 }}>
+                {selectedEmp.email}
+              </p>
+            )}
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>

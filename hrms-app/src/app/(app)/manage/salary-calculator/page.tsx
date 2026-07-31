@@ -17,7 +17,7 @@ export default async function SalaryCalculatorPage() {
   const admin = createAdminClient()
   const { data: employees } = await admin
     .from('users')
-    .select('id, name')
+    .select('id, name, email')
     .eq('is_active', true)
     .order('name')
 
