@@ -17,13 +17,28 @@ export default async function SeparationPage() {
   const admin = createAdminClient()
 
   // Fetch existing separation request for this employee
-  const { data: existing } = await admin
+  const { data: existing, error: sepError } = await admin
     .from('separation_requests')
     .select('*')
     .eq('employee_id', employee.id)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  // Table doesn't exist yet — show setup notice
+  if (sepError && sepError.code === '42P01') {
+    return (
+      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Leave', href: '/leave' }, { label: 'Separation Request' }]} />
+        <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '0.875rem', padding: '1.5rem', marginTop: '1rem' }}>
+          <p style={{ fontWeight: 700, color: '#92400e', margin: '0 0 0.5rem' }}>Setup required</p>
+          <p style={{ color: '#92400e', fontSize: '0.875rem', margin: 0 }}>
+            The <code>separation_requests</code> table has not been created yet. Please run the setup SQL in your Supabase SQL Editor, then reload this page.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   async function submitSeparation(formData: FormData) {
     'use server'

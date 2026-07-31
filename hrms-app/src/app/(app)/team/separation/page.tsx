@@ -15,10 +15,24 @@ export default async function TeamSeparationPage() {
 
   const admin = createAdminClient()
 
-  const { data: requests } = await admin
+  const { data: requests, error: sepError } = await admin
     .from('separation_requests')
     .select('*, users(name, email, departments(name))')
     .order('created_at', { ascending: false })
+
+  if (sepError && sepError.code === '42P01') {
+    return (
+      <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+        <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Team', href: '/team' }, { label: 'Separation Requests' }]} />
+        <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '0.875rem', padding: '1.5rem', marginTop: '1rem' }}>
+          <p style={{ fontWeight: 700, color: '#92400e', margin: '0 0 0.5rem' }}>Setup required</p>
+          <p style={{ color: '#92400e', fontSize: '0.875rem', margin: 0 }}>
+            The <code>separation_requests</code> table has not been created yet. Please run the setup SQL in your Supabase SQL Editor, then reload.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   async function approveRequest(formData: FormData) {
     'use server'
