@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import SalaryCalculator from './SalaryCalculator'
@@ -13,6 +14,13 @@ export default async function SalaryCalculatorPage() {
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
   if (!me || !['admin', 'super_admin', 'sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
+  const admin = createAdminClient()
+  const { data: employees } = await admin
+    .from('users')
+    .select('id, name')
+    .eq('is_active', true)
+    .order('name')
+
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
@@ -21,10 +29,10 @@ export default async function SalaryCalculatorPage() {
           Salary Structure Calculator
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-          Enter Annual CTC to compute full salary breakup including employer and employee contributions
+          Select an employee and enter Annual CTC to compute full salary breakup
         </p>
       </div>
-      <SalaryCalculator />
+      <SalaryCalculator employees={employees ?? []} />
     </div>
   )
 }
