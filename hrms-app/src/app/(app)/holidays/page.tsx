@@ -1,5 +1,6 @@
 import Breadcrumb from '@/components/Breadcrumb'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +11,9 @@ export default async function HolidaysPage() {
   if (!user) redirect('/login')
 
   const year = new Date().getFullYear()
+  const admin = createAdminClient()
 
-  const { data: holidays } = await supabase
+  const { data: holidays } = await admin
     .from('holiday_calendar')
     .select('*')
     .eq('year', year)
