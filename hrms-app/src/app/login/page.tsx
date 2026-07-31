@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import ForgotPasswordButton from './ForgotPasswordButton'
 
@@ -11,13 +12,32 @@ export default async function LoginPage({
   const rawError = params?.error
   const errorMsg = rawError && rawError !== '{}' && rawError !== '[object Object]'
     ? rawError
-    : rawError ? 'Invalid email or password. Please try again.' : null
+    : rawError ? 'Invalid credentials. Please try again.' : null
 
   async function signIn(formData: FormData) {
     'use server'
-    const email = formData.get('email') as string
+    const identifier = (formData.get('identifier') as string)?.trim()
     const password = formData.get('password') as string
     const supabase = await createClient()
+
+    let email = identifier
+
+    // If input looks like a phone number, look up the email from users table
+    const isPhone = /^[+\d\s\-()]{7,}$/.test(identifier) && !identifier.includes('@')
+    if (isPhone) {
+      const admin = createAdminClient()
+      const normalized = identifier.replace(/\s+/g, '')
+      const { data: userRow } = await admin
+        .from('users')
+        .select('email')
+        .or(`phone.eq.${normalized},phone.eq.${identifier}`)
+        .maybeSingle()
+      if (!userRow?.email) {
+        redirect(`/login?error=${encodeURIComponent('No account found for that phone number.')}`)
+      }
+      email = userRow.email
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       redirect(`/login?error=${encodeURIComponent(error.message)}`)
@@ -25,89 +45,70 @@ export default async function LoginPage({
     redirect('/dashboard')
   }
 
+  const inputStyle = {
+    width: '100%',
+    background: 'var(--surface2)',
+    border: '1px solid var(--border)',
+    borderRadius: '0.75rem',
+    padding: '0.75rem 1rem',
+    color: 'var(--text)',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+    fontSize: '1rem',
+  }
+
   return (
-    <div
-      style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--bg)',
-        padding: '1rem',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '400px',
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '1.25rem',
-          padding: '2rem',
-          boxShadow: 'var(--shadow-md)',
-        }}
-      >
+    <div style={{
+      minHeight: '100dvh',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'var(--bg)', padding: '1rem',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: '400px',
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: '1.25rem', padding: '2rem', boxShadow: 'var(--shadow-md)',
+      }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
             width: '52px', height: '52px', borderRadius: '14px',
             background: 'linear-gradient(135deg, var(--primary), #a855f7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 800, fontSize: '18px',
-            margin: '0 auto 1rem',
+            color: '#fff', fontWeight: 800, fontSize: '18px', margin: '0 auto 1rem',
           }}>IC</div>
           <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
             Icestasy HRMS
           </h1>
-          <p style={{ color: 'var(--muted)', marginTop: '0.375rem', fontSize: '0.9rem' }}>Sign in to your account</p>
+          <p style={{ color: 'var(--muted)', marginTop: '0.375rem', fontSize: '0.9rem' }}>Sign in with email or phone</p>
         </div>
 
         {errorMsg && (
-          <div
-            style={{
-              background: 'rgba(239,68,68,0.1)',
-              border: '1px solid var(--danger)',
-              borderRadius: '0.75rem',
-              padding: '0.75rem 1rem',
-              color: 'var(--danger)',
-              fontSize: '0.875rem',
-              marginBottom: '1rem',
-            }}
-          >
+          <div style={{
+            background: 'rgba(239,68,68,0.1)', border: '1px solid var(--danger)',
+            borderRadius: '0.75rem', padding: '0.75rem 1rem',
+            color: 'var(--danger)', fontSize: '0.875rem', marginBottom: '1rem',
+          }}>
             {errorMsg}
           </div>
         )}
 
         <form action={signIn} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label
-              htmlFor="email"
-              style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}
-            >
-              Email
+            <label htmlFor="identifier" style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              Email or Phone Number
             </label>
             <input
-              id="email"
-              name="email"
-              type="email"
+              id="identifier"
+              name="identifier"
+              type="text"
               required
-              autoComplete="email"
-              style={{
-                width: '100%',
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                borderRadius: '0.75rem',
-                padding: '0.75rem 1rem',
-                color: 'var(--text)',
-                outline: 'none',
-              }}
+              autoComplete="username"
+              placeholder="you@company.com or +91 98765 43210"
+              style={inputStyle}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}
-            >
+            <label htmlFor="password" style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
               Password
             </label>
             <input
@@ -116,35 +117,16 @@ export default async function LoginPage({
               type="password"
               required
               autoComplete="current-password"
-              style={{
-                width: '100%',
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                borderRadius: '0.75rem',
-                padding: '0.75rem 1rem',
-                color: 'var(--text)',
-                outline: 'none',
-              }}
+              style={inputStyle}
             />
           </div>
 
-          <button
-            type="submit"
-            style={{
-              width: '100%',
-              background: 'var(--primary)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '0.75rem',
-              padding: '0.875rem',
-              fontWeight: 700,
-              fontSize: '1rem',
-              cursor: 'pointer',
-              minHeight: '44px',
-              boxShadow: 'var(--shadow)',
-              letterSpacing: '-0.01em',
-            }}
-          >
+          <button type="submit" style={{
+            width: '100%', background: 'var(--primary)', color: '#fff',
+            border: 'none', borderRadius: '0.75rem', padding: '0.875rem',
+            fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
+            minHeight: '44px', boxShadow: 'var(--shadow)', letterSpacing: '-0.01em',
+          }}>
             Sign In
           </button>
         </form>

@@ -61,7 +61,43 @@ export default async function AttendancePage({
     const today = todayIST()
     const timeStr = timeIST()
 
-    // Check for an approved scheduled half-day leave covering today
+    // Determine if today is a weekend for this employee's schedule
+    const dow = new Date(today + 'T00:00:00').getDay() // 0=Sun,6=Sat
+    const schedType = emp.employee_type === 'blue_collar' ? 'blue_collar' : 'white_collar'
+    // white_collar: Sat(6)+Sun(0) are off; blue_collar: only Sun(0) is off
+    const isWeekendDay = schedType === 'white_collar' ? (dow === 0 || dow === 6) : dow === 0
+
+    const { data: existing } = await supabase
+      .from('attendance_logs')
+      .select('*')
+      .eq('user_id', emp.id)
+      .eq('work_date', today)
+      .single()
+
+    if (isWeekendDay) {
+      // Weekend: log hours only — try weekend_work status, fall back to present
+      if (!existing) {
+        let res = await supabase.from('attendance_logs').insert({
+          user_id: emp.id, work_date: today, check_in: timeStr, day_status: 'weekend_work',
+        })
+        if (res.error) {
+          // enum may not have weekend_work yet — fall back to present
+          res = await supabase.from('attendance_logs').insert({
+            user_id: emp.id, work_date: today, check_in: timeStr, day_status: 'present',
+          })
+        }
+        if (res.error) redirect(`/attendance?error=${encodeURIComponent(res.error.message)}`)
+      } else if (!existing.check_out) {
+        const { error } = await supabase
+          .from('attendance_logs')
+          .update({ check_out: timeStr })
+          .eq('id', existing.id)
+        if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
+      }
+      redirect('/attendance')
+    }
+
+    // Weekday: normal half-day logic
     const { data: scheduledLeave } = await supabase
       .from('leave_requests')
       .select('id')
@@ -72,13 +108,6 @@ export default async function AttendancePage({
       .gte('end_date', today)
       .maybeSingle()
     const hasScheduledHalfDay = !!scheduledLeave
-
-    const { data: existing } = await supabase
-      .from('attendance_logs')
-      .select('*')
-      .eq('user_id', emp.id)
-      .eq('work_date', today)
-      .single()
 
     if (!existing) {
       const { dayStatus } = computeAttendanceStatus(timeStr, null, hasScheduledHalfDay)
@@ -93,10 +122,7 @@ export default async function AttendancePage({
       const { dayStatus } = computeAttendanceStatus(existing.check_in, timeStr, hasScheduledHalfDay)
       const { error } = await supabase
         .from('attendance_logs')
-        .update({
-          check_out: timeStr,
-          day_status: dayStatus,
-        })
+        .update({ check_out: timeStr, day_status: dayStatus })
         .eq('id', existing.id)
       if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
     }
