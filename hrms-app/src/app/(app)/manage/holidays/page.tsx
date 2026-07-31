@@ -26,11 +26,54 @@ export default async function HolidaysPage() {
     if (!user) return
     const admin = createAdminClient()
     const dateStr = formData.get('date') as string
+    const holidayYear = new Date(dateStr + 'T00:00:00').getFullYear()
+    const dow = new Date(dateStr + 'T00:00:00').getDay() // 0=Sun, 6=Sat
+
     await admin.from('holiday_calendar').insert({
       name: formData.get('name') as string,
       holiday_date: dateStr,
       type: 'public',
     })
+
+    // If holiday falls on a weekend, credit +1 SL to all active employees
+    // white_collar: Sat(6) or Sun(0) → credit everyone
+    // blue_collar: only Sun(0) → credit only blue_collar
+    const isWeekendForAll = dow === 0  // Sunday — off for all
+    const isWeekendWhiteOnly = dow === 6 // Saturday — off only for white_collar
+
+    if (isWeekendForAll || isWeekendWhiteOnly) {
+      const { data: allUsers } = await admin
+        .from('users')
+        .select('id, employee_type')
+        .eq('is_active', true)
+
+      for (const u of allUsers ?? []) {
+        const isBlueCollar = u.employee_type === 'blue_collar'
+        // Saturday: blue collar works, so only credit white collar
+        if (isWeekendWhiteOnly && isBlueCollar) continue
+
+        const { data: bal } = await admin
+          .from('leave_balances')
+          .select('id, sl_total')
+          .eq('user_id', u.id)
+          .eq('year', holidayYear)
+          .maybeSingle()
+
+        if (bal) {
+          await admin.from('leave_balances')
+            .update({ sl_total: (bal.sl_total ?? 0) + 1 })
+            .eq('id', bal.id)
+        } else {
+          await admin.from('leave_balances').insert({
+            user_id: u.id,
+            year: holidayYear,
+            sl_total: 1,
+            ul_total: 0,
+          })
+        }
+      }
+    }
+
     redirect('/manage/holidays')
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
+import { DoorOpen, Palmtree } from 'lucide-react'
 
 interface Props {
   submitSeparation: (formData: FormData) => Promise<void>
@@ -112,7 +113,9 @@ export default function SeparationForm({ submitSeparation, withdrawRequest, exis
                       textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.15s',
                     }}
                   >
-                    <p style={{ fontSize: '1.25rem', margin: '0 0 0.25rem' }}>{t === 'resignation' ? '🚪' : '🏖'}</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.375rem', color: type === t ? 'var(--primary)' : 'var(--muted)' }}>
+                      {t === 'resignation' ? <DoorOpen size={28} strokeWidth={1.75} /> : <Palmtree size={28} strokeWidth={1.75} />}
+                    </div>
                     <p style={{ fontWeight: 700, color: 'var(--text)', margin: 0, fontSize: '0.875rem', textTransform: 'capitalize' }}>{t}</p>
                   </div>
                 ))}

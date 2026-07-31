@@ -45,12 +45,15 @@ export default async function AttendanceHistoryPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
           {logs.map(log => {
             const isHalf = log.day_status?.includes('half_day')
-            const badgeColor = isHalf
-              ? 'var(--warning)'
-              : log.check_out
-                ? 'var(--success)'
-                : 'var(--primary)'
-            const badgeLabel = isHalf ? 'Half Day' : log.check_out ? 'Present' : 'In Progress'
+            const isWeekend = log.day_status === 'weekend_work'
+            const badgeColor = isWeekend
+              ? '#6366f1'
+              : isHalf
+                ? 'var(--warning)'
+                : log.check_out
+                  ? 'var(--success)'
+                  : 'var(--primary)'
+            const badgeLabel = isWeekend ? 'Weekend' : isHalf ? 'Half Day' : log.check_out ? 'Present' : 'In Progress'
 
             return (
               <div
