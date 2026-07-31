@@ -172,9 +172,9 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         height: '56px',
-        background: 'linear-gradient(135deg, #5b1fa8 0%, #7c2fc9 55%, #9b4de0 100%)',
+        background: 'linear-gradient(135deg, #0f52a8 0%, #1b72d8 55%, #2e8af6 100%)',
         display: 'flex', alignItems: 'stretch',
-        boxShadow: '0 2px 8px rgba(91,31,168,0.35)',
+        boxShadow: '0 2px 8px rgba(15,82,168,0.35)',
       }}>
         {/* Left: hamburger + logo */}
         <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '0.875rem', gap: '0.375rem', flexShrink: 0 }}>
@@ -196,23 +196,21 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
               background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Cone */}
-                <path d="M8.5 14L12 22L15.5 14H8.5Z" fill="rgba(255,220,150,0.9)" stroke="rgba(255,255,255,0.6)" strokeWidth="0.5" strokeLinejoin="round"/>
-                {/* Cone lines */}
-                <line x1="12" y1="22" x2="10" y2="14" stroke="rgba(255,255,255,0.35)" strokeWidth="0.5"/>
-                <line x1="12" y1="22" x2="14" y2="14" stroke="rgba(255,255,255,0.35)" strokeWidth="0.5"/>
-                {/* Bottom scoop */}
-                <ellipse cx="12" cy="13.5" rx="3.5" ry="2" fill="rgba(255,182,193,0.95)"/>
-                {/* Left scoop */}
-                <circle cx="9.5" cy="11" r="2.8" fill="rgba(255,182,193,0.95)" stroke="rgba(255,255,255,0.3)" strokeWidth="0.3"/>
-                {/* Right scoop */}
-                <circle cx="14.5" cy="11" r="2.8" fill="rgba(200,160,255,0.95)" stroke="rgba(255,255,255,0.3)" strokeWidth="0.3"/>
-                {/* Top scoop */}
-                <circle cx="12" cy="8.5" r="2.8" fill="rgba(255,255,255,0.92)" stroke="rgba(255,255,255,0.4)" strokeWidth="0.3"/>
-                {/* Cherry */}
-                <circle cx="12" cy="5.8" r="1.2" fill="#ff6b8a"/>
-                <path d="M12 5.8 Q13.5 4 13 3" stroke="rgba(255,255,255,0.7)" strokeWidth="0.6" fill="none" strokeLinecap="round"/>
+              <svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Chef hat puffy top */}
+                <path d="M24 6C18 6 13 10 13 15.5C13 18 14.2 20.2 16 21.5V24H32V21.5C33.8 20.2 35 18 35 15.5C35 10 30 6 24 6Z" fill="white" fillOpacity="0.92"/>
+                {/* Crown cutout detail */}
+                <path d="M20 15 Q24 11 28 15" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                {/* Left puff */}
+                <circle cx="15.5" cy="14" r="4" fill="white" fillOpacity="0.85"/>
+                {/* Right puff */}
+                <circle cx="32.5" cy="14" r="4" fill="white" fillOpacity="0.85"/>
+                {/* Top center puff */}
+                <circle cx="24" cy="10" r="4.5" fill="white" fillOpacity="0.95"/>
+                {/* Brim/band */}
+                <rect x="13" y="24" width="22" height="5" rx="1.5" fill="white" fillOpacity="0.8"/>
+                {/* Brim bottom line */}
+                <rect x="11" y="29" width="26" height="2.5" rx="1.25" fill="white" fillOpacity="0.6"/>
               </svg>
             </div>
             <div>
@@ -308,7 +306,7 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
           }} onClick={e => e.stopPropagation()}>
             <div style={{
               padding: '1rem',
-              background: 'linear-gradient(135deg, #5b1fa8, #7c2fc9)',
+              background: 'linear-gradient(135deg, #0f52a8, #1b72d8)',
               display: 'flex', alignItems: 'center', gap: '0.75rem',
             }}>
               <div style={{
@@ -355,7 +353,7 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
         background: 'var(--surface)',
         borderTop: '1px solid var(--border)',
-        boxShadow: '0 -2px 12px rgba(124,47,201,0.08)',
+        boxShadow: '0 -2px 12px rgba(27,114,216,0.08)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
         {navItems.slice(0, 4).map(item => (

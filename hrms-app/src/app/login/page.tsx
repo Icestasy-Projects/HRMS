@@ -70,11 +70,21 @@ export default async function LoginPage({
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
-            width: '52px', height: '52px', borderRadius: '14px',
-            background: 'linear-gradient(135deg, var(--primary), #a855f7)',
+            width: '64px', height: '64px', borderRadius: '16px',
+            background: 'linear-gradient(135deg, #0f52a8, #1b72d8)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 800, fontSize: '18px', margin: '0 auto 1rem',
-          }}>IC</div>
+            margin: '0 auto 1rem',
+          }}>
+            <svg width="38" height="38" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 6C18 6 13 10 13 15.5C13 18 14.2 20.2 16 21.5V24H32V21.5C33.8 20.2 35 18 35 15.5C35 10 30 6 24 6Z" fill="white" fillOpacity="0.92"/>
+              <path d="M20 15 Q24 11 28 15" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+              <circle cx="15.5" cy="14" r="4" fill="white" fillOpacity="0.85"/>
+              <circle cx="32.5" cy="14" r="4" fill="white" fillOpacity="0.85"/>
+              <circle cx="24" cy="10" r="4.5" fill="white" fillOpacity="0.95"/>
+              <rect x="13" y="24" width="22" height="5" rx="1.5" fill="white" fillOpacity="0.8"/>
+              <rect x="11" y="29" width="26" height="2.5" rx="1.25" fill="white" fillOpacity="0.6"/>
+            </svg>
+          </div>
           <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
             Icestasy HRMS
           </h1>
