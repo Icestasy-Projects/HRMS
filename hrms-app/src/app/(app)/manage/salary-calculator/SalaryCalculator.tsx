@@ -39,9 +39,8 @@ function Section({ title, rows }: { title: string; rows: { label: string; value:
   )
 }
 
-export default function SalaryCalculator({ employees }: { employees: { id: string; name: string }[] }) {
+export default function SalaryCalculator({ empName, empEmail }: { empName: string; empEmail: string }) {
   const [annual, setAnnual] = useState('')
-  const [empName, setEmpName] = useState('')
   const [downloading, setDownloading] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
 
@@ -122,29 +121,18 @@ export default function SalaryCalculator({ employees }: { employees: { id: strin
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: '0.75rem', padding: '1.25rem', boxShadow: 'var(--shadow)', marginBottom: '1.5rem',
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', alignItems: 'end' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
-              Employee Name
+              Employee
             </label>
-            <select
-              value={empName}
-              onChange={e => setEmpName(e.target.value)}
-              style={{
-                width: '100%', padding: '0.875rem 1rem', fontSize: '1rem', fontWeight: 600,
-                border: '2px solid var(--border)', borderRadius: '0.625rem',
-                background: 'var(--bg)', color: empName ? 'var(--text)' : 'var(--muted)',
-                outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box',
-                cursor: 'pointer',
-              }}
-              onFocus={e => (e.target.style.borderColor = 'var(--primary)')}
-              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
-            >
-              <option value="">— Select employee —</option>
-              {employees.map(emp => (
-                <option key={emp.id} value={emp.name}>{emp.name}</option>
-              ))}
-            </select>
+            <div style={{
+              padding: '0.875rem 1rem', border: '2px solid var(--border)', borderRadius: '0.625rem',
+              background: 'var(--surface2)', boxSizing: 'border-box',
+            }}>
+              <p style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text)', margin: 0 }}>{empName || '—'}</p>
+              {empEmail && <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0.15rem 0 0' }}>{empEmail}</p>}
+            </div>
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
