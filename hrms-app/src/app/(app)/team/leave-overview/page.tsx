@@ -61,7 +61,7 @@ export default async function LeaveOverviewPage() {
       id: emp.id,
       name: emp.name,
       role: emp.role,
-      department: (emp.departments as { name: string } | null)?.name ?? '—',
+      department: (emp.departments as unknown as { name: string } | null)?.name ?? '—',
       slTotal: bal.sl_total,
       slUsed: used.sl,
       slRemaining,
