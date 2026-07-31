@@ -137,7 +137,7 @@ export default async function DashboardPage() {
 
       {/* Hero banner */}
       <div style={{
-        background: 'linear-gradient(135deg, #5b1fa8 0%, #7c2fc9 55%, #9b4de0 100%)',
+        background: 'linear-gradient(135deg, #0f52a8 0%, #1b72d8 55%, #2e8af6 100%)',
         borderRadius: '0.75rem',
         padding: '1.75rem 1.5rem',
         marginBottom: '1.5rem',

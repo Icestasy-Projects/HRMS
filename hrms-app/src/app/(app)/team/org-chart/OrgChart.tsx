@@ -46,9 +46,9 @@ function collectConnections(nodes: TreeNode[]): Array<{ parentId: string; childI
 }
 
 const ROLE_COLORS: Record<string, { bg: string; color: string; border: string }> = {
-  super_admin:     { bg: '#ede9fe', color: '#6d28d9', border: '#c4b5fd' },
-  sub_super_admin: { bg: '#fce7f3', color: '#9d174d', border: '#f9a8d4' },
-  admin:           { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' },
+  super_admin:     { bg: '#dbeafe', color: '#1e3a8a', border: '#93c5fd' },
+  sub_super_admin: { bg: '#e0f2fe', color: '#0c4a6e', border: '#7dd3fc' },
+  admin:           { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
   employee:        { bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
 }
 
