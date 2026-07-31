@@ -15,6 +15,12 @@ interface User {
   departments?: { name: string } | null
 }
 
+interface SeparationInfo {
+  type: string
+  sabbatical_from?: string | null
+  sabbatical_to?: string | null
+}
+
 interface TreeNode extends User {
   children: TreeNode[]
 }
@@ -58,10 +64,25 @@ function initials(name: string) {
 
 // ─── Mobile: vertical indented list ───────────────────────────────────────────
 
-function MobileNode({ node, depth, onSelect }: { node: TreeNode; depth: number; onSelect: (u: User) => void }) {
+function SeparationBadge({ info }: { info: SeparationInfo }) {
+  const isResigning = info.type === 'resignation'
+  return (
+    <span style={{
+      background: isResigning ? '#fee2e2' : '#fef3c7',
+      color: isResigning ? '#991b1b' : '#92400e',
+      borderRadius: '999px', padding: '0.05rem 0.45rem',
+      fontSize: '0.6rem', fontWeight: 700,
+    }}>
+      {isResigning ? 'Resigning' : 'On Sabbatical'}
+    </span>
+  )
+}
+
+function MobileNode({ node, depth, onSelect, separationMap }: { node: TreeNode; depth: number; onSelect: (u: User) => void; separationMap: Record<string, SeparationInfo> }) {
   const [collapsed, setCollapsed] = useState(depth > 1)
   const rc = ROLE_COLORS[node.role] ?? ROLE_COLORS.employee
   const hasChildren = node.children.length > 0
+  const sep = separationMap[node.id]
 
   return (
     <div style={{ marginLeft: depth === 0 ? 0 : '1.25rem' }}>
@@ -96,6 +117,7 @@ function MobileNode({ node, depth, onSelect }: { node: TreeNode; depth: number; 
               borderRadius: '999px', padding: '0.05rem 0.45rem',
               fontSize: '0.65rem', fontWeight: 600,
             }}>{roleLabel(node.role)}</span>
+            {sep && <SeparationBadge info={sep} />}
             {node.departments && (
               <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>
                 {(node.departments as { name: string }).name}
@@ -123,7 +145,7 @@ function MobileNode({ node, depth, onSelect }: { node: TreeNode; depth: number; 
       {hasChildren && !collapsed && (
         <div>
           {node.children.map(child => (
-            <MobileNode key={child.id} node={child} depth={depth + 1} onSelect={onSelect} />
+            <MobileNode key={child.id} node={child} depth={depth + 1} onSelect={onSelect} separationMap={separationMap} />
           ))}
         </div>
       )}
@@ -133,12 +155,13 @@ function MobileNode({ node, depth, onSelect }: { node: TreeNode; depth: number; 
 
 // ─── Desktop: horizontal tree with SVG connectors ─────────────────────────────
 
-function DesktopNode({ node, depth, onSelect, onToggle }: {
-  node: TreeNode; depth: number; onSelect: (u: User) => void; onToggle: () => void
+function DesktopNode({ node, depth, onSelect, onToggle, separationMap }: {
+  node: TreeNode; depth: number; onSelect: (u: User) => void; onToggle: () => void; separationMap: Record<string, SeparationInfo>
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const rc = ROLE_COLORS[node.role] ?? ROLE_COLORS.employee
   const hasChildren = node.children.length > 0
+  const sep = separationMap[node.id]
 
   function toggle() { setCollapsed(c => !c); requestAnimationFrame(onToggle) }
 
@@ -169,6 +192,7 @@ function DesktopNode({ node, depth, onSelect, onToggle }: {
           background: rc.bg, color: rc.color, border: `1px solid ${rc.border}`,
           borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: 600,
         }}>{roleLabel(node.role)}</span>
+        {sep && <div style={{ marginTop: '0.25rem' }}><SeparationBadge info={sep} /></div>}
         {node.departments && (
           <p style={{ color: 'var(--muted)', fontSize: '0.68rem', margin: '0.25rem 0 0' }}>
             {(node.departments as { name: string }).name}
@@ -191,7 +215,7 @@ function DesktopNode({ node, depth, onSelect, onToggle }: {
       {hasChildren && (
         <div style={{ display: collapsed ? 'none' : 'flex', gap: '2rem', alignItems: 'flex-start', marginTop: '40px' }}>
           {node.children.map(child => (
-            <DesktopNode key={child.id} node={child} depth={depth + 1} onSelect={onSelect} onToggle={onToggle} />
+            <DesktopNode key={child.id} node={child} depth={depth + 1} onSelect={onSelect} onToggle={onToggle} separationMap={separationMap} />
           ))}
         </div>
       )}
@@ -252,7 +276,7 @@ function DetailPanel({ user, onClose }: { user: User; onClose: () => void }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function OrgChart({ users }: { users: User[] }) {
+export default function OrgChart({ users, separationMap = {} }: { users: User[]; separationMap?: Record<string, SeparationInfo> }) {
   const roots = useMemo(() => buildTree(users), [users])
   const connections = useMemo(() => collectConnections(roots), [roots])
   const [selected, setSelected] = useState<User | null>(null)
@@ -317,7 +341,7 @@ export default function OrgChart({ users }: { users: User[] }) {
       <>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {roots.map(root => (
-            <MobileNode key={root.id} node={root} depth={0} onSelect={setSelected} />
+            <MobileNode key={root.id} node={root} depth={0} onSelect={setSelected} separationMap={separationMap} />
           ))}
         </div>
         {legend}
@@ -345,7 +369,7 @@ export default function OrgChart({ users }: { users: User[] }) {
           </svg>
           <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '3rem', justifyContent: 'center' }}>
             {roots.map(root => (
-              <DesktopNode key={root.id} node={root} depth={0} onSelect={setSelected} onToggle={measure} />
+              <DesktopNode key={root.id} node={root} depth={0} onSelect={setSelected} onToggle={measure} separationMap={separationMap} />
             ))}
           </div>
           {legend}

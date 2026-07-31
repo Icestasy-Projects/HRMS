@@ -4,21 +4,24 @@ import Link from 'next/link'
 import {
   Clock, Leaf, ClipboardList, CalendarDays, Bell,
   CalendarCheck, CalendarRange, Users, Network,
-  CheckSquare, Settings,
+  CheckSquare, Settings, LogOut, Calculator,
 } from 'lucide-react'
 
 const ICON_MAP: Record<string, React.ReactNode> = {
-  '/attendance':         <Clock size={26} strokeWidth={1.75} />,
-  '/leave':              <Leaf size={26} strokeWidth={1.75} />,
-  '/leave/history':      <ClipboardList size={26} strokeWidth={1.75} />,
-  '/attendance/history': <CalendarDays size={26} strokeWidth={1.75} />,
-  '/notifications':      <Bell size={26} strokeWidth={1.75} />,
-  '/holidays':           <CalendarCheck size={26} strokeWidth={1.75} />,
-  '/team/calendar':      <CalendarRange size={26} strokeWidth={1.75} />,
-  '/team':               <Users size={26} strokeWidth={1.75} />,
-  '/team/org-chart':     <Network size={26} strokeWidth={1.75} />,
-  '/team/leave':         <CheckSquare size={26} strokeWidth={1.75} />,
-  '/manage':             <Settings size={26} strokeWidth={1.75} />,
+  '/attendance':              <Clock size={26} strokeWidth={1.75} />,
+  '/leave':                   <Leaf size={26} strokeWidth={1.75} />,
+  '/leave/history':           <ClipboardList size={26} strokeWidth={1.75} />,
+  '/leave/separation':        <LogOut size={26} strokeWidth={1.75} />,
+  '/attendance/history':      <CalendarDays size={26} strokeWidth={1.75} />,
+  '/notifications':           <Bell size={26} strokeWidth={1.75} />,
+  '/holidays':                <CalendarCheck size={26} strokeWidth={1.75} />,
+  '/team/calendar':           <CalendarRange size={26} strokeWidth={1.75} />,
+  '/team':                    <Users size={26} strokeWidth={1.75} />,
+  '/team/org-chart':          <Network size={26} strokeWidth={1.75} />,
+  '/team/leave':              <CheckSquare size={26} strokeWidth={1.75} />,
+  '/team/separation':         <LogOut size={26} strokeWidth={1.75} />,
+  '/manage':                  <Settings size={26} strokeWidth={1.75} />,
+  '/manage/salary-calculator':<Calculator size={26} strokeWidth={1.75} />,
 }
 
 interface Worklet {
