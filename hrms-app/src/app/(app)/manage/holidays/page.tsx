@@ -30,7 +30,6 @@ export default async function HolidaysPage() {
       name: formData.get('name') as string,
       holiday_date: dateStr,
       type: 'public',
-      year: new Date(dateStr + 'T00:00:00').getFullYear(),
     })
     redirect('/manage/holidays')
   }

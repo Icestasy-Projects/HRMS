@@ -13,11 +13,14 @@ export default async function HolidaysPage() {
   const year = new Date().getFullYear()
   const admin = createAdminClient()
 
-  const { data: holidays } = await admin
+  const { data: holidays, error: hError } = await admin
     .from('holiday_calendar')
     .select('*')
-    .eq('year', year)
+    .gte('holiday_date', `${year}-01-01`)
+    .lte('holiday_date', `${year}-12-31`)
     .order('holiday_date', { ascending: true })
+
+  console.log('[holidays] fetched:', holidays?.length, 'error:', hError?.message)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
