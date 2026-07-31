@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST } from '@/lib/attendance'
 import Link from 'next/link'
@@ -47,6 +48,69 @@ export default async function AttendancePage({
     const h = Math.floor(diffMins / 60)
     const m = diffMins % 60
     hoursWorked = m === 0 ? `${h}h` : `${h}h ${m}m`
+  }
+
+  async function deductHalfDayLeave(employeeId: string, date: string) {
+    'use server'
+    const admin = createAdminClient()
+    const year = date.slice(0, 4)
+
+    // Check if already auto-deducted for this date
+    const { data: existing } = await admin
+      .from('leave_requests')
+      .select('id')
+      .eq('employee_id', employeeId)
+      .eq('start_date', date)
+      .eq('status', 'approved')
+      .like('reason', 'Auto: unscheduled half day%')
+      .maybeSingle()
+    if (existing) return
+
+    // Calculate remaining balances
+    const { data: bal } = await admin
+      .from('leave_balances')
+      .select('ul_total, sl_total')
+      .eq('user_id', employeeId)
+      .eq('year', Number(year))
+      .maybeSingle()
+
+    const { data: usedLeaves } = await admin
+      .from('leave_requests')
+      .select('leave_type, days_count')
+      .eq('employee_id', employeeId)
+      .eq('status', 'approved')
+      .gte('start_date', `${year}-01-01`)
+
+    const ulUsed = usedLeaves?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+    const slUsed = usedLeaves?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+    const ulRemaining = Math.max(0, (bal?.ul_total ?? 6) - ulUsed)
+    const slRemaining = Math.max(0, (bal?.sl_total ?? 18) - slUsed)
+
+    const deduct = 0.5
+    const ulDeduct = Math.min(deduct, ulRemaining)
+    const slDeduct = Math.min(deduct - ulDeduct, slRemaining)
+    // any remainder beyond sl goes to salary deduction (noted in reason)
+    const salaryDeduct = deduct - ulDeduct - slDeduct
+
+    if (ulDeduct > 0) {
+      await admin.from('leave_requests').insert({
+        employee_id: employeeId, leave_type: 'UL',
+        start_date: date, end_date: date,
+        is_half_day: true, days_count: ulDeduct,
+        reason: 'Auto: unscheduled half day (attendance)',
+        status: 'approved',
+      })
+    }
+    if (slDeduct > 0) {
+      await admin.from('leave_requests').insert({
+        employee_id: employeeId, leave_type: 'SL',
+        start_date: date, end_date: date,
+        is_half_day: true, days_count: slDeduct,
+        reason: 'Auto: unscheduled half day (UL exhausted)',
+        status: 'approved',
+      })
+    }
+    // salaryDeduct > 0 means both UL and SL are exhausted — to be handled in payroll
   }
 
   async function clockInOut() {
@@ -118,6 +182,9 @@ export default async function AttendancePage({
         day_status: dayStatus,
       })
       if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
+      if (dayStatus === 'unscheduled_half_day_first_off') {
+        await deductHalfDayLeave(emp.id, today)
+      }
     } else if (!existing.check_out) {
       const { dayStatus } = computeAttendanceStatus(existing.check_in, timeStr, hasScheduledHalfDay)
       const { error } = await supabase
@@ -125,6 +192,9 @@ export default async function AttendancePage({
         .update({ check_out: timeStr, day_status: dayStatus })
         .eq('id', existing.id)
       if (error) redirect(`/attendance?error=${encodeURIComponent(error.message)}`)
+      if (dayStatus === 'unscheduled_half_day_second_off') {
+        await deductHalfDayLeave(emp.id, today)
+      }
     }
 
     redirect('/attendance')

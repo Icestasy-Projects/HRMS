@@ -106,7 +106,7 @@ export default async function LoginPage({
               type="text"
               required
               autoComplete="username"
-              placeholder="you@company.com or +91 98765 43210"
+              placeholder="Email or phone number"
               style={inputStyle}
             />
           </div>

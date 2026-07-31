@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import Link from 'next/link'
 
 interface User {
   id: string
@@ -253,21 +252,15 @@ function DetailPanel({ user, onClose }: { user: User; onClose: () => void }) {
         </div>
         <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {[
-            { label: 'Email', value: user.email },
-            { label: 'Department', value: user.departments ? (user.departments as { name: string }).name : 'Not assigned' },
-            { label: 'Employee Type', value: user.employee_type ? user.employee_type.replace('_', ' ') : '—' },
-            { label: 'Status', value: user.is_active !== false ? 'Active' : 'Inactive' },
+            { label: 'Email', value: user.email, noCapitalize: true },
+            { label: 'Department', value: user.departments ? (user.departments as { name: string }).name : 'Not assigned', noCapitalize: false },
+            { label: 'Status', value: user.is_active !== false ? 'Active' : 'Inactive', noCapitalize: false },
           ].map(row => (
             <div key={row.label} style={{ background: 'var(--surface2)', borderRadius: '0.625rem', padding: '0.625rem 0.875rem' }}>
               <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>{row.label}</p>
-              <p style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.875rem', margin: 0, textTransform: 'capitalize' }}>{row.value}</p>
+              <p style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.875rem', margin: 0, textTransform: row.noCapitalize ? 'none' : 'capitalize' }}>{row.value}</p>
             </div>
           ))}
-        </div>
-        <div style={{ padding: '0 1.25rem 1.25rem', marginTop: 'auto' }}>
-          <Link href={`/manage/employees/${user.id}/view`} style={{ display: 'block', textAlign: 'center', background: 'var(--primary)', color: '#fff', borderRadius: '0.75rem', padding: '0.75rem', fontWeight: 600, fontSize: '0.875rem' }}>
-            View Full Profile
-          </Link>
         </div>
       </div>
     </>
