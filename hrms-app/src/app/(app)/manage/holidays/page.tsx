@@ -83,7 +83,51 @@ export default async function HolidaysPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const admin = createAdminClient()
-    await admin.from('holiday_calendar').delete().eq('id', formData.get('id'))
+
+    const id = formData.get('id') as string
+
+    // Fetch holiday details before deleting so we can reverse any SL credit
+    const { data: holiday } = await admin
+      .from('holiday_calendar')
+      .select('holiday_date')
+      .eq('id', id)
+      .single()
+
+    if (holiday) {
+      const dateStr = holiday.holiday_date as string
+      const holidayYear = new Date(dateStr + 'T00:00:00').getFullYear()
+      const dow = new Date(dateStr + 'T00:00:00').getDay()
+
+      const isWeekendForAll = dow === 0   // Sunday
+      const isWeekendWhiteOnly = dow === 6 // Saturday
+
+      if (isWeekendForAll || isWeekendWhiteOnly) {
+        const { data: allUsers } = await admin
+          .from('users')
+          .select('id, employee_type')
+          .eq('is_active', true)
+
+        for (const u of allUsers ?? []) {
+          const isBlueCollar = u.employee_type === 'blue_collar'
+          if (isWeekendWhiteOnly && isBlueCollar) continue
+
+          const { data: bal } = await admin
+            .from('leave_balances')
+            .select('id, sl_total')
+            .eq('user_id', u.id)
+            .eq('year', holidayYear)
+            .maybeSingle()
+
+          if (bal) {
+            await admin.from('leave_balances')
+              .update({ sl_total: Math.max(0, (bal.sl_total ?? 0) - 1) })
+              .eq('id', bal.id)
+          }
+        }
+      }
+    }
+
+    await admin.from('holiday_calendar').delete().eq('id', id)
     redirect('/manage/holidays')
   }
 
