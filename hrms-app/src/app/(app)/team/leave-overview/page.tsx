@@ -148,11 +148,15 @@ export default async function LeaveOverviewPage({
 
       {/* Summary chips */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-        {[
+        {(selectedMonth ? [
+          { label: 'Total employees', value: rows.length },
+          { label: 'SL taken', value: rows.reduce((s, r) => s + r.slUsed, 0) },
+          { label: 'UL taken', value: rows.reduce((s, r) => s + r.ulUsed, 0) },
+        ] : [
           { label: 'Total employees', value: rows.length },
           { label: 'SL exhausted', value: rows.filter(r => r.slRemaining === 0).length },
           { label: 'UL exhausted', value: rows.filter(r => r.ulRemaining === 0).length },
-        ].map(chip => (
+        ]).map(chip => (
           <div key={chip.label} style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: '0.75rem', padding: '0.625rem 1rem',
@@ -172,18 +176,18 @@ export default async function LeaveOverviewPage({
               <tr>
                 <th style={th}>Employee</th>
                 <th style={th}>Department</th>
-                <th style={{ ...th, textAlign: 'right' }}>SL Total</th>
+                {!selectedMonth && <th style={{ ...th, textAlign: 'right' }}>SL Total</th>}
                 <th style={{ ...th, textAlign: 'right' }}>SL Used</th>
-                <th style={{ ...th, textAlign: 'right', color: 'var(--primary)' }}>SL Left</th>
-                <th style={{ ...th, textAlign: 'right' }}>UL Total</th>
+                {!selectedMonth && <th style={{ ...th, textAlign: 'right', color: 'var(--primary)' }}>SL Left</th>}
+                {!selectedMonth && <th style={{ ...th, textAlign: 'right' }}>UL Total</th>}
                 <th style={{ ...th, textAlign: 'right' }}>UL Used</th>
-                <th style={{ ...th, textAlign: 'right', color: 'var(--warning)' }}>UL Left</th>
+                {!selectedMonth && <th style={{ ...th, textAlign: 'right', color: 'var(--warning)' }}>UL Left</th>}
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => {
-                const slLow = row.slRemaining <= 3
-                const ulLow = row.ulRemaining <= 1
+                const slLow = !selectedMonth && row.slRemaining <= 3
+                const ulLow = !selectedMonth && row.ulRemaining <= 1
                 const rowBg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'
                 return (
                   <tr key={row.id} style={{ background: rowBg }}>
@@ -204,20 +208,20 @@ export default async function LeaveOverviewPage({
                       </span>
                     </td>
                     <td style={{ ...td, color: 'var(--muted)' }}>{row.department}</td>
-                    <td style={numCell(row.slTotal, false, true)}>{row.slTotal}</td>
+                    {!selectedMonth && <td style={numCell(row.slTotal, false, true)}>{row.slTotal}</td>}
                     <td style={numCell(row.slUsed, false, false)}>{row.slUsed}</td>
-                    <td style={{
+                    {!selectedMonth && <td style={{
                       ...numCell(row.slRemaining, slLow, false),
                       background: slLow ? 'rgba(220,38,38,0.06)' : undefined,
                       fontWeight: 700,
-                    }}>{row.slRemaining}</td>
-                    <td style={numCell(row.ulTotal, false, true)}>{row.ulTotal}</td>
+                    }}>{row.slRemaining}</td>}
+                    {!selectedMonth && <td style={numCell(row.ulTotal, false, true)}>{row.ulTotal}</td>}
                     <td style={numCell(row.ulUsed, false, false)}>{row.ulUsed}</td>
-                    <td style={{
+                    {!selectedMonth && <td style={{
                       ...numCell(row.ulRemaining, ulLow, false),
                       background: ulLow ? 'rgba(217,119,6,0.07)' : undefined,
                       fontWeight: 700,
-                    }}>{row.ulRemaining}</td>
+                    }}>{row.ulRemaining}</td>}
                   </tr>
                 )
               })}
