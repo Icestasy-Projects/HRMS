@@ -11,13 +11,13 @@ export default async function TeamSeparationPage() {
   if (!user) redirect('/login')
 
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!me || !['admin', 'super_admin', 'sub_super_admin'].includes(me.role)) redirect('/dashboard')
+  if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
   const admin = createAdminClient()
 
   const { data: requests, error: sepError } = await admin
     .from('separation_requests')
-    .select('*, users(name, email, departments(name))')
+    .select('*, users!employee_id(name, email, departments(name))')
     .order('created_at', { ascending: false })
 
   if (sepError && sepError.code === '42P01') {
