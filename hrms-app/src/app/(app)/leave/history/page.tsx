@@ -32,13 +32,13 @@ export default async function LeaveHistoryPage() {
     if (!user) return
     const admin = createAdminClient()
     const id = formData.get('id') as string
-    // Only delete if still pending and belongs to this user
+    // Allow retract for pending or approved leaves belonging to this user
     await admin
       .from('leave_requests')
       .delete()
       .eq('id', id)
       .eq('employee_id', user.id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'approved'])
     redirect('/leave/history')
   }
 
@@ -145,7 +145,7 @@ export default async function LeaveHistoryPage() {
                   }}>
                     {req.status}
                   </span>
-                  {req.status === 'pending' && (
+                  {(req.status === 'pending' || req.status === 'approved') && (
                     <form action={retractLeave}>
                       <input type="hidden" name="id" value={req.id} />
                       <button type="submit" style={{
