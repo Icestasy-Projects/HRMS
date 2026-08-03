@@ -5,7 +5,14 @@ import Breadcrumb from '@/components/Breadcrumb'
 
 export const dynamic = 'force-dynamic'
 
-export default async function LeaveOverviewPage() {
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+export default async function LeaveOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>
+}) {
+  const params = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -15,6 +22,7 @@ export default async function LeaveOverviewPage() {
 
   const admin = createAdminClient()
   const year = new Date().getFullYear()
+  const selectedMonth = params.month ? Number(params.month) : null // 1-12 or null = full year
 
   // Fetch all active employees
   const { data: employees } = await admin
@@ -36,13 +44,20 @@ export default async function LeaveOverviewPage() {
     balanceMap[b.user_id] = { sl_total: b.sl_total ?? 18, ul_total: b.ul_total ?? 6 }
   }
 
-  // Fetch all approved leave requests for this year
+  // Fetch approved leave requests — full year or specific month
+  const monthStart = selectedMonth
+    ? `${year}-${String(selectedMonth).padStart(2,'0')}-01`
+    : `${year}-01-01`
+  const monthEnd = selectedMonth
+    ? `${year}-${String(selectedMonth).padStart(2,'0')}-31`
+    : `${year}-12-31`
+
   const { data: usedLeaves } = await admin
     .from('leave_requests')
     .select('employee_id, leave_type, days_count')
     .eq('status', 'approved')
-    .gte('start_date', `${year}-01-01`)
-    .lte('start_date', `${year}-12-31`)
+    .gte('start_date', monthStart)
+    .lte('start_date', monthEnd)
 
   const usedMap: Record<string, { sl: number; ul: number }> = {}
   for (const l of usedLeaves ?? []) {
@@ -101,14 +116,34 @@ export default async function LeaveOverviewPage() {
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.25rem' }}>
         <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Team', href: '/team' }, { label: 'Leave Overview' }]} />
         <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
           Leave Overview
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-          {year} leave balances for all active employees
+          {selectedMonth ? `${MONTHS[selectedMonth - 1]} ${year}` : `Full year ${year}`} — leave used by all active employees
         </p>
+      </div>
+
+      {/* Month filter */}
+      <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+        <a href="/team/leave-overview" style={{
+          padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600,
+          background: !selectedMonth ? 'var(--primary)' : 'var(--surface)',
+          color: !selectedMonth ? '#fff' : 'var(--muted)',
+          border: `1px solid ${!selectedMonth ? 'var(--primary)' : 'var(--border)'}`,
+          textDecoration: 'none',
+        }}>All</a>
+        {MONTHS.map((m, i) => (
+          <a key={m} href={`/team/leave-overview?month=${i + 1}`} style={{
+            padding: '0.3rem 0.75rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600,
+            background: selectedMonth === i + 1 ? 'var(--primary)' : 'var(--surface)',
+            color: selectedMonth === i + 1 ? '#fff' : 'var(--muted)',
+            border: `1px solid ${selectedMonth === i + 1 ? 'var(--primary)' : 'var(--border)'}`,
+            textDecoration: 'none',
+          }}>{m}</a>
+        ))}
       </div>
 
       {/* Summary chips */}

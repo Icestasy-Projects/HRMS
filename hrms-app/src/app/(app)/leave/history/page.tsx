@@ -1,7 +1,10 @@
 import Breadcrumb from '@/components/Breadcrumb'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+
+export const dynamic = 'force-dynamic'
 
 export default async function LeaveHistoryPage() {
   const supabase = await createClient()
@@ -21,6 +24,23 @@ export default async function LeaveHistoryPage() {
     .select('*')
     .eq('employee_id', employee.id)
     .order('requested_at', { ascending: false })
+
+  async function retractLeave(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const admin = createAdminClient()
+    const id = formData.get('id') as string
+    // Only delete if still pending and belongs to this user
+    await admin
+      .from('leave_requests')
+      .delete()
+      .eq('id', id)
+      .eq('employee_id', user.id)
+      .eq('status', 'pending')
+    redirect('/leave/history')
+  }
 
   function statusColor(status: string) {
     if (status === 'approved') return 'var(--success)'
@@ -115,15 +135,30 @@ export default async function LeaveHistoryPage() {
                     </p>
                   )}
                 </div>
-                <span style={{
-                  background: `${sc}18`, color: sc,
-                  border: `1px solid ${sc}`,
-                  borderRadius: '999px', padding: '0.25rem 0.75rem',
-                  fontSize: '0.78rem', fontWeight: 600,
-                  whiteSpace: 'nowrap', textTransform: 'capitalize', flexShrink: 0,
-                }}>
-                  {req.status}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
+                  <span style={{
+                    background: `${sc}18`, color: sc,
+                    border: `1px solid ${sc}`,
+                    borderRadius: '999px', padding: '0.25rem 0.75rem',
+                    fontSize: '0.78rem', fontWeight: 600,
+                    whiteSpace: 'nowrap', textTransform: 'capitalize',
+                  }}>
+                    {req.status}
+                  </span>
+                  {req.status === 'pending' && (
+                    <form action={retractLeave}>
+                      <input type="hidden" name="id" value={req.id} />
+                      <button type="submit" style={{
+                        background: 'transparent', border: '1px solid var(--danger)',
+                        color: 'var(--danger)', borderRadius: '0.5rem',
+                        padding: '0.2rem 0.625rem', fontSize: '0.75rem',
+                        fontWeight: 600, cursor: 'pointer',
+                      }}>
+                        Retract
+                      </button>
+                    </form>
+                  )}
+                </div>
               </div>
             )
           })}

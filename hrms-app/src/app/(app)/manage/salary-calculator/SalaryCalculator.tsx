@@ -203,12 +203,12 @@ export default function SalaryCalculator({ empName, empEmail }: { empName: strin
             <div>
               <Section title="Monthly Breakdown" rows={[
                 { label: 'Monthly CTC', value: monthly },
-                { label: 'Variable Pay (25%)', value: variable },
-                { label: 'Fixed Pay (75%)', value: fixed, bold: true, highlight: 'sub' },
+                { label: 'Variable Pay', value: variable },
+                { label: 'Fixed Pay', value: fixed, bold: true, highlight: 'sub' },
               ]} />
 
               <Section title="Employer Contributions" rows={[
-                { label: 'Employer ESIC (3.25%)', value: empESIC },
+                { label: 'Employer ESIC', value: empESIC },
                 { label: 'Employer LWF', value: empLWF },
                 { label: 'Employer PF', value: empPF },
                 { label: 'Admin Charges', value: adminCharge },
@@ -220,15 +220,15 @@ export default function SalaryCalculator({ empName, empEmail }: { empName: strin
             <div>
               <Section title="Salary Components" rows={[
                 { label: 'Monthly Gross', value: gross },
-                { label: 'Basic (50% of Fixed)', value: basic },
-                { label: 'HRA (50% of Basic)', value: hra },
-                { label: 'LTA (10% of Basic)', value: lta },
+                { label: 'Basic', value: basic },
+                { label: 'HRA', value: hra },
+                { label: 'LTA', value: lta },
                 { label: 'Variable Allowance', value: allowance, highlight: 'sub' },
               ]} />
 
               <Section title="Employee Deductions" rows={[
-                { label: 'Employee PF (12%)', value: pfDed },
-                { label: 'Employee ESIC (0.75%)', value: esicDed },
+                { label: 'Employee PF', value: pfDed },
+                { label: 'Employee ESIC', value: esicDed },
                 { label: 'Professional Tax', value: pt },
                 { label: 'Total Deductions', value: totalDed, highlight: 'sub' },
               ]} />
