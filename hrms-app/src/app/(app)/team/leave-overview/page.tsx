@@ -11,7 +11,7 @@ export default async function LeaveOverviewPage() {
   if (!user) redirect('/login')
 
   const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
-  if (!me || !['super_admin', 'sub_super_admin', 'admin'].includes(me.role)) redirect('/dashboard')
+  if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
   const admin = createAdminClient()
   const year = new Date().getFullYear()
