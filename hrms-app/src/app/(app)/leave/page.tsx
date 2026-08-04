@@ -96,7 +96,6 @@ export default async function LeavePage() {
               {balanceLabel(finalBalance.sl_remaining, finalBalance.sl_total, 'scheduled')}
             </p>
             <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{finalBalance.sl_remaining}</p>
-            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.375rem 0 0' }}>of {finalBalance.sl_total ?? '—'} days</p>
           </div>
 
           <div style={{
@@ -107,7 +106,6 @@ export default async function LeavePage() {
               {balanceLabel(finalBalance.ul_remaining, finalBalance.ul_total, 'unscheduled')}
             </p>
             <p style={{ color: 'var(--text)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{finalBalance.ul_remaining}</p>
-            <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.375rem 0 0' }}>of {finalBalance.ul_total ?? '—'} days</p>
           </div>
         </div>
       ) : (
