@@ -33,5 +33,5 @@ export function unpaidLeaveWarning(scheduled: number, unscheduled: number): stri
 
 export function balanceLabel(balance: number, total: number, type: 'scheduled' | 'unscheduled'): string {
   const label = type === 'scheduled' ? 'Scheduled days left' : 'Sick/emergency days left'
-  return `${label} (${total - balance} used of ${total})`
+  return label
 }
