@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST } from '@/lib/attendance'
 import Link from 'next/link'
 import Breadcrumb from '@/components/Breadcrumb'
+import ClockButton from '@/components/ClockButton'
 
 export default async function AttendancePage({
   searchParams,
@@ -289,31 +290,9 @@ export default async function AttendancePage({
       </div>
 
       {/* Clock button */}
-      <form action={clockInOut} style={{ marginBottom: '1rem' }}>
-        <button
-          type="submit"
-          disabled={!!isDone}
-          style={{
-            width: '100%', height: '80px',
-            background: isDone ? 'var(--success)' : isClockedIn ? '#dc2626' : 'var(--primary)',
-            color: '#fff',
-            border: 'none', borderRadius: '1rem',
-            fontSize: '1.375rem', fontWeight: 800,
-            cursor: isDone ? 'default' : 'pointer',
-            boxShadow: isDone ? 'none' : '0 4px 20px rgba(124,47,201,0.35)',
-            letterSpacing: '-0.01em',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem',
-          }}
-        >
-          {isDone ? (
-            <><span style={{ fontSize: '1.25rem' }}>✓</span> Day Complete</>
-          ) : isClockedIn ? (
-            <><span style={{ fontSize: '1.5rem' }}>◉</span> Clock Out</>
-          ) : (
-            <><span style={{ fontSize: '1.5rem' }}>◎</span> Clock In</>
-          )}
-        </button>
-      </form>
+      <div style={{ marginBottom: '1rem' }}>
+        <ClockButton isDone={!!isDone} isClockedIn={!!isClockedIn} action={clockInOut} />
+      </div>
 
       {/* Quick link to history */}
       <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>

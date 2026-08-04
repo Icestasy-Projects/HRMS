@@ -120,6 +120,7 @@ export default async function DashboardPage() {
     { label: 'My Leave', href: '/leave', show: hasPersonalCards },
     { label: 'Leave History', href: '/leave/history', show: hasPersonalCards },
     { label: 'My Attendance Log', href: '/attendance/history', show: hasPersonalCards },
+    { label: 'Attendance Regularization', href: '/attendance/regularization', show: hasPersonalCards },
     { label: 'Resignation / Sabbatical', href: '/leave/separation', show: hasPersonalCards },
     { label: 'Notifications', href: '/notifications', show: true },
     { label: 'Public Holidays', href: '/holidays', show: true },
@@ -129,6 +130,7 @@ export default async function DashboardPage() {
     { label: 'Leave Requests', href: '/team/leave', badge: pendingLeaveCount > 0 ? pendingLeaveCount : undefined, show: isAdmin },
     { label: 'Separation Requests', href: '/team/separation', show: isSuperAdmin || isSubSuperAdmin },
     { label: 'Leave Overview', href: '/team/leave-overview', show: isSuperAdmin || isSubSuperAdmin },
+    { label: 'Regularization Requests', href: '/team/regularization', show: isSuperAdmin || isSubSuperAdmin },
     { label: 'Salary Calculator', href: '/manage/salary-calculator', show: isSuperAdmin || isSubSuperAdmin || isAdmin },
     { label: 'Manage', href: '/manage', show: isSuperAdmin || isSubSuperAdmin },
   ].filter(w => w.show)

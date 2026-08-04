@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatTime } from '@/lib/attendance'
+import Link from 'next/link'
 
 export default async function AttendanceHistoryPage() {
   const supabase = await createClient()
@@ -24,9 +25,19 @@ export default async function AttendanceHistoryPage() {
 
   return (
     <div style={{ maxWidth: '672px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1.5rem' }}>
-        Attendance History
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+          Attendance History
+        </h1>
+        <Link href="/attendance/regularization" style={{
+          background: 'var(--primary)', color: '#fff',
+          borderRadius: '0.625rem', padding: '0.5rem 1rem',
+          fontWeight: 600, fontSize: '0.85rem',
+          display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+        }}>
+          + Request Correction
+        </Link>
+      </div>
 
       {(!logs || logs.length === 0) ? (
         <div
