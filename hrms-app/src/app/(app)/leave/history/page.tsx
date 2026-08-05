@@ -3,10 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { todayIST } from '@/lib/attendance'
 
 export const dynamic = 'force-dynamic'
 
 export default async function LeaveHistoryPage() {
+  const today = todayIST()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -32,7 +34,16 @@ export default async function LeaveHistoryPage() {
     if (!user) return
     const admin = createAdminClient()
     const id = formData.get('id') as string
-    // Allow retract for pending or approved leaves belonging to this user
+    // Only allow retract if leave end_date is today or future
+    const today = todayIST()
+    const { data: req } = await admin
+      .from('leave_requests')
+      .select('end_date')
+      .eq('id', id)
+      .eq('employee_id', user.id)
+      .in('status', ['pending', 'approved'])
+      .single()
+    if (!req || req.end_date < today) redirect('/leave/history')
     await admin
       .from('leave_requests')
       .delete()
@@ -145,19 +156,33 @@ export default async function LeaveHistoryPage() {
                   }}>
                     {req.status}
                   </span>
-                  {(req.status === 'pending' || req.status === 'approved') && (
-                    <form action={retractLeave}>
-                      <input type="hidden" name="id" value={req.id} />
-                      <button type="submit" style={{
-                        background: 'transparent', border: '1px solid var(--danger)',
-                        color: 'var(--danger)', borderRadius: '0.5rem',
-                        padding: '0.2rem 0.625rem', fontSize: '0.75rem',
-                        fontWeight: 600, cursor: 'pointer',
-                      }}>
-                        Retract
-                      </button>
-                    </form>
-                  )}
+                  {(req.status === 'pending' || req.status === 'approved') && (() => {
+                    const isPast = req.end_date < today
+                    if (isPast) {
+                      return (
+                        <Link href="/attendance/regularization" style={{
+                          fontSize: '0.72rem', fontWeight: 600, color: 'var(--muted)',
+                          border: '1px solid var(--border)', borderRadius: '0.5rem',
+                          padding: '0.2rem 0.55rem', textDecoration: 'none', whiteSpace: 'nowrap',
+                        }}>
+                          Request Retraction
+                        </Link>
+                      )
+                    }
+                    return (
+                      <form action={retractLeave}>
+                        <input type="hidden" name="id" value={req.id} />
+                        <button type="submit" style={{
+                          background: 'transparent', border: '1px solid var(--danger)',
+                          color: 'var(--danger)', borderRadius: '0.5rem',
+                          padding: '0.2rem 0.625rem', fontSize: '0.75rem',
+                          fontWeight: 600, cursor: 'pointer',
+                        }}>
+                          Retract
+                        </button>
+                      </form>
+                    )
+                  })()}
                 </div>
               </div>
             )

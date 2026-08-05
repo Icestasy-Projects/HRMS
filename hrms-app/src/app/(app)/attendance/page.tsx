@@ -6,6 +6,30 @@ import Link from 'next/link'
 import Breadcrumb from '@/components/Breadcrumb'
 import ClockButton from '@/components/ClockButton'
 
+function workingDaysElapsed(year: number, month: number, scheduleType: 'white_collar' | 'blue_collar'): number {
+  const maxDow = scheduleType === 'white_collar' ? 5 : 6
+  const today = new Date()
+  const lastDay = today.getFullYear() === year && today.getMonth() + 1 === month
+    ? today.getDate() : new Date(year, month, 0).getDate()
+  let count = 0
+  for (let d = 1; d <= lastDay; d++) {
+    const dow = new Date(year, month - 1, d).getDay()
+    if (dow >= 1 && dow <= maxDow) count++
+  }
+  return count
+}
+
+function workingDaysInMonth(year: number, month: number, scheduleType: 'white_collar' | 'blue_collar'): number {
+  const maxDow = scheduleType === 'white_collar' ? 5 : 6
+  const daysInMonth = new Date(year, month, 0).getDate()
+  let count = 0
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dow = new Date(year, month - 1, d).getDay()
+    if (dow >= 1 && dow <= maxDow) count++
+  }
+  return count
+}
+
 export default async function AttendancePage({
   searchParams,
 }: {
@@ -50,6 +74,40 @@ export default async function AttendancePage({
     const m = diffMins % 60
     hoursWorked = m === 0 ? `${h}h` : `${h}h ${m}m`
   }
+
+  // Monthly hours
+  const nowDate = new Date()
+  const curYear = nowDate.getFullYear()
+  const curMonth = nowDate.getMonth() + 1
+  const monthStart = `${curYear}-${String(curMonth).padStart(2, '0')}-01`
+  const monthEnd = `${curYear}-${String(curMonth).padStart(2, '0')}-31`
+  const schedType: 'white_collar' | 'blue_collar' = scheduleType as 'white_collar' | 'blue_collar'
+  const { data: monthLogs } = await supabase
+    .from('attendance_logs')
+    .select('check_in, check_out, work_date')
+    .eq('user_id', employee.id)
+    .gte('work_date', monthStart)
+    .lte('work_date', monthEnd)
+    .not('check_out', 'is', null)
+
+  let monthWorkedMins = 0
+  for (const log of monthLogs ?? []) {
+    if (!log.check_in || !log.check_out) continue
+    const inMs = new Date(`${log.work_date}T${log.check_in}`).getTime()
+    const outMs = new Date(`${log.work_date}T${log.check_out}`).getTime()
+    monthWorkedMins += Math.max(0, Math.floor((outMs - inMs) / 60000))
+  }
+  const monthWorkedH = Math.floor(monthWorkedMins / 60)
+  const monthWorkedM = monthWorkedMins % 60
+  const monthWorkedStr = monthWorkedM === 0 ? `${monthWorkedH}h` : `${monthWorkedH}h ${monthWorkedM}m`
+
+  const elapsedDays = workingDaysElapsed(curYear, curMonth, schedType)
+  const totalDays = workingDaysInMonth(curYear, curMonth, schedType)
+  const elapsedQuotaH = elapsedDays * schedule.hours_per_day
+  const monthlyQuotaH = totalDays * schedule.hours_per_day
+  const monthWorkedHDecimal = monthWorkedMins / 60
+  const deficitH = Math.max(0, Math.round((elapsedQuotaH - monthWorkedHDecimal) * 10) / 10)
+  const monthPct = elapsedQuotaH > 0 ? Math.min(100, Math.round((monthWorkedHDecimal / elapsedQuotaH) * 100)) : 100
 
   async function deductHalfDayLeave(employeeId: string, date: string) {
     'use server'
@@ -301,6 +359,43 @@ export default async function AttendancePage({
         }}>
           View attendance history →
         </Link>
+      </div>
+
+      {/* Monthly hours widget */}
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: '0.875rem', padding: '1.125rem 1.25rem',
+        boxShadow: 'var(--shadow)', marginBottom: '1rem',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+            This Month&apos;s Hours
+          </p>
+          <span style={{
+            fontSize: '0.72rem', fontWeight: 700,
+            color: monthPct >= 90 ? 'var(--success)' : monthPct >= 70 ? 'var(--warning)' : 'var(--danger)',
+          }}>
+            {monthPct}%
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.625rem' }}>
+          <div>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)', margin: 0, lineHeight: 1 }}>{monthWorkedStr}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: '0.2rem 0 0' }}>worked of {elapsedQuotaH}h elapsed · {monthlyQuotaH}h total</p>
+          </div>
+          {deficitH > 0 && (
+            <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--danger)', margin: 0 }}>
+              -{deficitH}h behind
+            </p>
+          )}
+        </div>
+        <div style={{ height: '6px', background: 'var(--border)', borderRadius: '999px', overflow: 'hidden' }}>
+          <div style={{
+            width: `${monthPct}%`, height: '100%', borderRadius: '999px',
+            background: monthPct >= 90 ? 'var(--success)' : monthPct >= 70 ? 'var(--warning)' : 'var(--danger)',
+            transition: 'width 0.3s ease',
+          }} />
+        </div>
       </div>
 
       {/* Rules card */}
