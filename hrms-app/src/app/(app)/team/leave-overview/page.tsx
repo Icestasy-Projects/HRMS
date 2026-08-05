@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -192,20 +193,11 @@ export default async function LeaveOverviewPage({
                 return (
                   <tr key={row.id} style={{ background: rowBg }}>
                     <td style={td}>
-                      <span style={{ fontWeight: 600 }}>{row.name}</span>
-                      <span style={{
-                        marginLeft: '0.5rem',
-                        fontSize: '0.68rem', fontWeight: 600,
-                        background: row.role === 'super_admin' ? '#dbeafe'
-                          : row.role === 'admin' ? '#eff6ff' : '#d1fae5',
-                        color: row.role === 'super_admin' ? '#1e3a8a'
-                          : row.role === 'admin' ? '#1d4ed8' : '#065f46',
-                        borderRadius: '999px', padding: '0.05rem 0.45rem',
+                      <Link href={`/team/leave-overview/${row.id}`} style={{
+                        fontWeight: 600, color: 'var(--primary)', textDecoration: 'none',
                       }}>
-                        {row.role === 'super_admin' ? 'Super Admin'
-                          : row.role === 'sub_super_admin' ? 'Sub Admin'
-                          : row.role === 'admin' ? 'Admin' : 'Employee'}
-                      </span>
+                        {row.name}
+                      </Link>
                     </td>
                     <td style={{ ...td, color: 'var(--muted)' }}>{row.department}</td>
                     {!selectedMonth && <td style={numCell(row.slTotal, false, true)}>{row.slTotal}</td>}
