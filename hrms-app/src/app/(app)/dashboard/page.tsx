@@ -63,6 +63,7 @@ export default async function DashboardPage() {
       .from('leave_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending')
+      .gte('end_date', today)
 
     if (employee.role === 'admin' && employee.department_id) {
       const { data: deptUsers } = await supabase
