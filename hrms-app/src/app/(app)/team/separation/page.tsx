@@ -15,6 +15,12 @@ export default async function TeamSeparationPage() {
 
   const admin = createAdminClient()
 
+  const { data: employees } = await admin
+    .from('users')
+    .select('id, name, departments(name)')
+    .eq('is_active', true)
+    .order('name')
+
   const { data: requests, error: sepError } = await admin
     .from('separation_requests')
     .select('*, users!employee_id(name, email, departments(name))')
@@ -32,6 +38,49 @@ export default async function TeamSeparationPage() {
         </div>
       </div>
     )
+  }
+
+  async function markSeparation(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const admin = createAdminClient()
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
+
+    const employeeId = formData.get('employee_id') as string
+    const type = formData.get('type') as string
+    const reason = formData.get('reason') as string
+    const sabbaticalFrom = formData.get('sabbatical_from') as string | null
+    const sabbaticalTo = formData.get('sabbatical_to') as string | null
+
+    await admin.from('separation_requests').insert({
+      employee_id: employeeId,
+      type,
+      reason: reason || null,
+      sabbatical_from: type === 'sabbatical' && sabbaticalFrom ? sabbaticalFrom : null,
+      sabbatical_to: type === 'sabbatical' && sabbaticalTo ? sabbaticalTo : null,
+      status: 'approved',
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+    })
+
+    redirect('/team/separation')
+  }
+
+  async function revokeSeparation(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const admin = createAdminClient()
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
+
+    const id = formData.get('id') as string
+    await admin.from('separation_requests').delete().eq('id', id)
+    redirect('/team/separation')
   }
 
   async function approveRequest(formData: FormData) {
@@ -98,6 +147,56 @@ export default async function TeamSeparationPage() {
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
           Approve or reject resignation and sabbatical requests
         </p>
+      </div>
+
+      {/* Manual mark form */}
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: '0.875rem', padding: '1.25rem 1.5rem',
+        boxShadow: 'var(--shadow)', marginBottom: '2rem',
+      }}>
+        <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text)', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Mark Employee Separation
+        </p>
+        <form action={markSeparation} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Employee</label>
+              <select name="employee_id" required style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem' }}>
+                <option value="">Select employee…</option>
+                {(employees ?? []).map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}{(emp.departments as unknown as { name: string } | null)?.name ? ` — ${(emp.departments as unknown as { name: string }).name}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Type</label>
+              <select name="type" required style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem' }}>
+                <option value="resignation">Resignation</option>
+                <option value="sabbatical">Sabbatical</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical From (if applicable)</label>
+              <input type="date" name="sabbatical_from" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical To (if applicable)</label>
+              <input type="date" name="sabbatical_to" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Reason / Note (optional)</label>
+            <input type="text" name="reason" placeholder="e.g. Voluntary resignation, medical sabbatical…" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+          </div>
+          <button type="submit" style={{ alignSelf: 'flex-start', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.5rem', padding: '0.625rem 1.5rem', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+            Mark as Separated
+          </button>
+        </form>
       </div>
 
       {/* Pending */}
@@ -249,13 +348,28 @@ export default async function TeamSeparationPage() {
                       </p>
                     )}
                   </div>
-                  <span style={{
-                    background: statusColor[req.status], color: '#fff',
-                    borderRadius: '999px', padding: '0.2rem 0.75rem',
-                    fontSize: '0.72rem', fontWeight: 700, textTransform: 'capitalize', whiteSpace: 'nowrap',
-                  }}>
-                    {req.status}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
+                    <span style={{
+                      background: statusColor[req.status], color: '#fff',
+                      borderRadius: '999px', padding: '0.2rem 0.75rem',
+                      fontSize: '0.72rem', fontWeight: 700, textTransform: 'capitalize', whiteSpace: 'nowrap',
+                    }}>
+                      {req.status}
+                    </span>
+                    {req.status === 'approved' && (
+                      <form action={revokeSeparation}>
+                        <input type="hidden" name="id" value={req.id} />
+                        <button type="submit" style={{
+                          background: 'transparent', border: '1px solid var(--muted)',
+                          color: 'var(--muted)', borderRadius: '0.5rem',
+                          padding: '0.2rem 0.625rem', fontSize: '0.72rem',
+                          fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}>
+                          Revoke
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
