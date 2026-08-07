@@ -28,6 +28,22 @@ export default async function RegularizationPage({
     .order('created_at', { ascending: false })
     .limit(20)
 
+  async function retractRequest(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const admin = createAdminClient()
+    const id = formData.get('id') as string
+    await admin
+      .from('attendance_regularizations')
+      .delete()
+      .eq('id', id)
+      .eq('employee_id', user.id)
+      .eq('status', 'pending')
+    redirect('/attendance/regularization')
+  }
+
   async function submitRequest(formData: FormData) {
     'use server'
     const supabase = await createClient()
@@ -228,15 +244,30 @@ export default async function RegularizationPage({
                       </p>
                     )}
                   </div>
-                  <span style={{
-                    background: `${sc}18`, color: sc,
-                    border: `1px solid ${sc}`,
-                    borderRadius: '999px', padding: '0.2rem 0.65rem',
-                    fontSize: '0.75rem', fontWeight: 700,
-                    textTransform: 'capitalize', whiteSpace: 'nowrap', flexShrink: 0,
-                  }}>
-                    {r.status}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem', flexShrink: 0 }}>
+                    <span style={{
+                      background: `${sc}18`, color: sc,
+                      border: `1px solid ${sc}`,
+                      borderRadius: '999px', padding: '0.2rem 0.65rem',
+                      fontSize: '0.75rem', fontWeight: 700,
+                      textTransform: 'capitalize', whiteSpace: 'nowrap',
+                    }}>
+                      {r.status}
+                    </span>
+                    {r.status === 'pending' && (
+                      <form action={retractRequest}>
+                        <input type="hidden" name="id" value={r.id} />
+                        <button type="submit" style={{
+                          background: 'transparent', border: '1px solid var(--danger)',
+                          color: 'var(--danger)', borderRadius: '0.5rem',
+                          padding: '0.2rem 0.625rem', fontSize: '0.75rem',
+                          fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}>
+                          Retract
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
               )
             })}

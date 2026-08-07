@@ -118,7 +118,6 @@ export default async function DashboardPage() {
   type Worklet = { label: string; href: string; badge?: number; show?: boolean }
   const worklets: Worklet[] = [
     { label: 'Time & Attendance', href: '/attendance', show: hasPersonalCards },
-    { label: 'My Leave', href: '/leave', show: hasPersonalCards },
     { label: 'Leave History', href: '/leave/history', show: hasPersonalCards },
     { label: 'My Attendance Log', href: '/attendance/history', show: hasPersonalCards },
     { label: 'Attendance Regularization', href: '/attendance/regularization', show: hasPersonalCards },
