@@ -18,8 +18,9 @@ export default async function DashboardPage() {
   if (!employee) redirect('/login')
 
   const today = todayIST()
-  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
-  const dateFull = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const nowInIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  const dayName = nowInIST.toLocaleDateString('en-US', { weekday: 'long' })
+  const dateFull = nowInIST.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   const firstName = employee.name.split(' ')[0]
 
   const { data: todayLog } = await supabase
@@ -97,8 +98,8 @@ export default async function DashboardPage() {
         : 'var(--primary)'
     : 'var(--muted)'
 
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const hourIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
+  const greeting = hourIST < 12 ? 'Good morning' : hourIST < 17 ? 'Good afternoon' : 'Good evening'
 
   const attStatusLabel = todayLog
     ? isHalfDay ? 'Half Day'
