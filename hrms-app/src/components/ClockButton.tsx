@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Props {
   isDone: boolean
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function ClockButton({ isDone, isClockedIn, action }: Props) {
+  const router = useRouter()
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -24,7 +26,12 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
   async function handleConfirm() {
     setLoading(true)
     setConfirming(false)
-    await action()
+    try {
+      await action()
+    } catch {
+      // redirect() throws a special Next.js error — that's expected
+    }
+    router.refresh()
     setLoading(false)
     setSuccess(true)
     setTimeout(() => setSuccess(false), 2500)

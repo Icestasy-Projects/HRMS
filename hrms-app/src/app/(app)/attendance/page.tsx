@@ -114,14 +114,14 @@ export default async function AttendancePage({
     const admin = createAdminClient()
     const year = date.slice(0, 4)
 
-    // Check if already auto-deducted for this date
+    // Skip if any approved leave already exists for this date (prevents double-deduction)
     const { data: existing } = await admin
       .from('leave_requests')
       .select('id')
       .eq('employee_id', employeeId)
-      .eq('start_date', date)
       .eq('status', 'approved')
-      .like('reason', 'Auto: unscheduled half day%')
+      .lte('start_date', date)
+      .gte('end_date', date)
       .maybeSingle()
     if (existing) return
 
