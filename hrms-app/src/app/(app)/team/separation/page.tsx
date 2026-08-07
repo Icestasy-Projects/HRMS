@@ -166,7 +166,7 @@ export default async function TeamSeparationPage() {
                 <option value="">Select employee…</option>
                 {(employees ?? []).map(emp => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name}{(emp.departments as { name: string } | null)?.name ? ` — ${(emp.departments as { name: string }).name}` : ''}
+                    {emp.name}{(emp.departments as unknown as { name: string } | null)?.name ? ` — ${(emp.departments as unknown as { name: string }).name}` : ''}
                   </option>
                 ))}
               </select>
