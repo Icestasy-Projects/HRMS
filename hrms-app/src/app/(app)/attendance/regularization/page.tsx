@@ -95,13 +95,28 @@ export default async function RegularizationPage({
       </div>
 
       {params.success && (
-        <div style={{
-          background: 'var(--success-l)', border: '1px solid var(--success)',
-          borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
-          color: 'var(--success)', marginBottom: '1.25rem', fontWeight: 600, fontSize: '0.875rem',
-        }}>
-          ✓ Request submitted successfully. Your admin will review it shortly.
-        </div>
+        <>
+          {/* Fixed toast */}
+          <div style={{
+            position: 'fixed', top: '1.25rem', left: '50%', transform: 'translateX(-50%)',
+            background: 'var(--success)', color: '#fff',
+            borderRadius: '0.75rem', padding: '0.875rem 1.5rem',
+            fontWeight: 700, fontSize: '0.95rem', zIndex: 9999,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            whiteSpace: 'nowrap',
+          }}>
+            ✓ Request submitted successfully!
+          </div>
+          {/* Inline banner below heading */}
+          <div style={{
+            background: 'var(--success-l)', border: '1px solid var(--success)',
+            borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
+            color: 'var(--success)', marginBottom: '1.25rem', fontWeight: 600, fontSize: '0.875rem',
+          }}>
+            ✓ Request submitted — your admin will review it shortly.
+          </div>
+        </>
       )}
 
       {/* Submit form */}

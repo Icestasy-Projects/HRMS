@@ -2,6 +2,7 @@ import Breadcrumb from '@/components/Breadcrumb'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { sendLeaveDecisionEmail } from '@/lib/email'
+import { todayIST } from '@/lib/attendance'
 
 export default async function TeamLeavePage() {
   const supabase = await createClient()
@@ -16,6 +17,31 @@ export default async function TeamLeavePage() {
 
   if (!employee || (!['admin','super_admin','sub_super_admin'].includes(employee.role))) {
     redirect('/dashboard')
+  }
+
+  const today = todayIST()
+  const admin = createAdminClient()
+
+  // Auto-reject any pending SL leaves whose end_date is before today
+  const { data: expiredPending } = await admin
+    .from('leave_requests')
+    .select('id, employee_id, leave_type, start_date, end_date, days_count')
+    .eq('status', 'pending')
+    .lt('end_date', today)
+
+  if (expiredPending && expiredPending.length > 0) {
+    const ids = expiredPending.map(r => r.id)
+    await admin.from('leave_requests').update({ status: 'rejected' }).in('id', ids)
+    // Notify each employee
+    for (const req of expiredPending) {
+      const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
+      await admin.from('notifications').insert({
+        recipient_id: req.employee_id,
+        type: 'fyi',
+        title: '❌ Leave Request Expired',
+        message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) was auto-rejected as the date has passed.`,
+      })
+    }
   }
 
   let empIds: string[] = []
