@@ -70,13 +70,26 @@ export default async function TeamRegularizationPage({
         })
         .eq('id', log.id)
     } else {
-      // No log existed yet — create one
       await admin.from('attendance_logs').insert({
         user_id: req.employee_id,
         work_date: req.work_date,
         [req.field]: req.requested_value,
         day_status: dayStatus,
       })
+    }
+
+    // If corrected status is no longer a half-day, remove any auto-deducted
+    // half-day leave that was created for this date
+    if (!dayStatus.includes('half_day')) {
+      await admin
+        .from('leave_requests')
+        .delete()
+        .eq('employee_id', req.employee_id)
+        .eq('start_date', req.work_date)
+        .eq('end_date', req.work_date)
+        .eq('status', 'approved')
+        .eq('is_half_day', true)
+        .like('reason', 'Auto:%')
     }
 
     await admin
