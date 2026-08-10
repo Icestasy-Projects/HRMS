@@ -4,6 +4,10 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Icestasy HRMS',
   description: 'Human Resource Management System',
+  icons: {
+    icon: '/favicon.jpeg',
+    apple: '/favicon.jpeg',
+  },
 }
 
 export default function RootLayout({
