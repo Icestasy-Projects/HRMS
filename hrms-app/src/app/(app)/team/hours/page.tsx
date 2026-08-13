@@ -53,12 +53,38 @@ export default async function TeamHoursPage({
   const monthStart = `${year}-${String(selectedMonth).padStart(2, '0')}-01`
   const monthEnd = `${year}-${String(selectedMonth).padStart(2, '0')}-31`
 
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Fetch employees on approved sabbatical that overlaps the selected month
+  const { data: sabbaticals } = await admin
+    .from('separation_requests')
+    .select('employee_id')
+    .eq('type', 'sabbatical')
+    .eq('status', 'approved')
+    .lte('sabbatical_from', monthEnd)
+    .gte('sabbatical_to', monthStart)
+
+  // Fetch employees with approved resignation where last working day has passed
+  const { data: resignations } = await admin
+    .from('separation_requests')
+    .select('employee_id')
+    .eq('type', 'resignation')
+    .eq('status', 'approved')
+    .lte('sabbatical_from', today) // sabbatical_from stores resignation date for resignations
+
+  const excludedIds = new Set([
+    ...(sabbaticals ?? []).map((r: any) => r.employee_id),
+    ...(resignations ?? []).map((r: any) => r.employee_id),
+  ])
+
   const { data: employees } = await admin
     .from('users')
     .select('id, name, employee_type, departments(name)')
     .eq('is_active', true)
     .neq('role', 'super_admin')
     .order('name')
+
+  const activeEmployees = (employees ?? []).filter((e: any) => !excludedIds.has(e.id))
 
   const { data: logs } = await admin
     .from('attendance_logs')
@@ -79,7 +105,7 @@ export default async function TeamHoursPage({
 
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-  const rows = (employees ?? []).map(emp => {
+  const rows = activeEmployees.map(emp => {
     const schedType: 'white_collar' | 'blue_collar' =
       emp.employee_type === 'blue_collar' ? 'blue_collar' : 'white_collar'
     const schedule = SCHEDULE[schedType]
