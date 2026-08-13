@@ -114,6 +114,18 @@ export default async function AttendancePage({
     const admin = createAdminClient()
     const year = date.slice(0, 4)
 
+    // Skip if employee is on approved sabbatical covering this date
+    const { data: sabbatical } = await admin
+      .from('separation_requests')
+      .select('id')
+      .eq('employee_id', employeeId)
+      .eq('type', 'sabbatical')
+      .eq('status', 'approved')
+      .lte('sabbatical_from', date)
+      .gte('sabbatical_to', date)
+      .maybeSingle()
+    if (sabbatical) return
+
     // Skip if any approved leave already exists for this date (prevents double-deduction)
     const { data: existing } = await admin
       .from('leave_requests')
