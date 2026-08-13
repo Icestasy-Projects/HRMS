@@ -184,7 +184,7 @@ export default async function TeamSeparationPage() {
                 <option value="sabbatical">Sabbatical</option>
               </select>
               <script dangerouslySetInnerHTML={{ __html: `
-                (function() {
+                (function init() {
                   function toggle(val) {
                     var r = document.getElementById('sep-resignation-fields');
                     var s = document.getElementById('sep-sabbatical-fields');
@@ -197,10 +197,16 @@ export default async function TeamSeparationPage() {
                       s.style.display = 'none';
                     }
                   }
-                  var sel = document.getElementById('sep-type-select');
-                  if (sel) {
+                  function setup() {
+                    var sel = document.getElementById('sep-type-select');
+                    if (!sel) return;
                     sel.addEventListener('change', function() { toggle(this.value); });
                     toggle(sel.value);
+                  }
+                  if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', setup);
+                  } else {
+                    setup();
                   }
                 })();
               ` }} />
