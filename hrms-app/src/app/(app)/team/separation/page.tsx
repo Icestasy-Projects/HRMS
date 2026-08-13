@@ -175,14 +175,35 @@ export default async function TeamSeparationPage() {
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Type</label>
               <select
+                id="sep-type-select"
                 name="type"
                 required
                 style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem' }}
-                {...{ onChange: "var r=document.getElementById('sep-resignation-fields'),s=document.getElementById('sep-sabbatical-fields');if(this.value==='resignation'){r.style.display='block';s.style.display='none'}else{r.style.display='none';s.style.display='grid'}" } as any}
               >
                 <option value="resignation">Resignation</option>
                 <option value="sabbatical">Sabbatical</option>
               </select>
+              <script dangerouslySetInnerHTML={{ __html: `
+                (function() {
+                  function toggle(val) {
+                    var r = document.getElementById('sep-resignation-fields');
+                    var s = document.getElementById('sep-sabbatical-fields');
+                    if (!r || !s) return;
+                    if (val === 'sabbatical') {
+                      r.style.display = 'none';
+                      s.style.display = 'grid';
+                    } else {
+                      r.style.display = 'block';
+                      s.style.display = 'none';
+                    }
+                  }
+                  var sel = document.getElementById('sep-type-select');
+                  if (sel) {
+                    sel.addEventListener('change', function() { toggle(this.value); });
+                    toggle(sel.value);
+                  }
+                })();
+              ` }} />
             </div>
           </div>
 
