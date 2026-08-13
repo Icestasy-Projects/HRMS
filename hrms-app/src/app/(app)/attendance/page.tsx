@@ -114,6 +114,10 @@ export default async function AttendancePage({
     const admin = createAdminClient()
     const year = date.slice(0, 4)
 
+    // Skip super admins — attendance not tracked for them
+    const { data: emp } = await admin.from('users').select('role').eq('id', employeeId).single()
+    if (emp?.role === 'super_admin') return
+
     // Skip if employee is on approved sabbatical covering this date
     const { data: sabbatical } = await admin
       .from('separation_requests')
