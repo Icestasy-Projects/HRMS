@@ -78,9 +78,19 @@ export default async function TeamRegularizationPage({
       })
     }
 
-    // If corrected status is no longer a half-day, remove any auto-deducted
-    // half-day leave that was created for this date
-    if (!dayStatus.includes('half_day')) {
+    // If attendance is now complete (present), remove ALL auto-generated leaves
+    // for this date (both half-day auto leaves and full-day auto-UL from missed checkout)
+    if (dayStatus === 'present' || (!dayStatus.includes('half_day') && newCheckIn && newCheckOut)) {
+      await admin
+        .from('leave_requests')
+        .delete()
+        .eq('employee_id', req.employee_id)
+        .eq('start_date', req.work_date)
+        .eq('end_date', req.work_date)
+        .eq('status', 'approved')
+        .like('reason', 'Auto:%')
+    } else if (!dayStatus.includes('half_day')) {
+      // Partial correction — only remove half-day auto leaves
       await admin
         .from('leave_requests')
         .delete()
