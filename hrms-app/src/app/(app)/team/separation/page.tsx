@@ -54,12 +54,13 @@ export default async function TeamSeparationPage() {
     const reason = formData.get('reason') as string
     const sabbaticalFrom = formData.get('sabbatical_from') as string | null
     const sabbaticalTo = formData.get('sabbatical_to') as string | null
+    const resignationDate = formData.get('resignation_date') as string | null
 
     await admin.from('separation_requests').insert({
       employee_id: employeeId,
       type,
       reason: reason || null,
-      sabbatical_from: type === 'sabbatical' && sabbaticalFrom ? sabbaticalFrom : null,
+      sabbatical_from: type === 'sabbatical' && sabbaticalFrom ? sabbaticalFrom : (type === 'resignation' && resignationDate ? resignationDate : null),
       sabbatical_to: type === 'sabbatical' && sabbaticalTo ? sabbaticalTo : null,
       status: 'approved',
       approved_by: user.id,
@@ -173,19 +174,32 @@ export default async function TeamSeparationPage() {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Type</label>
-              <select name="type" required style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem' }}>
+              <select
+                name="type"
+                required
+                style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem' }}
+                {...{ onChange: "var r=document.getElementById('sep-resignation-fields'),s=document.getElementById('sep-sabbatical-fields');if(this.value==='resignation'){r.style.display='block';s.style.display='none'}else{r.style.display='none';s.style.display='grid'}" } as any}
+              >
                 <option value="resignation">Resignation</option>
                 <option value="sabbatical">Sabbatical</option>
               </select>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+
+          {/* Resignation date — shown for resignation */}
+          <div id="sep-resignation-fields" style={{ display: 'block' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Last Working Day</label>
+            <input type="date" name="resignation_date" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+          </div>
+
+          {/* Sabbatical dates — shown for sabbatical */}
+          <div id="sep-sabbatical-fields" style={{ display: 'none', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical From (if applicable)</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical From</label>
               <input type="date" name="sabbatical_from" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical To (if applicable)</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical To</label>
               <input type="date" name="sabbatical_to" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
           </div>
@@ -337,6 +351,11 @@ export default async function TeamSeparationPage() {
                         {' '}— {req.type === 'resignation' ? 'Resignation' : 'Sabbatical'}
                       </span>
                     </p>
+                    {req.status === 'approved' && req.type === 'resignation' && req.sabbatical_from && (
+                      <p style={{ color: 'var(--success)', fontSize: '0.8rem', fontWeight: 600, margin: '0.25rem 0 0' }}>
+                        Last working day: {req.sabbatical_from}
+                      </p>
+                    )}
                     {req.status === 'approved' && req.notice_period_days && (
                       <p style={{ color: 'var(--success)', fontSize: '0.8rem', fontWeight: 600, margin: '0.25rem 0 0' }}>
                         Notice: {req.notice_period_days} days
