@@ -57,6 +57,7 @@ export default async function TeamHoursPage({
     .from('users')
     .select('id, name, employee_type, departments(name)')
     .eq('is_active', true)
+    .neq('role', 'super_admin')
     .order('name')
 
   const { data: logs } = await admin
