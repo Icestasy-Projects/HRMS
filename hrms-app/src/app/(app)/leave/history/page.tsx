@@ -157,7 +157,20 @@ export default async function LeaveHistoryPage() {
                     {req.status}
                   </span>
                   {(req.status === 'pending' || req.status === 'approved') && (() => {
+                    const isAuto = req.reason?.startsWith('Auto')
                     const isPast = req.end_date < today
+                    // Auto leaves (system-generated) cannot be retracted — must go through regularization
+                    if (isAuto) {
+                      return (
+                        <Link href="/attendance/regularization" style={{
+                          fontSize: '0.72rem', fontWeight: 600, color: 'var(--muted)',
+                          border: '1px solid var(--border)', borderRadius: '0.5rem',
+                          padding: '0.2rem 0.55rem', textDecoration: 'none', whiteSpace: 'nowrap',
+                        }}>
+                          Request Regularization
+                        </Link>
+                      )
+                    }
                     if (isPast) {
                       return (
                         <Link href="/attendance/regularization" style={{
