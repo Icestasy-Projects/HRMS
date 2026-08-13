@@ -30,6 +30,7 @@ export default async function LeaveOverviewPage({
     .from('users')
     .select('id, name, role, employee_type, departments(name)')
     .eq('is_active', true)
+    .neq('role', 'super_admin')
     .order('name')
 
   if (!employees) redirect('/dashboard')
