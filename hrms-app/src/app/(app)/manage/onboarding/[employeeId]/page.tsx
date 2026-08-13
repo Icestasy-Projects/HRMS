@@ -40,10 +40,18 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
   const admin = createAdminClient()
   const { data: emp } = await admin
     .from('users')
-    .select('id, name, role, hire_date, departments(name)')
+    .select('id, name, role, departments(name)')
     .eq('id', employeeId)
     .single()
   if (!emp) redirect('/manage/onboarding')
+
+  // hire_date is optional — fetch separately so missing column doesn't crash the page
+  const { data: empExtra } = await admin
+    .from('users')
+    .select('hire_date')
+    .eq('id', employeeId)
+    .single()
+  const hireDate = empExtra?.hire_date ? new Date(empExtra.hire_date) : null
 
   const { data: templates } = await admin
     .from('onboarding_templates')
@@ -97,8 +105,6 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
     ? [{ label: 'Home', href: '/dashboard' }, { label: 'Manage', href: '/manage' }, { label: 'Onboarding', href: '/manage/onboarding' }, { label: emp.name }]
     : [{ label: 'Home', href: '/dashboard' }, { label: 'My Onboarding' }]
 
-  const hireDate = (emp as any).hire_date ? new Date((emp as any).hire_date) : null
-
   function dueDateLabel(offset: number | null) {
     if (offset == null || !hireDate) return null
     const d = new Date(hireDate)
@@ -116,7 +122,7 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
           {(emp as any).departments?.name && <>{(emp as any).departments.name} · </>}
-          {hireDate && <>Hired {hireDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · </>}
+          {hireDate && <>Hired {hireDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} &middot; </>}
           {doneTasks} of {totalTasks} tasks complete
         </p>
         {totalTasks > 0 && (
