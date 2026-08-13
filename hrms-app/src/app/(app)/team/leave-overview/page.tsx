@@ -25,6 +25,30 @@ export default async function LeaveOverviewPage({
   const year = new Date().getFullYear()
   const selectedMonth = params.month ? Number(params.month) : null // 1-12 or null = full year
 
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Fetch employees on approved sabbatical overlapping this year
+  const { data: sabbaticals } = await admin
+    .from('separation_requests')
+    .select('employee_id')
+    .eq('type', 'sabbatical')
+    .eq('status', 'approved')
+    .lte('sabbatical_from', `${year}-12-31`)
+    .gte('sabbatical_to', `${year}-01-01`)
+
+  // Fetch employees with approved resignation where last working day has passed
+  const { data: resignations } = await admin
+    .from('separation_requests')
+    .select('employee_id')
+    .eq('type', 'resignation')
+    .eq('status', 'approved')
+    .lte('sabbatical_from', today)
+
+  const excludedIds = new Set([
+    ...(sabbaticals ?? []).map((r: any) => r.employee_id),
+    ...(resignations ?? []).map((r: any) => r.employee_id),
+  ])
+
   // Fetch all active employees
   const { data: employees } = await admin
     .from('users')
@@ -34,6 +58,8 @@ export default async function LeaveOverviewPage({
     .order('name')
 
   if (!employees) redirect('/dashboard')
+
+  const activeEmployees = employees.filter((e: any) => !excludedIds.has(e.id))
 
   // Fetch all leave balances for this year
   const { data: balances } = await admin
@@ -69,7 +95,7 @@ export default async function LeaveOverviewPage({
   }
 
   // Build rows
-  const rows = employees.map(emp => {
+  const rows = activeEmployees.map(emp => {
     const bal = balanceMap[emp.id] ?? { sl_total: 18, ul_total: 6 }
     const used = usedMap[emp.id] ?? { sl: 0, ul: 0 }
     const slRemaining = Math.max(0, bal.sl_total - used.sl)
