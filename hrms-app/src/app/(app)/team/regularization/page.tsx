@@ -88,7 +88,7 @@ export default async function TeamRegularizationPage({
         .eq('start_date', req.work_date)
         .eq('end_date', req.work_date)
         .eq('status', 'approved')
-        .like('reason', 'Auto:%')
+        .like('reason', 'Auto%')
     } else if (!dayStatus.includes('half_day')) {
       // Partial correction — only remove half-day auto leaves
       await admin
@@ -99,7 +99,7 @@ export default async function TeamRegularizationPage({
         .eq('end_date', req.work_date)
         .eq('status', 'approved')
         .eq('is_half_day', true)
-        .like('reason', 'Auto:%')
+        .like('reason', 'Auto%')
     }
 
     await admin
