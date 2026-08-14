@@ -98,7 +98,10 @@ export default async function LeaveOverviewPage({
   const rows = activeEmployees.map(emp => {
     const bal = balanceMap[emp.id] ?? { sl_total: 18, ul_total: 6 }
     const used = usedMap[emp.id] ?? { sl: 0, ul: 0 }
-    const slRemaining = Math.max(0, bal.sl_total - used.sl)
+    const ulExcess = Math.max(0, used.ul - bal.ul_total)
+    const slPenalty = Math.round(ulExcess * 1.5 * 10) / 10  // 1.5x penalty on excess UL
+    const effectiveSlUsed = Math.round((used.sl + slPenalty) * 10) / 10
+    const slRemaining = Math.max(0, Math.round((bal.sl_total - effectiveSlUsed) * 10) / 10)
     const ulRemaining = Math.max(0, bal.ul_total - used.ul)
     return {
       id: emp.id,
@@ -106,7 +109,8 @@ export default async function LeaveOverviewPage({
       role: emp.role,
       department: (emp.departments as unknown as { name: string } | null)?.name ?? '—',
       slTotal: bal.sl_total,
-      slUsed: used.sl,
+      slUsed: effectiveSlUsed,
+      slPenalty,
       slRemaining,
       ulTotal: bal.ul_total,
       ulUsed: used.ul,
@@ -228,7 +232,18 @@ export default async function LeaveOverviewPage({
                     </td>
                     <td style={{ ...td, color: 'var(--muted)' }}>{row.department}</td>
                     {!selectedMonth && <td style={numCell(row.slTotal, false, true)}>{row.slTotal}</td>}
-                    <td style={numCell(row.slUsed, false, false)}>{row.slUsed}</td>
+                    <td style={numCell(row.slUsed, false, false)}>
+                      {row.slUsed}
+                      {row.slPenalty > 0 && (
+                        <span title={`Includes ${row.slPenalty} day penalty (excess UL × 1.5)`} style={{
+                          marginLeft: '0.3rem', fontSize: '0.65rem', fontWeight: 700,
+                          color: 'var(--danger)', background: '#fee2e2',
+                          borderRadius: '999px', padding: '0.05rem 0.35rem',
+                        }}>
+                          +{row.slPenalty}
+                        </span>
+                      )}
+                    </td>
                     {!selectedMonth && <td style={{
                       ...numCell(row.slRemaining, slLow, false),
                       background: slLow ? 'rgba(220,38,38,0.06)' : undefined,
@@ -250,7 +265,7 @@ export default async function LeaveOverviewPage({
       </div>
 
       <p style={{ color: 'var(--muted)', fontSize: '0.75rem', marginTop: '0.75rem', textAlign: 'right' }}>
-        SL = Scheduled Leave · UL = Unscheduled / Sick Leave · Highlighted red = ≤3 SL remaining · Highlighted amber = ≤1 UL remaining
+        SL = Scheduled Leave · UL = Unscheduled / Sick Leave · Highlighted red = ≤3 SL remaining · Highlighted amber = ≤1 UL remaining · +N badge = SL penalty for excess UL (excess × 1.5)
       </p>
     </div>
   )
