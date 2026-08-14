@@ -32,7 +32,7 @@ export default async function EmployeeLeaveDetailPage({
 
   const { data: balRow } = await admin
     .from('leave_balances')
-    .select('sl_total, ul_total')
+    .select('sl_total, ul_total, sl_penalty')
     .eq('user_id', userId)
     .eq('year', year)
     .maybeSingle()
@@ -45,10 +45,13 @@ export default async function EmployeeLeaveDetailPage({
 
   const slTotal = balRow?.sl_total ?? 18
   const ulTotal = balRow?.ul_total ?? 6
+  const slPenalty = Number(balRow?.sl_penalty ?? 0)
 
   const thisYear = requests?.filter(r => r.start_date?.startsWith(String(year))) ?? []
   const slUsed = thisYear.filter(r => r.leave_type === 'SL' && r.status === 'approved').reduce((s, r) => s + Number(r.days_count), 0)
   const ulUsed = thisYear.filter(r => r.leave_type === 'UL' && r.status === 'approved').reduce((s, r) => s + Number(r.days_count), 0)
+  const effectiveSlUsed = Math.round((slUsed + slPenalty) * 10) / 10
+  const slRemaining = Math.max(0, Math.round((slTotal - effectiveSlUsed) * 10) / 10)
 
   function statusColor(s: string) {
     if (s === 'approved') return 'var(--success)'
@@ -82,19 +85,27 @@ export default async function EmployeeLeaveDetailPage({
 
       {/* Balance summary */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem', marginBottom: '1.5rem' }}>
-        {[
-          { label: 'Scheduled Leave', used: slUsed, total: slTotal, color: 'var(--primary)' },
-          { label: 'Unscheduled / Sick', used: ulUsed, total: ulTotal, color: 'var(--warning)' },
-        ].map(b => (
-          <div key={b.label} style={{
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
-          }}>
-            <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>{b.label}</p>
-            <p style={{ fontWeight: 800, fontSize: '1.75rem', color: b.color, margin: 0, lineHeight: 1 }}>{b.total - b.used}</p>
-            <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '0.25rem 0 0' }}>{b.used} used · {b.total} total</p>
-          </div>
-        ))}
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+        }}>
+          <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>Scheduled Leave</p>
+          <p style={{ fontWeight: 800, fontSize: '1.75rem', color: 'var(--primary)', margin: 0, lineHeight: 1 }}>{slRemaining}</p>
+          <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '0.25rem 0 0' }}>{effectiveSlUsed} used · {slTotal} total</p>
+          {slPenalty > 0 && (
+            <p style={{ fontSize: '0.72rem', color: 'var(--danger)', fontWeight: 600, margin: '0.3rem 0 0' }}>
+              Includes −{slPenalty} day{slPenalty !== 1 ? 's' : ''} UL penalty
+            </p>
+          )}
+        </div>
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
+        }}>
+          <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.5rem' }}>Unscheduled / Sick</p>
+          <p style={{ fontWeight: 800, fontSize: '1.75rem', color: 'var(--warning)', margin: 0, lineHeight: 1 }}>{Math.max(0, ulTotal - ulUsed)}</p>
+          <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '0.25rem 0 0' }}>{ulUsed} used · {ulTotal} total</p>
+        </div>
       </div>
 
       {/* Leave request list */}

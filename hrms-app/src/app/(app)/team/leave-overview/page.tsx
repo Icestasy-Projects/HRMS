@@ -64,12 +64,12 @@ export default async function LeaveOverviewPage({
   // Fetch all leave balances for this year
   const { data: balances } = await admin
     .from('leave_balances')
-    .select('user_id, sl_total, ul_total')
+    .select('user_id, sl_total, ul_total, sl_penalty')
     .eq('year', year)
 
-  const balanceMap: Record<string, { sl_total: number; ul_total: number }> = {}
+  const balanceMap: Record<string, { sl_total: number; ul_total: number; sl_penalty: number }> = {}
   for (const b of balances ?? []) {
-    balanceMap[b.user_id] = { sl_total: b.sl_total ?? 18, ul_total: b.ul_total ?? 6 }
+    balanceMap[b.user_id] = { sl_total: b.sl_total ?? 18, ul_total: b.ul_total ?? 6, sl_penalty: Number(b.sl_penalty ?? 0) }
   }
 
   // Fetch approved leave requests — full year or specific month
@@ -96,10 +96,9 @@ export default async function LeaveOverviewPage({
 
   // Build rows
   const rows = activeEmployees.map(emp => {
-    const bal = balanceMap[emp.id] ?? { sl_total: 18, ul_total: 6 }
+    const bal = balanceMap[emp.id] ?? { sl_total: 18, ul_total: 6, sl_penalty: 0 }
     const used = usedMap[emp.id] ?? { sl: 0, ul: 0 }
-    const ulExcess = Math.max(0, used.ul - bal.ul_total)
-    const slPenalty = Math.round(ulExcess * 1.5 * 10) / 10  // 1.5x penalty on excess UL
+    const slPenalty = bal.sl_penalty  // stored in DB by trigger
     const effectiveSlUsed = Math.round((used.sl + slPenalty) * 10) / 10
     const slRemaining = Math.max(0, Math.round((bal.sl_total - effectiveSlUsed) * 10) / 10)
     const ulRemaining = Math.max(0, bal.ul_total - used.ul)
