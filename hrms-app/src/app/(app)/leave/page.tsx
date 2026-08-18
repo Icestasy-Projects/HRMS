@@ -26,7 +26,7 @@ export default async function LeavePage() {
   // Fetch totals
   const { data: balRow } = await admin
     .from('leave_balances')
-    .select('sl_total, ul_total')
+    .select('sl_total, ul_total, sl_penalty')
     .eq('user_id', employee.id)
     .eq('year', currentYear)
     .single()
@@ -45,11 +45,14 @@ export default async function LeavePage() {
 
   const slTotal = balRow?.sl_total ?? 18
   const ulTotal = balRow?.ul_total ?? 6
+  const slPenalty = Number(balRow?.sl_penalty ?? 0)
+  const effectiveSlUsed = Math.round((slUsed + slPenalty) * 10) / 10
   const finalBalance = balRow ? {
     sl_total: slTotal,
     ul_total: ulTotal,
-    sl_remaining: slTotal - slUsed,
+    sl_remaining: Math.max(0, Math.round((slTotal - effectiveSlUsed) * 10) / 10),
     ul_remaining: ulTotal - ulUsed,
+    sl_penalty: slPenalty,
   } : null
 
   const carryWarn = finalBalance ? carryforwardWarning(finalBalance.sl_remaining) : null
@@ -96,6 +99,11 @@ export default async function LeavePage() {
               {balanceLabel(finalBalance.sl_remaining, finalBalance.sl_total, 'scheduled')}
             </p>
             <p style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '3rem', margin: 0, lineHeight: 1 }}>{finalBalance.sl_remaining}</p>
+            {finalBalance.sl_penalty > 0 && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.375rem', fontWeight: 600 }}>
+                −{finalBalance.sl_penalty} day{finalBalance.sl_penalty !== 1 ? 's' : ''} UL penalty applied
+              </p>
+            )}
           </div>
 
           <div style={{

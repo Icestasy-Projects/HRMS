@@ -322,6 +322,29 @@ export default async function TeamRegularizationPage({
           })}
         </div>
       )}
+      <script dangerouslySetInnerHTML={{ __html: `
+      (function() {
+        function setup() {
+          document.querySelectorAll('form').forEach(function(form) {
+            form.addEventListener('submit', function() {
+              var btn = form.querySelector('button[type="submit"]');
+              if (!btn) return;
+              btn.disabled = true;
+              btn.style.opacity = '0.65';
+              btn.style.cursor = 'not-allowed';
+              var isApprove = btn.textContent.includes('Approve');
+              btn.innerHTML = isApprove
+                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 0.8s linear infinite;display:inline-block"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Approving…'
+                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 0.8s linear infinite;display:inline-block"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Rejecting…';
+            });
+          });
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setup);
+        } else { setup(); }
+      })();
+    ` }} />
+      <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}` }} />
     </div>
   )
 }
