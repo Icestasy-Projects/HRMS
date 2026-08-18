@@ -322,8 +322,7 @@ export default async function TeamRegularizationPage({
           })}
         </div>
       )}
-    </div>
-    <script dangerouslySetInnerHTML={{ __html: `
+      <script dangerouslySetInnerHTML={{ __html: `
       (function() {
         function setup() {
           document.querySelectorAll('form').forEach(function(form) {
@@ -345,6 +344,7 @@ export default async function TeamRegularizationPage({
         } else { setup(); }
       })();
     ` }} />
-    <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}` }} />
+      <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}` }} />
+    </div>
   )
 }
