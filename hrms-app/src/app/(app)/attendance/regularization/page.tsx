@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import SuccessToast from '@/components/SuccessToast'
+import RegularizationForm from '@/components/RegularizationForm'
 import { todayIST } from '@/lib/attendance'
 
 export const dynamic = 'force-dynamic'
@@ -54,10 +55,8 @@ export default async function RegularizationPage({
 
     const workDate = formData.get('work_date') as string
     const field = formData.get('field') as string
-    const requestedValue = formData.get('requested_value') as string
     const reason = formData.get('reason') as string
 
-    // Get current value from attendance_logs
     const { data: log } = await admin
       .from('attendance_logs')
       .select('check_in, check_out')
@@ -65,17 +64,30 @@ export default async function RegularizationPage({
       .eq('work_date', workDate)
       .maybeSingle()
 
-    const currentValue = log ? (field === 'check_in' ? log.check_in : log.check_out) : null
+    const rows: Array<{
+      employee_id: string; work_date: string; field: string;
+      current_value: string | null; requested_value: string;
+      reason: string; status: string;
+    }> = []
 
-    await admin.from('attendance_regularizations').insert({
-      employee_id: user.id,
-      work_date: workDate,
-      field,
-      current_value: currentValue,
-      requested_value: requestedValue,
-      reason,
-      status: 'pending',
-    })
+    if (field === 'check_in' || field === 'both') {
+      rows.push({
+        employee_id: user.id, work_date: workDate, field: 'check_in',
+        current_value: log?.check_in ?? null,
+        requested_value: formData.get('requested_value_checkin') as string,
+        reason, status: 'pending',
+      })
+    }
+    if (field === 'check_out' || field === 'both') {
+      rows.push({
+        employee_id: user.id, work_date: workDate, field: 'check_out',
+        current_value: log?.check_out ?? null,
+        requested_value: formData.get('requested_value_checkout') as string,
+        reason, status: 'pending',
+      })
+    }
+
+    await admin.from('attendance_regularizations').insert(rows)
 
     redirect('/attendance/regularization?success=1')
   }
@@ -86,13 +98,6 @@ export default async function RegularizationPage({
     if (s === 'approved') return 'var(--success)'
     if (s === 'rejected') return 'var(--danger)'
     return 'var(--warning)'
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '0.75rem 1rem',
-    border: '1px solid var(--border)', borderRadius: '0.625rem',
-    background: 'var(--surface2)', color: 'var(--text)',
-    fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
   }
 
   return (
@@ -134,91 +139,8 @@ export default async function RegularizationPage({
         <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: '0 0 1.25rem' }}>
           New Request
         </h2>
-        <form action={submitRequest} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-                Date
-              </label>
-              <input
-                type="date"
-                name="work_date"
-                required
-                max={today}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-                Correction For
-              </label>
-              <select name="field" required style={inputStyle}>
-                <option value="check_in">Check-In Time</option>
-                <option value="check_out">Check-Out Time</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-              Correct Time (HH:MM)
-            </label>
-            <input
-              type="time"
-              name="requested_value"
-              required
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
-              Reason / Explanation
-            </label>
-            <textarea
-              name="reason"
-              required
-              rows={3}
-              placeholder="Explain why the time needs to be corrected..."
-              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
-            />
-          </div>
-
-          <button
-            id="reg-submit-btn"
-            type="submit"
-            style={{
-              background: 'var(--primary)', color: '#fff',
-              border: 'none', borderRadius: '0.625rem',
-              padding: '0.875rem', fontWeight: 700, fontSize: '0.95rem',
-              cursor: 'pointer', minHeight: '44px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-              width: '100%',
-            }}
-          >
-            Submit Request
-          </button>
-        </form>
+        <RegularizationForm today={today} submitAction={submitRequest} />
       </div>
-      <script dangerouslySetInnerHTML={{ __html: `
-        (function() {
-          function setup() {
-            var form = document.querySelector('form[action]');
-            var btn = document.getElementById('reg-submit-btn');
-            if (!form || !btn) return;
-            form.addEventListener('submit', function() {
-              btn.disabled = true;
-              btn.style.opacity = '0.7';
-              btn.style.cursor = 'not-allowed';
-              btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 0.8s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Submitting…';
-            });
-          }
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setup);
-          } else { setup(); }
-        })();
-      ` }} />
-      <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }` }} />
 
       {/* Past requests */}
       {requests && requests.length > 0 && (
