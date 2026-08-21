@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useFormStatus } from 'react-dom'
 
 const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)',
@@ -14,6 +15,27 @@ const inputStyle: React.CSSProperties = {
   fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
 }
 
+function SubmitButton() {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      style={{
+        background: 'var(--primary)', color: '#fff',
+        border: 'none', borderRadius: '0.625rem',
+        padding: '0.875rem', fontWeight: 700, fontSize: '0.95rem',
+        cursor: pending ? 'not-allowed' : 'pointer', minHeight: '44px',
+        opacity: pending ? 0.7 : 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+        width: '100%',
+      }}
+    >
+      {pending ? 'Submitting…' : 'Submit Request'}
+    </button>
+  )
+}
+
 export default function RegularizationForm({
   today,
   submitAction,
@@ -22,16 +44,9 @@ export default function RegularizationForm({
   submitAction: (formData: FormData) => Promise<void>
 }) {
   const [field, setField] = useState('check_in')
-  const [submitting, setSubmitting] = useState(false)
 
   return (
-    <form
-      action={async (formData) => {
-        setSubmitting(true)
-        await submitAction(formData)
-      }}
-      style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-    >
+    <form action={submitAction} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         <div>
           <label style={labelStyle}>Date</label>
@@ -82,21 +97,7 @@ export default function RegularizationForm({
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        style={{
-          background: 'var(--primary)', color: '#fff',
-          border: 'none', borderRadius: '0.625rem',
-          padding: '0.875rem', fontWeight: 700, fontSize: '0.95rem',
-          cursor: submitting ? 'not-allowed' : 'pointer', minHeight: '44px',
-          opacity: submitting ? 0.7 : 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-          width: '100%',
-        }}
-      >
-        {submitting ? 'Submitting…' : 'Submit Request'}
-      </button>
+      <SubmitButton />
     </form>
   )
 }
