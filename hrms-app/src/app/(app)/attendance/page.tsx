@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST } from '@/lib/attendance'
+import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST, OFFICE_LOCATION, GEOFENCE_RADIUS_M, haversineDistance } from '@/lib/attendance'
 import Link from 'next/link'
 import Breadcrumb from '@/components/Breadcrumb'
 import ClockButton from '@/components/ClockButton'
@@ -188,8 +188,14 @@ export default async function AttendancePage({
     // salaryDeduct > 0 means both UL and SL are exhausted — to be handled in payroll
   }
 
-  async function clockInOut() {
+  async function clockInOut(lat: number, lng: number) {
     'use server'
+    const distance = haversineDistance(lat, lng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng)
+    if (distance > GEOFENCE_RADIUS_M) {
+      const distKm = (distance / 1000).toFixed(1)
+      redirect(`/attendance?error=${encodeURIComponent(`You are ${distKm} km from the office. Clock in/out is only allowed within ${GEOFENCE_RADIUS_M}m of the office.`)}`)
+    }
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
