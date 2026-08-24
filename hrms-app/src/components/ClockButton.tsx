@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 interface Props {
   isDone: boolean
   isClockedIn: boolean
-  action: (lat: number, lng: number) => Promise<void>
+  action: () => Promise<void>
 }
 
 export default function ClockButton({ isDone, isClockedIn, action }: Props) {
@@ -14,7 +14,6 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [locError, setLocError] = useState<string | null>(null)
 
   const label = isDone ? 'Day Complete' : isClockedIn ? 'Clock Out' : 'Clock In'
   const icon = isDone ? '✓' : isClockedIn ? '◉' : '◎'
@@ -24,43 +23,13 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
     : 'Are you sure you want to clock in now?'
   const successMsg = isClockedIn ? 'Clocked out successfully!' : 'Clocked in successfully!'
 
-  function requestLocation(): Promise<GeolocationPosition> {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported by your browser.'))
-        return
-      }
-      navigator.geolocation.getCurrentPosition(resolve, (err) => {
-        if (err.code === 1) reject(new Error('Location permission denied. Please allow location access to clock in/out.'))
-        else if (err.code === 2) reject(new Error('Unable to determine your location. Please check your GPS settings.'))
-        else reject(new Error('Location request timed out. Please try again.'))
-      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
-    })
-  }
-
-  async function handleClick() {
-    if (isDone) return
-    setLocError(null)
-    setLoading(true)
-    try {
-      const pos = await requestLocation()
-      setLoading(false)
-      setConfirming(true)
-      ;(window as any).__clockCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-    } catch (err: any) {
-      setLoading(false)
-      setLocError(err.message)
-    }
-  }
-
   async function handleConfirm() {
     setLoading(true)
     setConfirming(false)
-    const coords = (window as any).__clockCoords as { lat: number; lng: number }
     try {
-      await action(coords.lat, coords.lng)
+      await action()
     } catch {
-      // redirect() throws — expected
+      // redirect() throws a special Next.js error — that's expected
     }
     router.refresh()
     setLoading(false)
@@ -80,16 +49,6 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
           display: 'flex', alignItems: 'center', gap: '0.5rem',
         }}>
           ✓ {successMsg}
-        </div>
-      )}
-
-      {locError && (
-        <div style={{
-          background: 'var(--danger-l)', border: '1px solid var(--danger)',
-          borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
-          color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.875rem', fontWeight: 600,
-        }}>
-          📍 {locError}
         </div>
       )}
 
@@ -142,7 +101,7 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
       <button
         type="button"
         disabled={isDone || loading}
-        onClick={handleClick}
+        onClick={() => !isDone && setConfirming(true)}
         style={{
           width: '100%', height: '80px',
           background: loading ? 'var(--muted)' : bg,
@@ -157,7 +116,7 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
         }}
       >
         <span style={{ fontSize: isDone ? '1.25rem' : '1.5rem' }}>{loading ? '…' : icon}</span>
-        {loading ? 'Getting location…' : label}
+        {loading ? 'Processing…' : label}
       </button>
     </>
   )
