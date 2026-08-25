@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import FormButton from '@/components/FormButton'
 import { computeAttendanceStatus } from '@/lib/attendance'
 
 export const dynamic = 'force-dynamic'
@@ -281,18 +282,16 @@ export default async function TeamRegularizationPage({
                         placeholder="Note (optional)"
                         style={inputStyle}
                       />
-                      <button
-                        type="submit"
+                      <FormButton
+                        label="✓ Approve & Update Attendance"
+                        pendingLabel="Approving…"
                         style={{
                           width: '100%', marginTop: '0.625rem',
                           background: 'var(--success)', color: '#fff',
                           border: 'none', borderRadius: '0.5rem',
                           padding: '0.625rem', fontWeight: 700, fontSize: '0.875rem',
-                          cursor: 'pointer',
                         }}
-                      >
-                        ✓ Approve & Update Attendance
-                      </button>
+                      />
                     </form>
                     <form action={rejectRequest}>
                       <input type="hidden" name="id" value={r.id} />
@@ -302,18 +301,16 @@ export default async function TeamRegularizationPage({
                         placeholder="Note (optional)"
                         style={inputStyle}
                       />
-                      <button
-                        type="submit"
+                      <FormButton
+                        label="✕ Reject"
+                        pendingLabel="Rejecting…"
                         style={{
                           width: '100%', marginTop: '0.625rem',
                           background: 'transparent', color: 'var(--danger)',
                           border: '1px solid var(--danger)', borderRadius: '0.5rem',
                           padding: '0.625rem', fontWeight: 700, fontSize: '0.875rem',
-                          cursor: 'pointer',
                         }}
-                      >
-                        ✕ Reject
-                      </button>
+                      />
                     </form>
                   </div>
                 )}
@@ -322,29 +319,6 @@ export default async function TeamRegularizationPage({
           })}
         </div>
       )}
-      <script dangerouslySetInnerHTML={{ __html: `
-      (function() {
-        function setup() {
-          document.querySelectorAll('form').forEach(function(form) {
-            form.addEventListener('submit', function() {
-              var btn = form.querySelector('button[type="submit"]');
-              if (!btn) return;
-              btn.disabled = true;
-              btn.style.opacity = '0.65';
-              btn.style.cursor = 'not-allowed';
-              var isApprove = btn.textContent.includes('Approve');
-              btn.innerHTML = isApprove
-                ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 0.8s linear infinite;display:inline-block"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Approving…'
-                : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 0.8s linear infinite;display:inline-block"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Rejecting…';
-            });
-          });
-        }
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', setup);
-        } else { setup(); }
-      })();
-    ` }} />
-      <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}` }} />
     </div>
   )
 }
