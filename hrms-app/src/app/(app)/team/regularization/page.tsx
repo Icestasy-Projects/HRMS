@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
-import FormButton from '@/components/FormButton'
+import RegularizationActions from '@/components/RegularizationActions'
 import { computeAttendanceStatus } from '@/lib/attendance'
 
 export const dynamic = 'force-dynamic'
@@ -151,14 +151,6 @@ export default async function TeamRegularizationPage({
     { key: 'rejected', label: 'Rejected' },
   ]
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '0.5rem 0.75rem',
-    border: '1px solid var(--border)', borderRadius: '0.5rem',
-    background: 'var(--surface2)', color: 'var(--text)',
-    fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box',
-    marginTop: '0.4rem',
-  }
-
   return (
     <div style={{ maxWidth: '760px', margin: '0 auto' }}>
       <div style={{ marginBottom: '1.25rem' }}>
@@ -271,48 +263,12 @@ export default async function TeamRegularizationPage({
                   </p>
                 )}
 
-                {/* Action buttons — only for pending */}
                 {r.status === 'pending' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <form action={approveRequest}>
-                      <input type="hidden" name="id" value={r.id} />
-                      <input
-                        name="admin_note"
-                        type="text"
-                        placeholder="Note (optional)"
-                        style={inputStyle}
-                      />
-                      <FormButton
-                        label="✓ Approve & Update Attendance"
-                        pendingLabel="Approving…"
-                        style={{
-                          width: '100%', marginTop: '0.625rem',
-                          background: 'var(--success)', color: '#fff',
-                          border: 'none', borderRadius: '0.5rem',
-                          padding: '0.625rem', fontWeight: 700, fontSize: '0.875rem',
-                        }}
-                      />
-                    </form>
-                    <form action={rejectRequest}>
-                      <input type="hidden" name="id" value={r.id} />
-                      <input
-                        name="admin_note"
-                        type="text"
-                        placeholder="Note (optional)"
-                        style={inputStyle}
-                      />
-                      <FormButton
-                        label="✕ Reject"
-                        pendingLabel="Rejecting…"
-                        style={{
-                          width: '100%', marginTop: '0.625rem',
-                          background: 'transparent', color: 'var(--danger)',
-                          border: '1px solid var(--danger)', borderRadius: '0.5rem',
-                          padding: '0.625rem', fontWeight: 700, fontSize: '0.875rem',
-                        }}
-                      />
-                    </form>
-                  </div>
+                  <RegularizationActions
+                    id={r.id}
+                    approveAction={approveRequest}
+                    rejectAction={rejectRequest}
+                  />
                 )}
               </div>
             )
