@@ -39,7 +39,6 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
 
   return (
     <>
-      {/* Success toast */}
       {success && (
         <div style={{
           position: 'fixed', top: '1.25rem', left: '50%', transform: 'translateX(-50%)',
@@ -53,7 +52,6 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
         </div>
       )}
 
-      {/* Confirmation modal */}
       {confirming && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
