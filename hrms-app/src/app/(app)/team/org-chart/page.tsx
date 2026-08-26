@@ -39,7 +39,20 @@ export default async function OrgChartPage() {
     }
   }
 
-  const activeUsers = (users ?? []).filter(u => !separatedIds.has((u as any).id))
+  const allUsers = users ?? []
+  const userById = new Map(allUsers.map(u => [(u as any).id, u]))
+
+  for (const sepId of separatedIds) {
+    const sepUser = userById.get(sepId) as any
+    if (!sepUser) continue
+    for (const u of allUsers) {
+      if ((u as any).manager_id === sepId) {
+        (u as any).manager_id = sepUser.manager_id ?? null
+      }
+    }
+  }
+
+  const activeUsers = allUsers.filter(u => !separatedIds.has((u as any).id))
 
   return (
     <div style={{ maxWidth: '100%', margin: '0 auto' }}>
