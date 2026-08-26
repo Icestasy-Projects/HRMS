@@ -48,7 +48,6 @@ export default async function TeamRegularizationPage({
 
     if (!req) return
 
-    // Fetch existing log for this date
     const { data: log } = await admin
       .from('attendance_logs')
       .select('*')
@@ -59,7 +58,6 @@ export default async function TeamRegularizationPage({
     const newCheckIn = req.field === 'check_in' ? req.requested_value : log?.check_in
     const newCheckOut = req.field === 'check_out' ? req.requested_value : log?.check_out
 
-    // Recompute day_status with updated times
     const { dayStatus } = computeAttendanceStatus(newCheckIn ?? null, newCheckOut ?? null, false)
 
     if (log) {
@@ -79,8 +77,6 @@ export default async function TeamRegularizationPage({
       })
     }
 
-    // If attendance is now complete (present), remove ALL auto-generated leaves
-    // for this date (both half-day auto leaves and full-day auto-UL from missed checkout)
     if (dayStatus === 'present' || (!dayStatus.includes('half_day') && newCheckIn && newCheckOut)) {
       await admin
         .from('leave_requests')
@@ -91,7 +87,6 @@ export default async function TeamRegularizationPage({
         .eq('status', 'approved')
         .like('reason', 'Auto%')
     } else if (!dayStatus.includes('half_day')) {
-      // Partial correction — only remove half-day auto leaves
       await admin
         .from('leave_requests')
         .delete()
@@ -151,8 +146,28 @@ export default async function TeamRegularizationPage({
     { key: 'rejected', label: 'Rejected' },
   ]
 
+  const thStyle: React.CSSProperties = {
+    padding: '0.625rem 0.75rem',
+    fontSize: '0.7rem',
+    fontWeight: 700,
+    color: 'var(--muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    textAlign: 'left',
+    whiteSpace: 'nowrap',
+    borderBottom: '2px solid var(--border)',
+  }
+
+  const tdStyle: React.CSSProperties = {
+    padding: '0.625rem 0.75rem',
+    fontSize: '0.85rem',
+    color: 'var(--text)',
+    borderBottom: '1px solid var(--border)',
+    verticalAlign: 'middle',
+  }
+
   return (
-    <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
       <div style={{ marginBottom: '1.25rem' }}>
         <Breadcrumb crumbs={[
           { label: 'Home', href: '/dashboard' },
@@ -190,89 +205,78 @@ export default async function TeamRegularizationPage({
           <p style={{ fontWeight: 600, color: 'var(--text)', margin: 0 }}>No {tab} requests</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-          {(requests as any[]).map(r => {
-            const emp = r.users as { name: string; departments: { name: string } | null } | null
-            const sc = statusColor(r.status)
-            return (
-              <div key={r.id} style={{
-                background: 'var(--surface)', border: '1px solid var(--border)',
-                borderRadius: '0.875rem', padding: '1.25rem',
-                boxShadow: 'var(--shadow)',
-              }}>
-                {/* Header row */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.875rem' }}>
-                  <div>
-                    <p style={{ fontWeight: 700, color: 'var(--text)', margin: 0, fontSize: '1rem' }}>{emp?.name ?? '—'}</p>
-                    <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0.1rem 0 0' }}>
-                      {(emp?.departments as { name: string } | null)?.name ?? '—'}
-                    </p>
-                  </div>
-                  <span style={{
-                    background: `${sc}18`, color: sc,
-                    border: `1px solid ${sc}`,
-                    borderRadius: '999px', padding: '0.2rem 0.65rem',
-                    fontSize: '0.75rem', fontWeight: 700,
-                    textTransform: 'capitalize', whiteSpace: 'nowrap',
-                  }}>{r.status}</span>
-                </div>
-
-                {/* Details */}
-                <div style={{
-                  background: 'var(--surface2)', borderRadius: '0.625rem', padding: '0.875rem 1rem',
-                  display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem',
-                  marginBottom: '0.875rem',
-                }}>
-                  <div>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Date</p>
-                    <p style={{ fontWeight: 700, color: 'var(--text)', margin: 0 }}>{r.work_date}</p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Correction</p>
-                    <p style={{ fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: '0.875rem', boxShadow: 'var(--shadow)',
+          overflowX: 'auto',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Employee</th>
+                <th style={thStyle}>Date</th>
+                <th style={thStyle}>Field</th>
+                <th style={thStyle}>Current</th>
+                <th style={thStyle}>Requested</th>
+                <th style={thStyle}>Reason</th>
+                <th style={thStyle}>Status</th>
+                {tab === 'pending' && <th style={thStyle}>Actions</th>}
+                {tab !== 'pending' && <th style={thStyle}>Admin Note</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {(requests as any[]).map(r => {
+                const emp = r.users as { name: string; departments: { name: string } | null } | null
+                const sc = statusColor(r.status)
+                return (
+                  <tr key={r.id}>
+                    <td style={tdStyle}>
+                      <span style={{ fontWeight: 700, display: 'block' }}>{emp?.name ?? '—'}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                        {(emp?.departments as { name: string } | null)?.name ?? '—'}
+                      </span>
+                    </td>
+                    <td style={{ ...tdStyle, fontWeight: 600, whiteSpace: 'nowrap' }}>{r.work_date}</td>
+                    <td style={tdStyle}>
                       {r.field === 'check_in' ? 'Check-In' : 'Check-Out'}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Current</p>
-                    <p style={{ fontWeight: 700, color: 'var(--danger)', margin: 0 }}>{r.current_value ?? '—'}</p>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.2rem' }}>Requested</p>
-                    <p style={{ fontWeight: 700, color: 'var(--success)', margin: 0 }}>{r.requested_value}</p>
-                  </div>
-                </div>
-
-                {r.reason && (
-                  <p style={{
-                    color: 'var(--muted)', fontSize: '0.85rem', fontStyle: 'italic',
-                    margin: '0 0 0.875rem', padding: '0.625rem 0.875rem',
-                    background: 'var(--surface2)', borderRadius: '0.5rem',
-                    borderLeft: '3px solid var(--border)',
-                  }}>
-                    &ldquo;{r.reason}&rdquo;
-                  </p>
-                )}
-
-                {r.admin_note && r.status !== 'pending' && (
-                  <p style={{
-                    color: 'var(--text)', fontSize: '0.85rem', fontWeight: 600,
-                    margin: '0 0 0.875rem',
-                  }}>
-                    Admin note: {r.admin_note}
-                  </p>
-                )}
-
-                {r.status === 'pending' && (
-                  <RegularizationActions
-                    id={r.id}
-                    approveAction={approveRequest}
-                    rejectAction={rejectRequest}
-                  />
-                )}
-              </div>
-            )
-          })}
+                    </td>
+                    <td style={{ ...tdStyle, color: 'var(--danger)', fontWeight: 600 }}>
+                      {r.current_value ?? '—'}
+                    </td>
+                    <td style={{ ...tdStyle, color: 'var(--success)', fontWeight: 600 }}>
+                      {r.requested_value}
+                    </td>
+                    <td style={{ ...tdStyle, maxWidth: '160px', fontSize: '0.8rem', color: 'var(--muted)', fontStyle: 'italic' }}>
+                      {r.reason || '—'}
+                    </td>
+                    <td style={tdStyle}>
+                      <span style={{
+                        background: `${sc}18`, color: sc,
+                        border: `1px solid ${sc}`,
+                        borderRadius: '999px', padding: '0.15rem 0.5rem',
+                        fontSize: '0.7rem', fontWeight: 700,
+                        textTransform: 'capitalize', whiteSpace: 'nowrap',
+                      }}>{r.status}</span>
+                    </td>
+                    {tab === 'pending' && (
+                      <td style={{ ...tdStyle, minWidth: '220px' }}>
+                        <RegularizationActions
+                          id={r.id}
+                          approveAction={approveRequest}
+                          rejectAction={rejectRequest}
+                        />
+                      </td>
+                    )}
+                    {tab !== 'pending' && (
+                      <td style={{ ...tdStyle, fontSize: '0.8rem' }}>
+                        {r.admin_note || '—'}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

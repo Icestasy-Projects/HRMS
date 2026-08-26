@@ -27,35 +27,37 @@ export default function RegularizationActions({
 }) {
   const [note, setNote] = useState('')
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '0.5rem 0.75rem',
-    border: '1px solid var(--border)', borderRadius: '0.5rem',
-    background: 'var(--surface2)', color: 'var(--text)',
-    fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box',
+  const btnBase: React.CSSProperties = {
+    padding: '0.35rem 0.625rem',
+    borderRadius: '0.375rem',
+    fontWeight: 700,
+    fontSize: '0.75rem',
+    whiteSpace: 'nowrap',
+    border: 'none',
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
       <input
         type="text"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Note (optional)"
-        style={inputStyle}
+        style={{
+          width: '100%', padding: '0.3rem 0.5rem',
+          border: '1px solid var(--border)', borderRadius: '0.375rem',
+          background: 'var(--surface2)', color: 'var(--text)',
+          fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box',
+        }}
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.625rem' }}>
+      <div style={{ display: 'flex', gap: '0.375rem' }}>
         <form action={approveAction}>
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="admin_note" value={note} />
           <SubmitBtn
-            label="✓ Approve & Update Attendance"
-            pendingLabel="Approving…"
-            style={{
-              width: '100%',
-              background: 'var(--success)', color: '#fff',
-              border: 'none', borderRadius: '0.5rem',
-              padding: '0.625rem', fontWeight: 700, fontSize: '0.875rem',
-            }}
+            label="✓ Approve"
+            pendingLabel="…"
+            style={{ ...btnBase, background: 'var(--success)', color: '#fff' }}
           />
         </form>
         <form action={rejectAction}>
@@ -63,13 +65,8 @@ export default function RegularizationActions({
           <input type="hidden" name="admin_note" value={note} />
           <SubmitBtn
             label="✕ Reject"
-            pendingLabel="Rejecting…"
-            style={{
-              width: '100%',
-              background: 'transparent', color: 'var(--danger)',
-              border: '1px solid var(--danger)', borderRadius: '0.5rem',
-              padding: '0.625rem', fontWeight: 700, fontSize: '0.875rem',
-            }}
+            pendingLabel="…"
+            style={{ ...btnBase, background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)' }}
           />
         </form>
       </div>
