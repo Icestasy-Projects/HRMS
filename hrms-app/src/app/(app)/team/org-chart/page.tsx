@@ -28,10 +28,18 @@ export default async function OrgChartPage() {
       .eq('status', 'approved'),
   ])
 
+  const today = new Date().toISOString().slice(0, 10)
   const separationMap: Record<string, { type: string; sabbatical_from?: string | null; sabbatical_to?: string | null }> = {}
+  const separatedIds = new Set<string>()
+
   for (const s of separations ?? []) {
     separationMap[s.employee_id] = { type: s.type, sabbatical_from: s.sabbatical_from, sabbatical_to: s.sabbatical_to }
+    if (s.type === 'resignation' && s.sabbatical_from && s.sabbatical_from < today) {
+      separatedIds.add(s.employee_id)
+    }
   }
+
+  const activeUsers = (users ?? []).filter(u => !separatedIds.has((u as any).id))
 
   return (
     <div style={{ maxWidth: '100%', margin: '0 auto' }}>
@@ -43,7 +51,7 @@ export default async function OrgChartPage() {
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>Reporting hierarchy across the organisation</p>
       </div>
       <OrgChart
-        users={(users ?? []) as unknown as Array<{ id: string; name: string; role: string; department_id: string | null; manager_id: string | null; email: string; employee_type?: string; is_active?: boolean; departments?: { name: string } | null }>}
+        users={activeUsers as unknown as Array<{ id: string; name: string; role: string; department_id: string | null; manager_id: string | null; email: string; employee_type?: string; is_active?: boolean; departments?: { name: string } | null }>}
         separationMap={separationMap}
       />
     </div>
