@@ -32,6 +32,11 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
 
   async function createPosition(formData: FormData) {
     'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const admin = createAdminClient()
     const title = formData.get('title') as string
     const department_id = (formData.get('department_id') as string) || null
@@ -43,6 +48,11 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
 
   async function updatePosition(formData: FormData) {
     'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const admin = createAdminClient()
     const id = formData.get('id') as string
     const title = formData.get('title') as string
@@ -55,6 +65,11 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
 
   async function toggleActive(formData: FormData) {
     'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const admin = createAdminClient()
     const id = formData.get('id') as string
     const current = formData.get('is_active') === 'true'

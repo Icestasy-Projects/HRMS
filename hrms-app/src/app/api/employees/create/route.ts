@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   // Create auth user with default password
   const { data: created, error: authErr } = await admin.auth.admin.createUser({
     email,
-    password: 'Test@123',
+    password: process.env.DEFAULT_EMPLOYEE_PASSWORD || 'ChangeMeOnFirstLogin!1',
     email_confirm: true,
     user_metadata: { name, role, employee_type: employeeType },
   })

@@ -31,6 +31,10 @@ export default async function DepartmentsPage({
   async function createDepartment(formData: FormData) {
     'use server'
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const name = formData.get('name') as string
     const description = (formData.get('description') as string) || null
     await supabase.from('departments').insert({ name, description })
@@ -40,6 +44,10 @@ export default async function DepartmentsPage({
   async function updateDepartment(formData: FormData) {
     'use server'
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const id = formData.get('id') as string
     const name = formData.get('name') as string
     const description = (formData.get('description') as string) || null

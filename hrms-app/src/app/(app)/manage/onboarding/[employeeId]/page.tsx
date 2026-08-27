@@ -70,8 +70,10 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
     'use server'
     const taskItemId = formData.get('task_item_id') as string
     const currentlyDone = formData.get('currently_done') === '1'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
     const admin = createAdminClient()
-    const { data: { user } } = await createClient().then(c => c.auth.getUser())
     if (currentlyDone) {
       await admin.from('onboarding_progress').delete()
         .eq('employee_id', employeeId).eq('task_item_id', taskItemId)

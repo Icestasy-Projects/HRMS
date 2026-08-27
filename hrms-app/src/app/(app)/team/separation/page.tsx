@@ -89,10 +89,15 @@ export default async function TeamSeparationPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
 
     const admin = createAdminClient()
     const id = formData.get('id') as string
     const noticePeriodDays = formData.get('notice_period_days') as string | null
+
+    const { data: req } = await admin.from('separation_requests').select('status').eq('id', id).single()
+    if (!req || req.status !== 'pending') return
 
     await admin.from('separation_requests').update({
       status: 'approved',
@@ -109,10 +114,15 @@ export default async function TeamSeparationPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
 
     const admin = createAdminClient()
     const id = formData.get('id') as string
     const rejectionReason = formData.get('rejection_reason') as string | null
+
+    const { data: req } = await admin.from('separation_requests').select('status').eq('id', id).single()
+    if (!req || req.status !== 'pending') return
 
     await admin.from('separation_requests').update({
       status: 'rejected',
