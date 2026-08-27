@@ -55,10 +55,10 @@ export default async function LeaveRequestPage({
   const year = new Date().getFullYear()
   const { data: holidayRows } = await supabase
     .from('holidays')
-    .select('date')
-    .gte('date', `${year}-01-01`)
-    .lte('date', `${year}-12-31`)
-  const holidays = holidayRows?.map((h: { date: string }) => h.date) ?? []
+    .select('holiday_date')
+    .gte('holiday_date', `${year}-01-01`)
+    .lte('holiday_date', `${year}-12-31`)
+  const holidays = holidayRows?.map((h: { holiday_date: string }) => h.holiday_date) ?? []
 
   async function submitLeave(formData: FormData) {
     'use server'
@@ -107,6 +107,32 @@ export default async function LeaveRequestPage({
 
     if (workdays === 0) {
       redirect(`/leave/request?error=${encodeURIComponent('Selected dates fall on weekends or public holidays only.')}`)
+    }
+
+    const balYear = new Date(startDate).getFullYear()
+    await adminClient.rpc('get_or_create_leave_balance', { p_employee_id: emp.id })
+    const { data: balRow } = await adminClient
+      .from('leave_balances')
+      .select('sl_total, ul_total')
+      .eq('user_id', emp.id)
+      .eq('year', balYear)
+      .single()
+    const { data: approvedThisYear } = await supabase
+      .from('leave_requests')
+      .select('leave_type, days_count')
+      .eq('employee_id', emp.id)
+      .eq('status', 'approved')
+      .gte('start_date', `${balYear}-01-01`)
+      .lte('start_date', `${balYear}-12-31`)
+    const slUsed = approvedThisYear?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+    const ulUsed = approvedThisYear?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
+    const slRemaining = (balRow?.sl_total ?? 18) - slUsed
+    const ulRemaining = (balRow?.ul_total ?? 6) - ulUsed
+    if (leaveType === 'SL' && daysCount > slRemaining) {
+      redirect(`/leave/request?error=${encodeURIComponent(`Insufficient scheduled leave balance. Available: ${slRemaining} day(s).`)}`)
+    }
+    if (leaveType === 'UL' && daysCount > ulRemaining) {
+      redirect(`/leave/request?error=${encodeURIComponent(`Insufficient unscheduled leave balance. Available: ${ulRemaining} day(s).`)}`)
     }
 
     const { data: newRequest, error: insertError } = await supabase

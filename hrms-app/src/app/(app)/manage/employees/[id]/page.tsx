@@ -33,6 +33,10 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
     'use server'
     const { id } = await params
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const role = formData.get('role') as string
 
     // manager logic mirrors add form

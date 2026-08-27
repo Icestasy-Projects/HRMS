@@ -17,6 +17,11 @@ export default async function NewTemplatePage() {
 
   async function createTemplate(formData: FormData) {
     'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const admin = createAdminClient()
     const name = formData.get('name') as string
     const role = formData.get('role') as string

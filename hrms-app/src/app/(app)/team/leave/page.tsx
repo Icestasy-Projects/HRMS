@@ -77,9 +77,9 @@ export default async function TeamLeavePage() {
     if (!req || req.status !== 'pending') return
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user || req.employee_id === user.id) return  // cannot approve own leave
-
-    const { data: approver } = await supabase.from('users').select('name').eq('id', user.id).single()
+    if (!user || req.employee_id === user.id) return
+    const { data: approver } = await supabase.from('users').select('name, role').eq('id', user.id).single()
+    if (!approver || !['admin', 'super_admin', 'sub_super_admin'].includes(approver.role)) return
 
     await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
 
@@ -117,9 +117,9 @@ export default async function TeamLeavePage() {
     if (!req || req.status !== 'pending') return
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user || req.employee_id === user.id) return  // cannot reject own leave
-
-    const { data: approver } = await supabase.from('users').select('name').eq('id', user.id).single()
+    if (!user || req.employee_id === user.id) return
+    const { data: approver } = await supabase.from('users').select('name, role').eq('id', user.id).single()
+    if (!approver || !['admin', 'super_admin', 'sub_super_admin'].includes(approver.role)) return
 
     await supabase.from('leave_requests').update({ status: 'rejected' }).eq('id', requestId)
 
@@ -213,7 +213,7 @@ export default async function TeamLeavePage() {
         }}>
           ⚠️ Could not load requests: {fetchError.message}
           <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', opacity: 0.85 }}>
-            Run in Supabase SQL Editor: <code>ALTER TABLE public.leave_requests DISABLE ROW LEVEL SECURITY;</code>
+            Please contact an administrator to resolve this issue.
           </p>
         </div>
       )}

@@ -64,13 +64,21 @@ export default async function RegularizationPage({
       .eq('work_date', workDate)
       .maybeSingle()
 
+    const { data: existingPending } = await admin
+      .from('attendance_regularizations')
+      .select('id, field')
+      .eq('employee_id', user.id)
+      .eq('work_date', workDate)
+      .eq('status', 'pending')
+    const pendingFields = new Set(existingPending?.map(r => r.field) ?? [])
+
     const rows: Array<{
       employee_id: string; work_date: string; field: string;
       current_value: string | null; requested_value: string;
       reason: string; status: string;
     }> = []
 
-    if (field === 'check_in' || field === 'both') {
+    if ((field === 'check_in' || field === 'both') && !pendingFields.has('check_in')) {
       rows.push({
         employee_id: user.id, work_date: workDate, field: 'check_in',
         current_value: log?.check_in ?? null,
@@ -78,7 +86,7 @@ export default async function RegularizationPage({
         reason, status: 'pending',
       })
     }
-    if (field === 'check_out' || field === 'both') {
+    if ((field === 'check_out' || field === 'both') && !pendingFields.has('check_out')) {
       rows.push({
         employee_id: user.id, work_date: workDate, field: 'check_out',
         current_value: log?.check_out ?? null,

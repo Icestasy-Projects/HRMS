@@ -45,6 +45,11 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
 
   async function addTask(formData: FormData) {
     'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const admin = createAdminClient()
     const title = formData.get('title') as string
     const description = (formData.get('description') as string) || null
@@ -61,6 +66,11 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
 
   async function deleteTask(formData: FormData) {
     'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const taskId = formData.get('task_id') as string
     const admin = createAdminClient()
     await admin.from('onboarding_task_items').delete().eq('id', taskId)
