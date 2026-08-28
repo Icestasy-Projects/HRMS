@@ -11,7 +11,7 @@ export default async function DashboardPage() {
 
   const { data: employee } = await supabase
     .from('users')
-    .select('*')
+    .select('id, name, role, department_id, employee_type')
     .eq('id', user.id)
     .single()
 
@@ -23,28 +23,29 @@ export default async function DashboardPage() {
   const dateFull = nowInIST.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   const firstName = employee.name.split(' ')[0]
 
-  const { data: todayLog } = await supabase
-    .from('attendance_logs')
-    .select('*')
-    .eq('user_id', employee.id)
-    .eq('work_date', today)
-    .single()
-
   const currentYear = new Date().getFullYear()
-  const { data: balRow } = await supabase
-    .from('leave_balances')
-    .select('sl_total, ul_total')
-    .eq('user_id', employee.id)
-    .eq('year', currentYear)
-    .single()
 
-  const { data: approvedLeaves } = await supabase
-    .from('leave_requests')
-    .select('leave_type, days_count')
-    .eq('employee_id', employee.id)
-    .eq('status', 'approved')
-    .gte('start_date', `${currentYear}-01-01`)
-    .lte('start_date', `${currentYear}-12-31`)
+  const [{ data: todayLog }, { data: balRow }, { data: approvedLeaves }] = await Promise.all([
+    supabase
+      .from('attendance_logs')
+      .select('check_in, check_out, day_status, work_date')
+      .eq('user_id', employee.id)
+      .eq('work_date', today)
+      .single(),
+    supabase
+      .from('leave_balances')
+      .select('sl_total, ul_total')
+      .eq('user_id', employee.id)
+      .eq('year', currentYear)
+      .single(),
+    supabase
+      .from('leave_requests')
+      .select('leave_type, days_count')
+      .eq('employee_id', employee.id)
+      .eq('status', 'approved')
+      .gte('start_date', `${currentYear}-01-01`)
+      .lte('start_date', `${currentYear}-12-31`),
+  ])
 
   const slUsed = approvedLeaves?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
   const ulUsed = approvedLeaves?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
@@ -82,12 +83,9 @@ export default async function DashboardPage() {
 
   const isHalfDay = todayLog?.day_status?.includes('half_day')
 
-  const attStatus = todayLog
-    ? isHalfDay
-      ? 'Half Day'
-      : todayLog.check_out
-        ? 'Complete'
-        : 'Clocked In'
+  const attStatusLabel = todayLog
+    ? isHalfDay ? 'Half Day'
+      : todayLog.check_out ? 'Complete' : 'Clocked In'
     : 'Not clocked in'
 
   const attColor = todayLog
@@ -98,23 +96,13 @@ export default async function DashboardPage() {
         : 'var(--primary)'
     : 'var(--muted)'
 
-  const hourIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
-  const greeting = hourIST < 12 ? 'Good morning' : hourIST < 17 ? 'Good afternoon' : 'Good evening'
-
-  const attStatusLabel = todayLog
-    ? isHalfDay ? 'Half Day'
-      : todayLog.check_out ? 'Complete' : 'Clocked In'
-    : 'Not clocked in'
-
   const attBadgeBg = todayLog
     ? isHalfDay ? '#fef3c7'
       : todayLog.check_out ? '#dcfce7' : 'var(--primary-l)'
     : 'var(--surface2)'
 
-  const attBadgeColor = todayLog
-    ? isHalfDay ? 'var(--warning)'
-      : todayLog.check_out ? 'var(--success)' : 'var(--primary)'
-    : 'var(--muted)'
+  const hourIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours()
+  const greeting = hourIST < 12 ? 'Good morning' : hourIST < 17 ? 'Good afternoon' : 'Good evening'
 
   type Worklet = { label: string; href: string; badge?: number; show?: boolean }
   const worklets: Worklet[] = [
@@ -158,7 +146,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <span style={{
-          background: attBadgeBg, color: attBadgeColor,
+          background: attBadgeBg, color: attColor,
           borderRadius: '999px', padding: '0.375rem 1rem',
           fontSize: '0.8rem', fontWeight: 700,
           whiteSpace: 'nowrap', alignSelf: 'flex-start',
@@ -179,7 +167,7 @@ export default async function DashboardPage() {
           borderRadius: '0.75rem', padding: '1.125rem', boxShadow: 'var(--shadow)',
         }}>
           <p style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.5rem' }}>Today</p>
-          <p style={{ color: attColor, fontWeight: 700, fontSize: '1rem', margin: 0 }}>{attStatus}</p>
+          <p style={{ color: attColor, fontWeight: 700, fontSize: '1rem', margin: 0 }}>{attStatusLabel}</p>
           {todayLog && (
             <p style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>
               {formatTime(todayLog.check_in)}{todayLog.check_out ? ` → ${formatTime(todayLog.check_out)}` : ' · Active'}

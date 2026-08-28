@@ -167,10 +167,16 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
+      <a href="#main-content" className="skip-nav" style={{
+        position: 'absolute', left: '-9999px', top: '0', zIndex: 100,
+        background: 'var(--primary)', color: '#fff', padding: '0.75rem 1.5rem',
+        fontSize: '14px', fontWeight: 600, borderRadius: '0 0 0.5rem 0',
+        textDecoration: 'none',
+      }}>Skip to main content</a>
       <NavProgress />
 
       {/* Fixed top header */}
-      <header style={{
+      <header role="banner" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         height: '56px',
         background: 'linear-gradient(135deg, #0f52a8 0%, #1b72d8 55%, #2e8af6 100%)',
@@ -210,7 +216,7 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
         </div>
 
         {/* Center: nav tabs — desktop only */}
-        <nav className="top-nav" style={{ flex: 1, display: 'none', alignItems: 'stretch', paddingLeft: '1.25rem' }}>
+        <nav aria-label="Main navigation" className="top-nav" style={{ flex: 1, display: 'none', alignItems: 'stretch', paddingLeft: '1.25rem' }}>
           {navItems.map(item => (
             <TopNavLink key={item.href} item={item} />
           ))}
@@ -218,7 +224,7 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
 
         {/* Right: bell + avatar */}
         <div style={{ display: 'flex', alignItems: 'center', paddingRight: '0.875rem', gap: '0.25rem', marginLeft: 'auto' }}>
-          <Link href="/notifications" prefetch={false} style={{
+          <Link href="/notifications" prefetch={false} aria-label="Notifications" style={{
             position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: '40px', height: '40px', borderRadius: '0.5rem',
           }}>
@@ -240,6 +246,8 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setAvatarMenuOpen(o => !o)}
+              aria-label="User menu"
+              aria-expanded={avatarMenuOpen}
               style={{
                 width: '36px', height: '36px', borderRadius: '50%',
                 background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.4)',
@@ -309,7 +317,7 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
                 <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', textTransform: 'capitalize' }}>{role.replace('_', ' ')}</div>
               </div>
             </div>
-            <nav style={{ flex: 1, padding: '0.75rem', overflowY: 'auto' }}>
+            <nav aria-label="Drawer navigation" style={{ flex: 1, padding: '0.75rem', overflowY: 'auto' }}>
               {navItems.map(item => (
                 <DrawerNavLink key={item.href} item={item} onClose={() => setDrawerOpen(false)} />
               ))}
@@ -330,14 +338,14 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
       )}
 
       {/* Main content */}
-      <main style={{ paddingTop: '56px', minHeight: '100dvh' }}>
+      <main id="main-content" role="main" style={{ paddingTop: '56px', minHeight: '100dvh' }}>
         <div style={{ padding: '1.25rem 1rem 5rem' }} className="main-inner">
           {children}
         </div>
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="bottom-nav" style={{
+      <nav aria-label="Mobile navigation" className="bottom-nav" style={{
         display: 'none',
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
         background: 'var(--surface)',
@@ -353,6 +361,7 @@ export default function AppShell({ children, role, userName, notifCount }: AppSh
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        .skip-nav:focus { left: 0 !important; }
         @media (min-width: 768px) {
           .ham-btn { display: none !important; }
           .top-nav { display: flex !important; }

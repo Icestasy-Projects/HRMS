@@ -7,7 +7,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: employee } = await supabase.from('users').select('*').eq('id', user.id).single()
+  const { data: employee } = await supabase.from('users').select('id, name, email, role, department_id, must_change_password').eq('id', user.id).single()
 
   if (employee?.must_change_password) {
     redirect('/set-password')
@@ -39,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const { count: notifCount } = await supabase
-    .from('notifications').select('*', { count: 'exact', head: true })
+    .from('notifications').select('id', { count: 'exact', head: true })
     .eq('recipient_id', employee.id).eq('is_read', false)
 
   return <AppShell role={employee.role} userName={employee.name} notifCount={notifCount ?? 0}>{children}</AppShell>

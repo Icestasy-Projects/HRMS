@@ -20,10 +20,11 @@ export const SCHEDULE = {
 }
 
 export function computeAttendanceStatus(
-  checkIn: string,
+  checkIn: string | null,
   checkOut: string | null,
   hasScheduledHalfDay = false,
 ): { dayStatus: string; isHalfDay: boolean } {
+  if (!checkIn) return { dayStatus: 'absent', isHalfDay: false }
   const isLate = checkIn > HALF_DAY_LATE_CUTOFF
   const isEarlyOut = checkOut ? checkOut < HALF_DAY_EARLY_CUTOFF : false
 
