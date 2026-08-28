@@ -1,5 +1,6 @@
 import Breadcrumb from '@/components/Breadcrumb'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { countWorkdays } from '@/lib/leave'
 import LeaveRequestForm from './LeaveRequestForm'

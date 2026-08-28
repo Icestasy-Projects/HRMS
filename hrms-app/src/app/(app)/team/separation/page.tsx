@@ -80,7 +80,11 @@ export default async function TeamSeparationPage() {
     if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
 
     const id = formData.get('id') as string
-    await admin.from('separation_requests').delete().eq('id', id)
+    await admin.from('separation_requests').update({
+      status: 'revoked',
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+    }).eq('id', id)
     redirect('/team/separation')
   }
 
@@ -169,11 +173,11 @@ export default async function TeamSeparationPage() {
         <p style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text)', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Mark Employee Separation
         </p>
-        <form action={markSeparation} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        <form action={markSeparation} className="sep-form" style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Employee</label>
-              <select name="employee_id" required style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem' }}>
+              <label htmlFor="sep-employee" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Employee</label>
+              <select id="sep-employee" name="employee_id" required style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem' }}>
                 <option value="">Select employee…</option>
                 {(employees ?? []).map(emp => (
                   <option key={emp.id} value={emp.id}>
@@ -183,66 +187,44 @@ export default async function TeamSeparationPage() {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Type</label>
+              <label htmlFor="sep-type" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Type</label>
               <select
-                id="sep-type-select"
+                id="sep-type"
                 name="type"
                 required
+                className="sep-type-select"
                 style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem' }}
               >
                 <option value="resignation">Resignation</option>
                 <option value="sabbatical">Sabbatical</option>
               </select>
-              <script dangerouslySetInnerHTML={{ __html: `
-                (function init() {
-                  function toggle(val) {
-                    var r = document.getElementById('sep-resignation-fields');
-                    var s = document.getElementById('sep-sabbatical-fields');
-                    if (!r || !s) return;
-                    if (val === 'sabbatical') {
-                      r.style.display = 'none';
-                      s.style.display = 'grid';
-                    } else {
-                      r.style.display = 'block';
-                      s.style.display = 'none';
-                    }
-                  }
-                  function setup() {
-                    var sel = document.getElementById('sep-type-select');
-                    if (!sel) return;
-                    sel.addEventListener('change', function() { toggle(this.value); });
-                    toggle(sel.value);
-                  }
-                  if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', setup);
-                  } else {
-                    setup();
-                  }
-                })();
-              ` }} />
+              <style>{`
+                .sep-form .sep-sabbatical-fields { display: none !important; }
+                .sep-form .sep-resignation-fields { display: block; }
+                .sep-form:has(option[value="sabbatical"]:checked) .sep-sabbatical-fields { display: grid !important; }
+                .sep-form:has(option[value="sabbatical"]:checked) .sep-resignation-fields { display: none !important; }
+              `}</style>
             </div>
           </div>
 
-          {/* Resignation date — shown for resignation */}
-          <div id="sep-resignation-fields" style={{ display: 'block' }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Last Working Day</label>
-            <input type="date" name="resignation_date" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+          <div className="sep-resignation-fields">
+            <label htmlFor="resignation_date" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Last Working Day</label>
+            <input id="resignation_date" type="date" name="resignation_date" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
           </div>
 
-          {/* Sabbatical dates — shown for sabbatical */}
-          <div id="sep-sabbatical-fields" style={{ display: 'none', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+          <div className="sep-sabbatical-fields" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical From</label>
-              <input type="date" name="sabbatical_from" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+              <label htmlFor="sabbatical_from" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical From</label>
+              <input id="sabbatical_from" type="date" name="sabbatical_from" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical To</label>
-              <input type="date" name="sabbatical_to" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+              <label htmlFor="sabbatical_to" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Sabbatical To</label>
+              <input id="sabbatical_to" type="date" name="sabbatical_to" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
             </div>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Reason / Note (optional)</label>
-            <input type="text" name="reason" placeholder="e.g. Voluntary resignation, medical sabbatical…" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+            <label htmlFor="sep-reason" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>Reason / Note (optional)</label>
+            <input id="sep-reason" type="text" name="reason" placeholder="e.g. Voluntary resignation, medical sabbatical…" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', boxSizing: 'border-box' }} />
           </div>
           <button type="submit" style={{ alignSelf: 'flex-start', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.5rem', padding: '0.625rem 1.5rem', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
             Mark as Separated

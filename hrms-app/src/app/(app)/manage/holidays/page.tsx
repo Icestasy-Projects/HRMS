@@ -16,7 +16,7 @@ export default async function HolidaysPage() {
 
   const { data: holidays } = await admin
     .from('holiday_calendar')
-    .select('*')
+    .select('id, name, holiday_date, type')
     .order('holiday_date', { ascending: true })
 
   async function addHoliday(formData: FormData) {
@@ -37,11 +37,8 @@ export default async function HolidaysPage() {
       type: 'public',
     })
 
-    // If holiday falls on a weekend, credit +1 SL to all active employees
-    // white_collar: Sat(6) or Sun(0) → credit everyone
-    // blue_collar: only Sun(0) → credit only blue_collar
-    const isWeekendForAll = dow === 0  // Sunday — off for all
-    const isWeekendWhiteOnly = dow === 6 // Saturday — off only for white_collar
+    const isWeekendForAll = dow === 0
+    const isWeekendWhiteOnly = dow === 6
 
     if (isWeekendForAll || isWeekendWhiteOnly) {
       const { data: allUsers } = await admin
@@ -49,30 +46,35 @@ export default async function HolidaysPage() {
         .select('id, employee_type')
         .eq('is_active', true)
 
-      for (const u of allUsers ?? []) {
-        const isBlueCollar = u.employee_type === 'blue_collar'
-        // Saturday: blue collar works, so only credit white collar
-        if (isWeekendWhiteOnly && isBlueCollar) continue
+      const eligibleUsers = (allUsers ?? []).filter(u => {
+        if (isWeekendWhiteOnly && u.employee_type === 'blue_collar') return false
+        return true
+      })
 
-        const { data: bal } = await admin
+      const userIds = eligibleUsers.map(u => u.id)
+      if (userIds.length > 0) {
+        const { data: balances } = await admin
           .from('leave_balances')
-          .select('id, sl_total')
-          .eq('user_id', u.id)
+          .select('id, user_id, sl_total')
+          .in('user_id', userIds)
           .eq('year', holidayYear)
-          .maybeSingle()
 
-        if (bal) {
-          await admin.from('leave_balances')
-            .update({ sl_total: (bal.sl_total ?? 0) + 1 })
-            .eq('id', bal.id)
-        } else {
-          await admin.from('leave_balances').insert({
-            user_id: u.id,
-            year: holidayYear,
-            sl_total: 1,
-            ul_total: 0,
-          })
-        }
+        const balMap = new Map((balances ?? []).map(b => [b.user_id, b]))
+
+        const toUpdate = eligibleUsers.filter(u => balMap.has(u.id))
+        const toInsert = eligibleUsers.filter(u => !balMap.has(u.id))
+
+        await Promise.all([
+          ...toUpdate.map(u => {
+            const bal = balMap.get(u.id)!
+            return admin.from('leave_balances')
+              .update({ sl_total: (bal.sl_total ?? 0) + 1 })
+              .eq('id', bal.id)
+          }),
+          ...(toInsert.length > 0 ? [admin.from('leave_balances').insert(
+            toInsert.map(u => ({ user_id: u.id, year: holidayYear, sl_total: 1, ul_total: 0 }))
+          )] : []),
+        ])
       }
     }
 
@@ -111,22 +113,26 @@ export default async function HolidaysPage() {
           .select('id, employee_type')
           .eq('is_active', true)
 
-        for (const u of allUsers ?? []) {
-          const isBlueCollar = u.employee_type === 'blue_collar'
-          if (isWeekendWhiteOnly && isBlueCollar) continue
+        const eligibleUsers = (allUsers ?? []).filter(u => {
+          if (isWeekendWhiteOnly && u.employee_type === 'blue_collar') return false
+          return true
+        })
 
-          const { data: bal } = await admin
+        const userIds = eligibleUsers.map(u => u.id)
+        if (userIds.length > 0) {
+          const { data: balances } = await admin
             .from('leave_balances')
-            .select('id, sl_total')
-            .eq('user_id', u.id)
+            .select('id, user_id, sl_total')
+            .in('user_id', userIds)
             .eq('year', holidayYear)
-            .maybeSingle()
 
-          if (bal) {
-            await admin.from('leave_balances')
-              .update({ sl_total: Math.max(0, (bal.sl_total ?? 0) - 1) })
-              .eq('id', bal.id)
-          }
+          await Promise.all(
+            (balances ?? []).map(bal =>
+              admin.from('leave_balances')
+                .update({ sl_total: Math.max(0, (bal.sl_total ?? 0) - 1) })
+                .eq('id', bal.id)
+            )
+          )
         }
       }
     }
@@ -212,10 +218,11 @@ export default async function HolidaysPage() {
         </h2>
         <form action={addHoliday} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+            <label htmlFor="holiday-name" style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
               Holiday Name
             </label>
             <input
+              id="holiday-name"
               name="name"
               type="text"
               required
@@ -231,10 +238,11 @@ export default async function HolidaysPage() {
             />
           </div>
           <div>
-            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+            <label htmlFor="holiday-date" style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
               Date
             </label>
             <input
+              id="holiday-date"
               name="date"
               type="date"
               required

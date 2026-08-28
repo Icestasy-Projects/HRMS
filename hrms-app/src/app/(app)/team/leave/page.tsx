@@ -1,5 +1,6 @@
 import Breadcrumb from '@/components/Breadcrumb'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { sendLeaveDecisionEmail } from '@/lib/email'
 import { todayIST } from '@/lib/attendance'
