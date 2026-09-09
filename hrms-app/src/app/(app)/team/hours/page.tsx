@@ -51,7 +51,8 @@ export default async function TeamHoursPage({
   const selectedMonth = params.month ? Number(params.month) : now.getMonth() + 1
 
   const monthStart = `${year}-${String(selectedMonth).padStart(2, '0')}-01`
-  const monthEnd = `${year}-${String(selectedMonth).padStart(2, '0')}-31`
+  const lastDay = new Date(year, selectedMonth, 0).getDate()
+  const monthEnd = `${year}-${String(selectedMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -194,7 +195,9 @@ export default async function TeamHoursPage({
                 const barColor = row.pct >= 90 ? 'var(--success)' : row.pct >= 70 ? 'var(--warning)' : 'var(--danger)'
                 return (
                   <tr key={row.id} style={{ background: rowBg }}>
-                    <td style={{ ...td, fontWeight: 600 }}>{row.name}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>
+                      <a href={`/team/hours/${row.id}?month=${selectedMonth}`} style={{ color: 'var(--primary)', textDecoration: 'none' }}>{row.name}</a>
+                    </td>
                     <td style={{ ...td, color: 'var(--muted)' }}>{row.dept}</td>
                     <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{row.workedHours}h</td>
                     <td style={{ ...td, textAlign: 'right', color: 'var(--muted)' }}>{row.elapsedQuota}h</td>
