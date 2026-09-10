@@ -80,7 +80,8 @@ export default async function AttendancePage({
   const curYear = nowDate.getFullYear()
   const curMonth = nowDate.getMonth() + 1
   const monthStart = `${curYear}-${String(curMonth).padStart(2, '0')}-01`
-  const monthEnd = `${curYear}-${String(curMonth).padStart(2, '0')}-31`
+  const lastDayOfMonth = new Date(curYear, curMonth, 0).getDate()
+  const monthEnd = `${curYear}-${String(curMonth).padStart(2, '0')}-${String(lastDayOfMonth).padStart(2, '0')}`
   const schedType: 'white_collar' | 'blue_collar' = scheduleType as 'white_collar' | 'blue_collar'
   const { data: monthLogs } = await supabase
     .from('attendance_logs')
