@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
+import { env } from '@/lib/env'
 
-const FROM = process.env.EMAIL_FROM ?? 'HRMS <noreply@icestasyprojects.com>'
+const FROM = env.EMAIL_FROM
 
 export async function sendLeaveAppliedEmail({
   managerEmail, managerName, employeeName,
@@ -35,7 +36,7 @@ export async function sendLeaveAppliedEmail({
           ${reason ? row('Reason', reason) : ''}
         </table>
         ${!isUnscheduled ? `
-        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://hrms-kappa-nine.vercel.app'}/team/leave"
+        <a href="${env.APP_URL}/team/leave"
            style="display:inline-block;background:#7c2fc9;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
           Review Request →
         </a>` : ''}
@@ -43,11 +44,11 @@ export async function sendLeaveAppliedEmail({
       </div>
     </div>`
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!env.RESEND_API_KEY) {
     console.error('[email] RESEND_API_KEY is not set — skipping sendLeaveAppliedEmail')
     return
   }
-  const resend = new Resend(process.env.RESEND_API_KEY)
+  const resend = new Resend(env.RESEND_API_KEY)
   const { error } = await resend.emails.send({ from: FROM, to: managerEmail, subject, html })
   if (error) console.error('[email] sendLeaveAppliedEmail failed:', error)
 }
@@ -84,7 +85,7 @@ export async function sendLeaveDecisionEmail({
           ${row('Duration', `${daysCount} day${daysCount !== 1 ? 's' : ''}`)}
           ${row('Status', label)}
         </table>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://hrms-kappa-nine.vercel.app'}/leave/history"
+        <a href="${env.APP_URL}/leave/history"
            style="display:inline-block;background:#7c2fc9;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
           View Leave History →
         </a>
@@ -92,11 +93,11 @@ export async function sendLeaveDecisionEmail({
       </div>
     </div>`
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!env.RESEND_API_KEY) {
     console.error('[email] RESEND_API_KEY is not set — skipping sendLeaveDecisionEmail')
     return
   }
-  const resend = new Resend(process.env.RESEND_API_KEY)
+  const resend = new Resend(env.RESEND_API_KEY)
   const { error } = await resend.emails.send({ from: FROM, to: employeeEmail, subject, html })
   if (error) console.error('[email] sendLeaveDecisionEmail failed:', error)
 }
