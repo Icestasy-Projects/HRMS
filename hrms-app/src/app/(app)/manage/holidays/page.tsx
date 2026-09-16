@@ -65,7 +65,7 @@ export default async function HolidaysPage() {
         const toUpdate = eligibleUsers.filter(u => balMap.has(u.id))
         const toInsert = eligibleUsers.filter(u => !balMap.has(u.id))
 
-        await Promise.all([
+        const balResults = await Promise.all([
           ...toUpdate.map(u => {
             const bal = balMap.get(u.id)!
             return admin.from('leave_balances')
@@ -76,6 +76,8 @@ export default async function HolidaysPage() {
             toInsert.map(u => ({ user_id: u.id, year: holidayYear, sl_total: 1, ul_total: 0 }))
           )] : []),
         ])
+        const balErr = balResults.find(r => r.error)
+        if (balErr?.error) console.error('Failed to update leave balances for holiday:', balErr.error.message)
       }
     }
 
@@ -127,13 +129,15 @@ export default async function HolidaysPage() {
             .in('user_id', userIds)
             .eq('year', holidayYear)
 
-          await Promise.all(
+          const delBalResults = await Promise.all(
             (balances ?? []).map(bal =>
               admin.from('leave_balances')
                 .update({ sl_total: Math.max(0, (bal.sl_total ?? 0) - 1) })
                 .eq('id', bal.id)
             )
           )
+          const delBalErr = delBalResults.find(r => r.error)
+          if (delBalErr?.error) console.error('Failed to reverse leave balance for holiday deletion:', delBalErr.error.message)
         }
       }
     }

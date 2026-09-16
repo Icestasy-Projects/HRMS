@@ -170,22 +170,24 @@ export default async function AttendancePage({
     const salaryDeduct = deduct - ulDeduct - slDeduct
 
     if (ulDeduct > 0) {
-      await admin.from('leave_requests').insert({
+      const { error: ulErr } = await admin.from('leave_requests').insert({
         employee_id: employeeId, leave_type: 'UL',
         start_date: date, end_date: date,
         is_half_day: true, days_count: ulDeduct,
         reason: 'Auto: unscheduled half day (attendance)',
         status: 'approved',
       })
+      if (ulErr) console.error('Failed to auto-deduct UL half day:', ulErr.message)
     }
     if (slDeduct > 0) {
-      await admin.from('leave_requests').insert({
+      const { error: slErr } = await admin.from('leave_requests').insert({
         employee_id: employeeId, leave_type: 'SL',
         start_date: date, end_date: date,
         is_half_day: true, days_count: slDeduct,
         reason: 'Auto: unscheduled half day (UL exhausted)',
         status: 'approved',
       })
+      if (slErr) console.error('Failed to auto-deduct SL half day:', slErr.message)
     }
     // salaryDeduct > 0 means both UL and SL are exhausted — to be handled in payroll
   }
