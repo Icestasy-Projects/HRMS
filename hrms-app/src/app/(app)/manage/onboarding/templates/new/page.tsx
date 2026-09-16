@@ -26,7 +26,8 @@ export default async function NewTemplatePage() {
     const admin = createAdminClient()
     const name = formData.get('name') as string
     const role = formData.get('role') as string
-    const { data } = await admin.from('onboarding_templates').insert({ name, role }).select().single()
+    const { data, error } = await admin.from('onboarding_templates').insert({ name, role }).select().single()
+    if (error) redirect(`/manage/onboarding?error=${encodeURIComponent('Failed to create template: ' + error.message)}`)
     if (data) redirect(`/manage/onboarding/templates/${data.id}`)
     else redirect('/manage/onboarding')
   }

@@ -32,7 +32,7 @@ export default async function PolicyPage() {
     if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const types = ['blue_collar', 'white_collar']
     for (const type of types) {
-      await supabase.from('leave_policy').update({
+      const { error } = await supabase.from('leave_policy').update({
         sl_annual: Number(formData.get(`sl_annual_${type}`)),
         ul_annual: Number(formData.get(`ul_annual_${type}`)),
         max_carry_forward: Number(formData.get(`max_carry_forward_${type}`)),
@@ -40,6 +40,7 @@ export default async function PolicyPage() {
         daily_hours_required: Number(formData.get(`daily_hours_required_${type}`)),
         working_days_per_week: Number(formData.get(`working_days_per_week_${type}`)),
       }).eq('employee_type', type)
+      if (error) redirect(`/manage/policy?error=${encodeURIComponent('Failed to update policy: ' + error.message)}`)
     }
     redirect('/manage/policy')
   }

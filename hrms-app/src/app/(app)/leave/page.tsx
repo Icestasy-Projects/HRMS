@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { carryforwardWarning, unpaidLeaveWarning, balanceLabel } from '@/lib/leave'
+import { carryforwardWarning, unpaidLeaveWarning, balanceLabel, DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 
 export default async function LeavePage() {
   const supabase = await createClient()
@@ -44,8 +44,8 @@ export default async function LeavePage() {
   const slUsed = approvedLeaves?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
   const ulUsed = approvedLeaves?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
 
-  const slTotal = balRow?.sl_total ?? 18
-  const ulTotal = balRow?.ul_total ?? 6
+  const slTotal = balRow?.sl_total ?? DEFAULT_SL_TOTAL
+  const ulTotal = balRow?.ul_total ?? DEFAULT_UL_TOTAL
   const slPenalty = Number(balRow?.sl_penalty ?? 0)
   const effectiveSlUsed = Math.round((slUsed + slPenalty) * 10) / 10
   const finalBalance = balRow ? {

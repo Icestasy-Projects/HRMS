@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import RegularizationActions from '@/components/RegularizationActions'
 import { computeAttendanceStatus } from '@/lib/attendance'
+import { logAudit } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,24 +62,26 @@ export default async function TeamRegularizationPage({
     const { dayStatus } = computeAttendanceStatus(newCheckIn ?? null, newCheckOut ?? null, false)
 
     if (log) {
-      await admin
+      const { error: logErr } = await admin
         .from('attendance_logs')
         .update({
           [req.field]: req.requested_value,
           day_status: dayStatus,
         })
         .eq('id', log.id)
+      if (logErr) redirect(`/team/regularization?tab=pending&error=${encodeURIComponent('Failed to update attendance log: ' + logErr.message)}`)
     } else {
-      await admin.from('attendance_logs').insert({
+      const { error: logErr } = await admin.from('attendance_logs').insert({
         user_id: req.employee_id,
         work_date: req.work_date,
         [req.field]: req.requested_value,
         day_status: dayStatus,
       })
+      if (logErr) redirect(`/team/regularization?tab=pending&error=${encodeURIComponent('Failed to create attendance log: ' + logErr.message)}`)
     }
 
     if (dayStatus === 'present' || (!dayStatus.includes('half_day') && newCheckIn && newCheckOut)) {
-      await admin
+      const { error: delErr } = await admin
         .from('leave_requests')
         .delete()
         .eq('employee_id', req.employee_id)
@@ -86,8 +89,9 @@ export default async function TeamRegularizationPage({
         .eq('end_date', req.work_date)
         .eq('status', 'approved')
         .like('reason', 'Auto%')
+      if (delErr) console.error('Failed to clean up auto-leave:', delErr.message)
     } else if (!dayStatus.includes('half_day')) {
-      await admin
+      const { error: delErr } = await admin
         .from('leave_requests')
         .delete()
         .eq('employee_id', req.employee_id)
@@ -96,9 +100,10 @@ export default async function TeamRegularizationPage({
         .eq('status', 'approved')
         .eq('is_half_day', true)
         .like('reason', 'Auto%')
+      if (delErr) console.error('Failed to clean up auto-leave:', delErr.message)
     }
 
-    await admin
+    const { error: regErr } = await admin
       .from('attendance_regularizations')
       .update({
         status: 'approved',
@@ -107,6 +112,9 @@ export default async function TeamRegularizationPage({
         admin_note: adminNote,
       })
       .eq('id', id)
+    if (regErr) redirect(`/team/regularization?tab=pending&error=${encodeURIComponent('Failed to approve regularization: ' + regErr.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'regularization.approve', tableName: 'attendance_regularizations', recordId: id, oldValue: { status: 'pending' }, newValue: { status: 'approved', employee_id: req.employee_id, field: req.field, requested_value: req.requested_value } })
 
     redirect('/team/regularization?tab=pending')
   }
@@ -121,7 +129,7 @@ export default async function TeamRegularizationPage({
     const id = formData.get('id') as string
     const adminNote = (formData.get('admin_note') as string) || ''
 
-    await admin
+    const { error: regErr } = await admin
       .from('attendance_regularizations')
       .update({
         status: 'rejected',
@@ -130,6 +138,9 @@ export default async function TeamRegularizationPage({
         admin_note: adminNote,
       })
       .eq('id', id)
+    if (regErr) redirect(`/team/regularization?tab=pending&error=${encodeURIComponent('Failed to reject regularization: ' + regErr.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'regularization.reject', tableName: 'attendance_regularizations', recordId: id })
 
     redirect('/team/regularization?tab=pending')
   }

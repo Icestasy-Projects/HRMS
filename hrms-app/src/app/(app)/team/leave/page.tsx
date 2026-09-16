@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { sendLeaveDecisionEmail } from '@/lib/email'
 import { todayIST } from '@/lib/attendance'
+import { logAudit } from '@/lib/audit'
 
 export default async function TeamLeavePage() {
   const supabase = await createClient()
@@ -32,16 +33,17 @@ export default async function TeamLeavePage() {
 
   if (expiredPending && expiredPending.length > 0) {
     const ids = expiredPending.map(r => r.id)
-    await admin.from('leave_requests').update({ status: 'rejected' }).in('id', ids)
-    // Notify each employee
+    const { error: autoRejectErr } = await admin.from('leave_requests').update({ status: 'rejected' }).in('id', ids)
+    if (autoRejectErr) console.error('Failed to auto-reject expired leaves:', autoRejectErr.message)
     for (const req of expiredPending) {
       const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
-      await admin.from('notifications').insert({
+      const { error: notifErr } = await admin.from('notifications').insert({
         recipient_id: req.employee_id,
         type: 'fyi',
         title: '❌ Leave Request Expired',
         message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) was auto-rejected as the date has passed.`,
       })
+      if (notifErr) console.error('Failed to notify expired leave:', notifErr.message)
     }
   }
 
@@ -82,16 +84,20 @@ export default async function TeamLeavePage() {
     const { data: approver } = await supabase.from('users').select('name, role').eq('id', user.id).single()
     if (!approver || !['admin', 'super_admin', 'sub_super_admin'].includes(approver.role)) return
 
-    await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
+    const { error: updateErr } = await supabase.from('leave_requests').update({ status: 'approved' }).eq('id', requestId)
+    if (updateErr) redirect(`/team/leave?error=${encodeURIComponent('Failed to approve leave: ' + updateErr.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'leave.approve', tableName: 'leave_requests', recordId: requestId, oldValue: { status: 'pending' }, newValue: { status: 'approved', employee_id: req.employee_id, leave_type: req.leave_type, days_count: req.days_count } })
 
     const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
-    await adminClient.from('notifications').insert({
+    const { error: notifErr } = await adminClient.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',
       title: '✅ Leave Approved',
       message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) has been approved${approver ? ` by ${approver.name}` : ''}.`,
       related_id: requestId,
     })
+    if (notifErr) console.error('Failed to send approval notification:', notifErr.message)
 
     // Send email to employee
     const { data: emp } = await supabase.from('users').select('email, name').eq('id', req.employee_id).single()
@@ -122,16 +128,20 @@ export default async function TeamLeavePage() {
     const { data: approver } = await supabase.from('users').select('name, role').eq('id', user.id).single()
     if (!approver || !['admin', 'super_admin', 'sub_super_admin'].includes(approver.role)) return
 
-    await supabase.from('leave_requests').update({ status: 'rejected' }).eq('id', requestId)
+    const { error: updateErr } = await supabase.from('leave_requests').update({ status: 'rejected' }).eq('id', requestId)
+    if (updateErr) redirect(`/team/leave?error=${encodeURIComponent('Failed to reject leave: ' + updateErr.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'leave.reject', tableName: 'leave_requests', recordId: requestId, oldValue: { status: 'pending' }, newValue: { status: 'rejected', employee_id: req.employee_id, leave_type: req.leave_type, days_count: req.days_count } })
 
     const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
-    await adminClient.from('notifications').insert({
+    const { error: notifErr } = await adminClient.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',
       title: '❌ Leave Rejected',
       message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) has been rejected${approver ? ` by ${approver.name}` : ''}.`,
       related_id: requestId,
     })
+    if (notifErr) console.error('Failed to send rejection notification:', notifErr.message)
 
     // Send email to employee
     const { data: emp } = await supabase.from('users').select('email, name').eq('id', req.employee_id).single()
@@ -163,16 +173,20 @@ export default async function TeamLeavePage() {
     const { data: req } = await supabase.from('leave_requests').select('*').eq('id', requestId).single()
     if (!req || req.status === 'pending') return
 
-    await supabase.from('leave_requests').update({ status: 'pending' }).eq('id', requestId)
+    const { error: updateErr } = await supabase.from('leave_requests').update({ status: 'pending' }).eq('id', requestId)
+    if (updateErr) redirect(`/team/leave?error=${encodeURIComponent('Failed to revert leave: ' + updateErr.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'leave.revert', tableName: 'leave_requests', recordId: requestId, oldValue: { status: req.status }, newValue: { status: 'pending', employee_id: req.employee_id } })
 
     const typeLabel = req.leave_type === 'SL' ? 'Scheduled' : 'Unscheduled'
-    await adminClient.from('notifications').insert({
+    const { error: notifErr } = await adminClient.from('notifications').insert({
       recipient_id: req.employee_id,
       type: 'fyi',
       title: 'Leave Request Reverted',
       message: `Your ${typeLabel} leave request for ${req.days_count} day(s) (${req.start_date} to ${req.end_date}) has been reverted to pending by ${me.name}. It will be reviewed again.`,
       related_id: requestId,
     })
+    if (notifErr) console.error('Failed to send revert notification:', notifErr.message)
 
     redirect('/team/leave')
   }

@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 
 export async function POST(req: NextRequest) {
   // Verify caller is super_admin
@@ -58,8 +59,8 @@ export async function POST(req: NextRequest) {
   await admin.from('leave_balances').upsert({
     user_id: uid,
     year: new Date().getFullYear(),
-    sl_total: 18, sl_used: 0,
-    ul_total: 6, ul_used: 0,
+    sl_total: DEFAULT_SL_TOTAL, sl_used: 0,
+    ul_total: DEFAULT_UL_TOTAL, ul_used: 0,
   }, { onConflict: 'user_id,year' })
 
   return NextResponse.json({ id: uid })

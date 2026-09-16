@@ -32,7 +32,7 @@ export default async function NewEmployeePage() {
           Add Employee
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-          Default password <strong>Test@123</strong> — employee must change it on first login.
+          Default password <strong>{process.env.DEFAULT_EMPLOYEE_PASSWORD || 'ChangeMeOnFirstLogin!1'}</strong> — employee must change it on first login.
         </p>
       </div>
 

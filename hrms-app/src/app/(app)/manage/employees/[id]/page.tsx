@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import { logAudit } from '@/lib/audit'
 
 const inputStyle = {
   width: '100%', background: 'var(--surface2)',
@@ -46,7 +47,7 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
       // keep whatever was submitted (auto-assigned on add, editable here)
     }
 
-    await supabase.from('users').update({
+    const { error } = await supabase.from('users').update({
       name: formData.get('name') as string,
       email: formData.get('email') as string,
       phone: (formData.get('phone') as string) || null,
@@ -55,6 +56,9 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
       employee_type: formData.get('employee_type') as string,
       manager_id: managerId,
     }).eq('id', id)
+    if (error) redirect(`/manage/employees/${id}?error=${encodeURIComponent('Failed to update employee: ' + error.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'employee.update', tableName: 'users', recordId: id, newValue: { name: formData.get('name'), role, employee_type: formData.get('employee_type'), department_id: formData.get('department_id') || null, manager_id: managerId } })
 
     redirect('/manage/employees')
   }

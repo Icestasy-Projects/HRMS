@@ -31,11 +31,12 @@ export default async function HolidaysPage() {
     const holidayYear = new Date(dateStr + 'T00:00:00').getFullYear()
     const dow = new Date(dateStr + 'T00:00:00').getDay() // 0=Sun, 6=Sat
 
-    await admin.from('holiday_calendar').insert({
+    const { error: insertErr } = await admin.from('holiday_calendar').insert({
       name: formData.get('name') as string,
       holiday_date: dateStr,
       type: 'public',
     })
+    if (insertErr) redirect(`/manage/holidays?error=${encodeURIComponent('Failed to add holiday: ' + insertErr.message)}`)
 
     const isWeekendForAll = dow === 0
     const isWeekendWhiteOnly = dow === 6
@@ -137,7 +138,8 @@ export default async function HolidaysPage() {
       }
     }
 
-    await admin.from('holiday_calendar').delete().eq('id', id)
+    const { error: delErr } = await admin.from('holiday_calendar').delete().eq('id', id)
+    if (delErr) redirect(`/manage/holidays?error=${encodeURIComponent('Failed to delete holiday: ' + delErr.message)}`)
     redirect('/manage/holidays')
   }
 

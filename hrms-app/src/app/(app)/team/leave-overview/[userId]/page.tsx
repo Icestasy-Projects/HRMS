@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import Link from 'next/link'
+import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,8 +44,8 @@ export default async function EmployeeLeaveDetailPage({
     .eq('employee_id', userId)
     .order('start_date', { ascending: false })
 
-  const slTotal = balRow?.sl_total ?? 18
-  const ulTotal = balRow?.ul_total ?? 6
+  const slTotal = balRow?.sl_total ?? DEFAULT_SL_TOTAL
+  const ulTotal = balRow?.ul_total ?? DEFAULT_UL_TOTAL
   const slPenalty = Number(balRow?.sl_penalty ?? 0)
 
   const thisYear = requests?.filter(r => r.start_date?.startsWith(String(year))) ?? []

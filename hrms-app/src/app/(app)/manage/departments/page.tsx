@@ -37,7 +37,8 @@ export default async function DepartmentsPage({
     if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const name = formData.get('name') as string
     const description = (formData.get('description') as string) || null
-    await supabase.from('departments').insert({ name, description })
+    const { error } = await supabase.from('departments').insert({ name, description })
+    if (error) redirect(`/manage/departments?error=${encodeURIComponent('Failed to create department: ' + error.message)}`)
     redirect('/manage/departments')
   }
 
@@ -51,7 +52,8 @@ export default async function DepartmentsPage({
     const id = formData.get('id') as string
     const name = formData.get('name') as string
     const description = (formData.get('description') as string) || null
-    await supabase.from('departments').update({ name, description }).eq('id', id)
+    const { error } = await supabase.from('departments').update({ name, description }).eq('id', id)
+    if (error) redirect(`/manage/departments?error=${encodeURIComponent('Failed to update department: ' + error.message)}`)
     redirect('/manage/departments')
   }
 

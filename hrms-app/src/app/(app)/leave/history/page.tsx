@@ -44,12 +44,13 @@ export default async function LeaveHistoryPage() {
       .in('status', ['pending', 'approved'])
       .single()
     if (!req || req.end_date < today) redirect('/leave/history')
-    await admin
+    const { error } = await admin
       .from('leave_requests')
       .delete()
       .eq('id', id)
       .eq('employee_id', user.id)
       .in('status', ['pending', 'approved'])
+    if (error) redirect(`/leave/history?error=${encodeURIComponent('Failed to retract leave: ' + error.message)}`)
     redirect('/leave/history')
   }
 

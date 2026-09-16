@@ -86,7 +86,7 @@ export default async function SeparationPage({
 
     if (admins && admins.length > 0 && emp) {
       const typeLabel = type === 'resignation' ? 'Resignation' : 'Sabbatical'
-      await admin.from('notifications').insert(
+      const { error: notifErr } = await admin.from('notifications').insert(
         admins.map(a => ({
           recipient_id: a.id,
           type: 'action_needed',
@@ -95,6 +95,7 @@ export default async function SeparationPage({
           related_id: newReq?.id ?? null,
         }))
       )
+      if (notifErr) console.error('Failed to send separation notifications:', notifErr.message)
     }
 
     redirect('/leave/separation')
@@ -108,7 +109,8 @@ export default async function SeparationPage({
 
     const admin = createAdminClient()
     const id = formData.get('id') as string
-    await admin.from('separation_requests').delete().eq('id', id).eq('employee_id', user.id).eq('status', 'pending')
+    const { error } = await admin.from('separation_requests').delete().eq('id', id).eq('employee_id', user.id).eq('status', 'pending')
+    if (error) redirect(`/leave/separation?error=${encodeURIComponent('Failed to withdraw request: ' + error.message)}`)
     redirect('/leave/separation')
   }
 
