@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST, haversineDistance, OFFICE_LOCATION, GEOFENCE_RADIUS_M } from '@/lib/attendance'
+import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST } from '@/lib/attendance'
 import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 import Link from 'next/link'
 import Breadcrumb from '@/components/Breadcrumb'
@@ -203,17 +203,6 @@ export default async function AttendancePage({
     const { data: emp } = await admin.from('users').select('*').eq('id', user.id).single()
     if (!emp) return
 
-    // Fix #3: Server-side geofence validation
-    const lat = parseFloat(formData.get('lat') as string)
-    const lng = parseFloat(formData.get('lng') as string)
-    if (isNaN(lat) || isNaN(lng)) {
-      redirect('/attendance?error=' + encodeURIComponent('Location data is required. Please enable GPS and try again.'))
-    }
-    const distance = haversineDistance(lat, lng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng)
-    if (distance > GEOFENCE_RADIUS_M) {
-      redirect('/attendance?error=' + encodeURIComponent(`You are ${Math.round(distance)}m from the office. Must be within ${GEOFENCE_RADIUS_M}m to clock in/out.`))
-    }
-
     const today = todayIST()
     const timeStr = timeIST()
 
@@ -315,10 +304,7 @@ export default async function AttendancePage({
           borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
           color: 'var(--danger)', marginBottom: '1rem', fontSize: '0.875rem',
         }}>
-          ⚠️ {errorMsg}
-          <p style={{ margin: '0.375rem 0 0', fontSize: '0.8rem', opacity: 0.85 }}>
-            If this persists, ask your admin to disable Row Level Security on attendance_logs in Supabase.
-          </p>
+          {errorMsg}
         </div>
       )}
 
