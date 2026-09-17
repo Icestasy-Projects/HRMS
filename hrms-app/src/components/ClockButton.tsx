@@ -14,7 +14,6 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [geoError, setGeoError] = useState('')
   const formRef = useRef<HTMLFormElement>(null)
 
   const label = isDone ? 'Day Complete' : isClockedIn ? 'Clock Out' : 'Clock In'
@@ -27,37 +26,20 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
 
   function handleClick() {
     if (isDone) return
-    setGeoError('')
     setConfirming(true)
   }
 
   async function handleConfirm() {
     setLoading(true)
     setConfirming(false)
-    setGeoError('')
 
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        })
-      })
-
       const form = formRef.current
       if (!form) return
 
-      const latInput = form.querySelector<HTMLInputElement>('input[name="lat"]')
-      const lngInput = form.querySelector<HTMLInputElement>('input[name="lng"]')
-      if (latInput) latInput.value = String(pos.coords.latitude)
-      if (lngInput) lngInput.value = String(pos.coords.longitude)
-
       const formData = new FormData(form)
       await action(formData)
-    } catch (err: unknown) {
-      if (err instanceof GeolocationPositionError) {
-        setGeoError('Location access denied. Please enable GPS to clock in/out.')
-      }
+    } catch {
       // redirect() throws a special Next.js error — that's expected
     }
     router.refresh()
@@ -78,16 +60,6 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
           display: 'flex', alignItems: 'center', gap: '0.5rem',
         }}>
           ✓ {successMsg}
-        </div>
-      )}
-
-      {geoError && (
-        <div style={{
-          background: 'var(--danger-l)', border: '1px solid var(--danger)',
-          borderRadius: '0.75rem', padding: '0.75rem 1rem',
-          color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 500,
-        }}>
-          {geoError}
         </div>
       )}
 
@@ -138,8 +110,6 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
       )}
 
       <form ref={formRef} style={{ display: 'contents' }}>
-        <input type="hidden" name="lat" value="" />
-        <input type="hidden" name="lng" value="" />
         <button
           type="button"
           disabled={isDone || loading}
