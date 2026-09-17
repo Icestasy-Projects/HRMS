@@ -2,7 +2,7 @@ import Breadcrumb from '@/components/Breadcrumb'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { countWorkdays } from '@/lib/leave'
+import { countWorkdays, DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 import LeaveRequestForm from './LeaveRequestForm'
 import { sendLeaveAppliedEmail } from '@/lib/email'
 
@@ -48,8 +48,8 @@ export default async function LeaveRequestPage({
   const slUsedNow = approvedForBalance?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
   const ulUsedNow = approvedForBalance?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
   const balance = {
-    sl_remaining: (balRow?.sl_total ?? 18) - slUsedNow,
-    ul_remaining: (balRow?.ul_total ?? 6) - ulUsedNow,
+    sl_remaining: (balRow?.sl_total ?? DEFAULT_SL_TOTAL) - slUsedNow,
+    ul_remaining: (balRow?.ul_total ?? DEFAULT_UL_TOTAL) - ulUsedNow,
   }
 
   // Fetch public holidays for the year
@@ -127,8 +127,8 @@ export default async function LeaveRequestPage({
       .lte('start_date', `${balYear}-12-31`)
     const slUsed = approvedThisYear?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
     const ulUsed = approvedThisYear?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
-    const slRemaining = (balRow?.sl_total ?? 18) - slUsed
-    const ulRemaining = (balRow?.ul_total ?? 6) - ulUsed
+    const slRemaining = (balRow?.sl_total ?? DEFAULT_SL_TOTAL) - slUsed
+    const ulRemaining = (balRow?.ul_total ?? DEFAULT_UL_TOTAL) - ulUsed
     if (leaveType === 'SL' && daysCount > slRemaining) {
       redirect(`/leave/request?error=${encodeURIComponent(`Insufficient scheduled leave balance. Available: ${slRemaining} day(s).`)}`)
     }
@@ -178,12 +178,13 @@ export default async function LeaveRequestPage({
 
     if (isUnscheduled) {
       for (const mid of managersToNotify) {
-        await adminClient.from('notifications').insert({
+        const { error: notifErr } = await adminClient.from('notifications').insert({
           recipient_id: mid, type: 'fyi',
           title: 'Unscheduled Leave Taken',
           message: `${emp.name} has taken ${daysCount} day(s) of unscheduled leave from ${startDate} to ${endDate}.`,
           related_id: newRequest.id,
         })
+        if (notifErr) console.error('Failed to send leave notification:', notifErr.message)
       }
       for (const mgr of managerUsers ?? []) {
         await sendLeaveAppliedEmail({
@@ -193,12 +194,13 @@ export default async function LeaveRequestPage({
       }
     } else {
       for (const mid of managersToNotify) {
-        await adminClient.from('notifications').insert({
+        const { error: notifErr } = await adminClient.from('notifications').insert({
           recipient_id: mid, type: 'action_needed',
           title: 'Leave Request Pending Approval',
           message: `${emp.name} has requested ${daysCount} day(s) of scheduled leave from ${startDate} to ${endDate}. Please review and approve or reject.`,
           related_id: newRequest.id,
         })
+        if (notifErr) console.error('Failed to send leave notification:', notifErr.message)
       }
       for (const mgr of managerUsers ?? []) {
         await sendLeaveAppliedEmail({

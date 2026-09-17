@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Props {
   isDone: boolean
   isClockedIn: boolean
-  action: () => Promise<void>
+  action: (formData: FormData) => Promise<void>
 }
 
 export default function ClockButton({ isDone, isClockedIn, action }: Props) {
@@ -14,6 +14,8 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [geoError, setGeoError] = useState('')
+  const formRef = useRef<HTMLFormElement>(null)
 
   const label = isDone ? 'Day Complete' : isClockedIn ? 'Clock Out' : 'Clock In'
   const icon = isDone ? '✓' : isClockedIn ? '◉' : '◎'
@@ -23,12 +25,39 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
     : 'Are you sure you want to clock in now?'
   const successMsg = isClockedIn ? 'Clocked out successfully!' : 'Clocked in successfully!'
 
+  function handleClick() {
+    if (isDone) return
+    setGeoError('')
+    setConfirming(true)
+  }
+
   async function handleConfirm() {
     setLoading(true)
     setConfirming(false)
+    setGeoError('')
+
     try {
-      await action()
-    } catch {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        })
+      })
+
+      const form = formRef.current
+      if (!form) return
+
+      const latInput = form.querySelector<HTMLInputElement>('input[name="lat"]')
+      const lngInput = form.querySelector<HTMLInputElement>('input[name="lng"]')
+      if (latInput) latInput.value = String(pos.coords.latitude)
+      if (lngInput) lngInput.value = String(pos.coords.longitude)
+
+      const formData = new FormData(form)
+      await action(formData)
+    } catch (err: unknown) {
+      if (err instanceof GeolocationPositionError) {
+        setGeoError('Location access denied. Please enable GPS to clock in/out.')
+      }
       // redirect() throws a special Next.js error — that's expected
     }
     router.refresh()
@@ -49,6 +78,16 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
           display: 'flex', alignItems: 'center', gap: '0.5rem',
         }}>
           ✓ {successMsg}
+        </div>
+      )}
+
+      {geoError && (
+        <div style={{
+          background: 'var(--danger-l)', border: '1px solid var(--danger)',
+          borderRadius: '0.75rem', padding: '0.75rem 1rem',
+          color: 'var(--danger)', marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 500,
+        }}>
+          {geoError}
         </div>
       )}
 
@@ -98,26 +137,30 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
         </div>
       )}
 
-      <button
-        type="button"
-        disabled={isDone || loading}
-        onClick={() => !isDone && setConfirming(true)}
-        style={{
-          width: '100%', height: '80px',
-          background: loading ? 'var(--muted)' : bg,
-          color: '#fff',
-          border: 'none', borderRadius: '1rem',
-          fontSize: '1.375rem', fontWeight: 800,
-          cursor: isDone || loading ? 'default' : 'pointer',
-          boxShadow: isDone ? 'none' : '0 4px 20px rgba(124,47,201,0.35)',
-          letterSpacing: '-0.01em',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem',
-          transition: 'opacity 0.15s',
-        }}
-      >
-        <span style={{ fontSize: isDone ? '1.25rem' : '1.5rem' }}>{loading ? '…' : icon}</span>
-        {loading ? 'Processing…' : label}
-      </button>
+      <form ref={formRef} style={{ display: 'contents' }}>
+        <input type="hidden" name="lat" value="" />
+        <input type="hidden" name="lng" value="" />
+        <button
+          type="button"
+          disabled={isDone || loading}
+          onClick={handleClick}
+          style={{
+            width: '100%', height: '80px',
+            background: loading ? 'var(--muted)' : bg,
+            color: '#fff',
+            border: 'none', borderRadius: '1rem',
+            fontSize: '1.375rem', fontWeight: 800,
+            cursor: isDone || loading ? 'default' : 'pointer',
+            boxShadow: isDone ? 'none' : '0 4px 20px rgba(124,47,201,0.35)',
+            letterSpacing: '-0.01em',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem',
+            transition: 'opacity 0.15s',
+          }}
+        >
+          <span style={{ fontSize: isDone ? '1.25rem' : '1.5rem' }}>{loading ? '…' : icon}</span>
+          {loading ? 'Processing…' : label}
+        </button>
+      </form>
     </>
   )
 }

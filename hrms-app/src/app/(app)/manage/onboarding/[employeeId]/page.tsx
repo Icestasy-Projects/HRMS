@@ -76,13 +76,15 @@ export default async function EmployeeOnboardingPage({ params }: { params: Promi
     if (!user) return
     const admin = createAdminClient()
     if (currentlyDone) {
-      await admin.from('onboarding_progress').delete()
+      const { error } = await admin.from('onboarding_progress').delete()
         .eq('employee_id', employeeId).eq('task_item_id', taskItemId)
+      if (error) redirect(`/manage/onboarding/${employeeId}?error=${encodeURIComponent('Failed to update task: ' + error.message)}`)
     } else {
-      await admin.from('onboarding_progress').upsert({
+      const { error } = await admin.from('onboarding_progress').upsert({
         employee_id: employeeId, task_item_id: taskItemId,
         completed: true, completed_at: new Date().toISOString(), completed_by: user?.id,
       }, { onConflict: 'employee_id,task_item_id' })
+      if (error) redirect(`/manage/onboarding/${employeeId}?error=${encodeURIComponent('Failed to update task: ' + error.message)}`)
     }
     redirect(`/manage/onboarding/${employeeId}`)
   }

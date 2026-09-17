@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatTime, todayIST } from '@/lib/attendance'
+import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 import WorkletGrid from '@/components/WorkletGrid'
 
 export default async function DashboardPage() {
@@ -50,8 +51,8 @@ export default async function DashboardPage() {
   const slUsed = approvedLeaves?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
   const ulUsed = approvedLeaves?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
   const leaveBalance = balRow ? {
-    sl_remaining: (balRow.sl_total ?? 18) - slUsed,
-    ul_remaining: (balRow.ul_total ?? 6) - ulUsed,
+    sl_remaining: (balRow.sl_total ?? DEFAULT_SL_TOTAL) - slUsed,
+    ul_remaining: (balRow.ul_total ?? DEFAULT_UL_TOTAL) - ulUsed,
   } : null
 
   const isSuperAdmin = employee.role === 'super_admin'

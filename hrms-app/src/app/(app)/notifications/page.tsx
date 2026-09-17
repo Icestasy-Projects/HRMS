@@ -31,11 +31,12 @@ export default async function NotificationsPage() {
     const { data: emp } = await supabase.from('users').select('id').eq('id', user.id).single()
     if (!emp) return
 
-    await supabase
+    const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
       .eq('recipient_id', emp.id)
       .eq('is_read', false)
+    if (error) console.error('Failed to mark notifications as read:', error.message)
 
     redirect('/notifications')
   }

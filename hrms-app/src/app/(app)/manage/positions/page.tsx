@@ -43,7 +43,8 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
     const department_id = (formData.get('department_id') as string) || null
     const headcount = parseInt(formData.get('headcount') as string) || 1
     const description = (formData.get('description') as string) || null
-    await admin.from('positions').insert({ title, department_id, headcount, description })
+    const { error } = await admin.from('positions').insert({ title, department_id, headcount, description })
+    if (error) redirect(`/manage/positions?error=${encodeURIComponent('Failed to create position: ' + error.message)}`)
     redirect('/manage/positions')
   }
 
@@ -60,7 +61,8 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
     const department_id = (formData.get('department_id') as string) || null
     const headcount = parseInt(formData.get('headcount') as string) || 1
     const description = (formData.get('description') as string) || null
-    await admin.from('positions').update({ title, department_id, headcount, description }).eq('id', id)
+    const { error } = await admin.from('positions').update({ title, department_id, headcount, description }).eq('id', id)
+    if (error) redirect(`/manage/positions?error=${encodeURIComponent('Failed to update position: ' + error.message)}`)
     redirect('/manage/positions')
   }
 
@@ -74,7 +76,8 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
     const admin = createAdminClient()
     const id = formData.get('id') as string
     const current = formData.get('is_active') === 'true'
-    await admin.from('positions').update({ is_active: !current }).eq('id', id)
+    const { error } = await admin.from('positions').update({ is_active: !current }).eq('id', id)
+    if (error) redirect(`/manage/positions?error=${encodeURIComponent('Failed to toggle position: ' + error.message)}`)
     redirect('/manage/positions')
   }
 

@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST } from '@/lib/attendance'
+import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST, haversineDistance, OFFICE_LOCATION, GEOFENCE_RADIUS_M } from '@/lib/attendance'
+import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 import Link from 'next/link'
 import Breadcrumb from '@/components/Breadcrumb'
 import ClockButton from '@/components/ClockButton'
@@ -159,8 +160,8 @@ export default async function AttendancePage({
 
     const ulUsed = usedLeaves?.filter(r => r.leave_type === 'UL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
     const slUsed = usedLeaves?.filter(r => r.leave_type === 'SL').reduce((s, r) => s + Number(r.days_count), 0) ?? 0
-    const ulRemaining = Math.max(0, (bal?.ul_total ?? 6) - ulUsed)
-    const slRemaining = Math.max(0, (bal?.sl_total ?? 18) - slUsed)
+    const ulRemaining = Math.max(0, (bal?.ul_total ?? DEFAULT_UL_TOTAL) - ulUsed)
+    const slRemaining = Math.max(0, (bal?.sl_total ?? DEFAULT_SL_TOTAL) - slUsed)
 
     const deduct = 0.5
     const ulDeduct = Math.min(deduct, ulRemaining)
@@ -169,27 +170,29 @@ export default async function AttendancePage({
     const salaryDeduct = deduct - ulDeduct - slDeduct
 
     if (ulDeduct > 0) {
-      await admin.from('leave_requests').insert({
+      const { error: ulErr } = await admin.from('leave_requests').insert({
         employee_id: employeeId, leave_type: 'UL',
         start_date: date, end_date: date,
         is_half_day: true, days_count: ulDeduct,
         reason: 'Auto: unscheduled half day (attendance)',
         status: 'approved',
       })
+      if (ulErr) console.error('Failed to auto-deduct UL half day:', ulErr.message)
     }
     if (slDeduct > 0) {
-      await admin.from('leave_requests').insert({
+      const { error: slErr } = await admin.from('leave_requests').insert({
         employee_id: employeeId, leave_type: 'SL',
         start_date: date, end_date: date,
         is_half_day: true, days_count: slDeduct,
         reason: 'Auto: unscheduled half day (UL exhausted)',
         status: 'approved',
       })
+      if (slErr) console.error('Failed to auto-deduct SL half day:', slErr.message)
     }
     // salaryDeduct > 0 means both UL and SL are exhausted — to be handled in payroll
   }
 
-  async function clockInOut() {
+  async function clockInOut(formData: FormData) {
     'use server'
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -199,6 +202,17 @@ export default async function AttendancePage({
 
     const { data: emp } = await admin.from('users').select('*').eq('id', user.id).single()
     if (!emp) return
+
+    // Fix #3: Server-side geofence validation
+    const lat = parseFloat(formData.get('lat') as string)
+    const lng = parseFloat(formData.get('lng') as string)
+    if (isNaN(lat) || isNaN(lng)) {
+      redirect('/attendance?error=' + encodeURIComponent('Location data is required. Please enable GPS and try again.'))
+    }
+    const distance = haversineDistance(lat, lng, OFFICE_LOCATION.lat, OFFICE_LOCATION.lng)
+    if (distance > GEOFENCE_RADIUS_M) {
+      redirect('/attendance?error=' + encodeURIComponent(`You are ${Math.round(distance)}m from the office. Must be within ${GEOFENCE_RADIUS_M}m to clock in/out.`))
+    }
 
     const today = todayIST()
     const timeStr = timeIST()

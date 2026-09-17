@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import NewEmployeeForm from './NewEmployeeForm'
+import { env } from '@/lib/env'
 
 export default async function NewEmployeePage() {
   const supabase = await createClient()
@@ -32,7 +33,7 @@ export default async function NewEmployeePage() {
           Add Employee
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-          Default password <strong>Test@123</strong> — employee must change it on first login.
+          Default password <strong>{env.DEFAULT_EMPLOYEE_PASSWORD}</strong> — employee must change it on first login.
         </p>
       </div>
 

@@ -61,7 +61,8 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
     const due_day_offset = due_day_offset_raw ? Number(due_day_offset_raw) : null
     const { data: existing } = await admin.from('onboarding_task_items').select('sort_order').eq('template_id', id).order('sort_order', { ascending: false }).limit(1)
     const sort_order = (existing?.[0]?.sort_order ?? 0) + 1
-    await admin.from('onboarding_task_items').insert({ template_id: id, title, description, assigned_to, category, priority, due_day_offset, sort_order })
+    const { error } = await admin.from('onboarding_task_items').insert({ template_id: id, title, description, assigned_to, category, priority, due_day_offset, sort_order })
+    if (error) redirect(`/manage/onboarding/templates/${id}?error=${encodeURIComponent('Failed to add task: ' + error.message)}`)
     redirect(`/manage/onboarding/templates/${id}`)
   }
 
@@ -74,7 +75,8 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
     if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
     const taskId = formData.get('task_id') as string
     const admin = createAdminClient()
-    await admin.from('onboarding_task_items').delete().eq('id', taskId)
+    const { error } = await admin.from('onboarding_task_items').delete().eq('id', taskId)
+    if (error) redirect(`/manage/onboarding/templates/${id}?error=${encodeURIComponent('Failed to delete task: ' + error.message)}`)
     redirect(`/manage/onboarding/templates/${id}`)
   }
 

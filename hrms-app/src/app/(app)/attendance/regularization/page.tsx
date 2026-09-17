@@ -37,12 +37,13 @@ export default async function RegularizationPage({
     if (!user) return
     const admin = createAdminClient()
     const id = formData.get('id') as string
-    await admin
+    const { error: delErr } = await admin
       .from('attendance_regularizations')
       .delete()
       .eq('id', id)
       .eq('employee_id', user.id)
       .eq('status', 'pending')
+    if (delErr) redirect(`/attendance/regularization?error=${encodeURIComponent('Failed to retract request: ' + delErr.message)}`)
     redirect('/attendance/regularization')
   }
 
@@ -95,7 +96,8 @@ export default async function RegularizationPage({
       })
     }
 
-    await admin.from('attendance_regularizations').insert(rows)
+    const { error: insertErr } = await admin.from('attendance_regularizations').insert(rows)
+    if (insertErr) redirect(`/attendance/regularization?error=${encodeURIComponent('Failed to submit request: ' + insertErr.message)}`)
 
     redirect('/attendance/regularization?success=1')
   }

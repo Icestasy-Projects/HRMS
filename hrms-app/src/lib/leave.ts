@@ -1,3 +1,6 @@
+export const DEFAULT_SL_TOTAL = 18
+export const DEFAULT_UL_TOTAL = 6
+
 // Count working days between two date strings (YYYY-MM-DD), excluding weekends and given holidays
 export function countWorkdays(startDate: string, endDate: string, holidays: string[] = []): number {
   const holidaySet = new Set(holidays)

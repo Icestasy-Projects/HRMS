@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import Link from 'next/link'
+import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,7 +70,7 @@ export default async function LeaveOverviewPage({
 
   const balanceMap: Record<string, { sl_total: number; ul_total: number; sl_penalty: number }> = {}
   for (const b of balances ?? []) {
-    balanceMap[b.user_id] = { sl_total: b.sl_total ?? 18, ul_total: b.ul_total ?? 6, sl_penalty: Number(b.sl_penalty ?? 0) }
+    balanceMap[b.user_id] = { sl_total: b.sl_total ?? DEFAULT_SL_TOTAL, ul_total: b.ul_total ?? DEFAULT_UL_TOTAL, sl_penalty: Number(b.sl_penalty ?? 0) }
   }
 
   // Fetch approved leave requests — full year or specific month
@@ -77,7 +78,7 @@ export default async function LeaveOverviewPage({
     ? `${year}-${String(selectedMonth).padStart(2,'0')}-01`
     : `${year}-01-01`
   const monthEnd = selectedMonth
-    ? `${year}-${String(selectedMonth).padStart(2,'0')}-31`
+    ? `${year}-${String(selectedMonth).padStart(2,'0')}-${String(new Date(year, selectedMonth, 0).getDate()).padStart(2,'0')}`
     : `${year}-12-31`
 
   const { data: usedLeaves } = await admin
@@ -96,7 +97,7 @@ export default async function LeaveOverviewPage({
 
   // Build rows
   const rows = activeEmployees.map(emp => {
-    const bal = balanceMap[emp.id] ?? { sl_total: 18, ul_total: 6, sl_penalty: 0 }
+    const bal = balanceMap[emp.id] ?? { sl_total: DEFAULT_SL_TOTAL, ul_total: DEFAULT_UL_TOTAL, sl_penalty: 0 }
     const used = usedMap[emp.id] ?? { sl: 0, ul: 0 }
     const slPenalty = bal.sl_penalty  // stored in DB by trigger
     const effectiveSlUsed = Math.round((used.sl + slPenalty) * 10) / 10

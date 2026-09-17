@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import { logAudit } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,7 +57,7 @@ export default async function TeamSeparationPage() {
     const sabbaticalTo = formData.get('sabbatical_to') as string | null
     const resignationDate = formData.get('resignation_date') as string | null
 
-    await admin.from('separation_requests').insert({
+    const { error: insertErr } = await admin.from('separation_requests').insert({
       employee_id: employeeId,
       type,
       reason: reason || null,
@@ -66,6 +67,9 @@ export default async function TeamSeparationPage() {
       approved_by: user.id,
       approved_at: new Date().toISOString(),
     })
+    if (insertErr) redirect(`/team/separation?error=${encodeURIComponent('Failed to mark separation: ' + insertErr.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'separation.mark', tableName: 'separation_requests', newValue: { employee_id: employeeId, type, status: 'approved' } })
 
     redirect('/team/separation')
   }
@@ -80,11 +84,13 @@ export default async function TeamSeparationPage() {
     if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
 
     const id = formData.get('id') as string
-    await admin.from('separation_requests').update({
+    const { error: revokeErr } = await admin.from('separation_requests').update({
       status: 'revoked',
       approved_by: user.id,
       approved_at: new Date().toISOString(),
     }).eq('id', id)
+    if (revokeErr) redirect(`/team/separation?error=${encodeURIComponent('Failed to revoke separation: ' + revokeErr.message)}`)
+    await logAudit({ actorId: user.id, action: 'separation.revoke', tableName: 'separation_requests', recordId: id, oldValue: { status: 'approved' }, newValue: { status: 'revoked' } })
     redirect('/team/separation')
   }
 
@@ -103,12 +109,15 @@ export default async function TeamSeparationPage() {
     const { data: req } = await admin.from('separation_requests').select('status').eq('id', id).single()
     if (!req || req.status !== 'pending') return
 
-    await admin.from('separation_requests').update({
+    const { error: approveErr } = await admin.from('separation_requests').update({
       status: 'approved',
       approved_by: user.id,
       approved_at: new Date().toISOString(),
       notice_period_days: noticePeriodDays ? Number(noticePeriodDays) : null,
     }).eq('id', id)
+    if (approveErr) redirect(`/team/separation?error=${encodeURIComponent('Failed to approve request: ' + approveErr.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'separation.approve', tableName: 'separation_requests', recordId: id, oldValue: { status: 'pending' }, newValue: { status: 'approved' } })
 
     redirect('/team/separation')
   }
@@ -128,12 +137,15 @@ export default async function TeamSeparationPage() {
     const { data: req } = await admin.from('separation_requests').select('status').eq('id', id).single()
     if (!req || req.status !== 'pending') return
 
-    await admin.from('separation_requests').update({
+    const { error: rejectErr } = await admin.from('separation_requests').update({
       status: 'rejected',
       approved_by: user.id,
       approved_at: new Date().toISOString(),
       rejection_reason: rejectionReason,
     }).eq('id', id)
+    if (rejectErr) redirect(`/team/separation?error=${encodeURIComponent('Failed to reject request: ' + rejectErr.message)}`)
+
+    await logAudit({ actorId: user.id, action: 'separation.reject', tableName: 'separation_requests', recordId: id, oldValue: { status: 'pending' }, newValue: { status: 'rejected', rejection_reason: rejectionReason } })
 
     redirect('/team/separation')
   }
