@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import { logAudit } from '@/lib/audit'
+import SuccessToast from '@/components/SuccessToast'
 
 const inputStyle = {
   width: '100%', background: 'var(--surface2)',
@@ -9,8 +11,15 @@ const inputStyle = {
   padding: '0.75rem 1rem', color: 'var(--text)', outline: 'none',
 } as React.CSSProperties
 
-export default async function EditEmployeePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditEmployeePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ success?: string; error?: string }>
+}) {
   const { id } = await params
+  const sp = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -63,6 +72,31 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
     redirect('/manage/employees')
   }
 
+  async function resetPassword(formData: FormData) {
+    'use server'
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
+
+    const newPassword = formData.get('new_password') as string
+    if (!newPassword || newPassword.length < 8) {
+      redirect(`/manage/employees/${id}?error=${encodeURIComponent('Password must be at least 8 characters')}`)
+    }
+
+    const admin = createAdminClient()
+    const { error } = await admin.auth.admin.updateUserById(id, { password: newPassword })
+    if (error) {
+      redirect(`/manage/employees/${id}?error=${encodeURIComponent('Failed to reset password: ' + error.message)}`)
+    }
+
+    await logAudit({ actorId: user.id, action: 'employee.password_reset', tableName: 'users', recordId: id, newValue: { password_reset: true } })
+
+    redirect(`/manage/employees/${id}?success=${encodeURIComponent('Password has been reset successfully')}`)
+  }
+
   const roleLabel = (r: string) =>
     r === 'super_admin' ? 'Super Admin' : r === 'sub_super_admin' ? 'Sub Super Admin' : r === 'admin' ? 'Admin' : r
 
@@ -81,6 +115,17 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
           Edit Employee
         </h1>
       </div>
+
+      {sp.success && <SuccessToast message={sp.success} />}
+      {sp.error && (
+        <div style={{
+          background: 'rgba(239,68,68,0.08)', border: '1px solid var(--danger)',
+          borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
+          color: 'var(--danger)', marginBottom: '1.25rem', fontWeight: 600, fontSize: '0.875rem',
+        }}>
+          {sp.error}
+        </div>
+      )}
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
         <form action={updateEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -149,6 +194,38 @@ export default async function EditEmployeePage({ params }: { params: Promise<{ i
             fontSize: '1rem', cursor: 'pointer', marginTop: '0.5rem',
           }}>
             Save Changes
+          </button>
+        </form>
+      </div>
+
+      {/* Reset Password */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem', marginTop: '1.5rem' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: '0 0 0.25rem' }}>
+          Reset Password
+        </h2>
+        <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '0 0 1rem' }}>
+          Set a new password for {emp.name}. They will need to use this password on their next login.
+        </p>
+        <form action={resetPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>
+              New Password
+            </label>
+            <input
+              name="new_password"
+              type="text"
+              required
+              minLength={8}
+              placeholder="Minimum 8 characters"
+              style={inputStyle}
+            />
+          </div>
+          <button type="submit" style={{
+            background: 'var(--warning, #f59e0b)', color: '#fff', border: 'none',
+            borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 700,
+            fontSize: '1rem', cursor: 'pointer',
+          }}>
+            Reset Password
           </button>
         </form>
       </div>
