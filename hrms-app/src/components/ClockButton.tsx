@@ -32,7 +32,6 @@ export default function ClockButton({ isDone, isClockedIn, action }: Props) {
   async function handleConfirm() {
     setLoading(true)
     setConfirming(false)
-    setGeoError('')
 
     try {
       const form = formRef.current
