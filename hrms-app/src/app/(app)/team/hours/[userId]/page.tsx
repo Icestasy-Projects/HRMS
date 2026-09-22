@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import EditTimeCell from '@/components/EditTimeCell'
+import SuccessToast from '@/components/SuccessToast'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +12,7 @@ export default async function EmployeeHoursPage({
   searchParams,
 }: {
   params: Promise<{ userId: string }>
-  searchParams: Promise<{ month?: string }>
+  searchParams: Promise<{ month?: string; success?: string }>
 }) {
   const { userId } = await params
   const sp = await searchParams
@@ -22,6 +24,51 @@ export default async function EmployeeHoursPage({
   if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) redirect('/dashboard')
 
   const admin = createAdminClient()
+
+  async function updateAttendanceTime(formData: FormData) {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!me || !['super_admin', 'sub_super_admin'].includes(me.role)) return
+
+    const admin = createAdminClient()
+    const targetUserId = formData.get('user_id') as string
+    const workDate = formData.get('work_date') as string
+    const newCheckIn = (formData.get('check_in') as string) || null
+    const newCheckOut = (formData.get('check_out') as string) || null
+
+    let hoursWorked: number | null = null
+    if (newCheckIn && newCheckOut) {
+      const [ih, im] = newCheckIn.split(':').map(Number)
+      const [oh, om] = newCheckOut.split(':').map(Number)
+      const mins = (oh * 60 + om) - (ih * 60 + im)
+      hoursWorked = mins > 0 ? Math.round((mins / 60) * 100) / 100 : 0
+    }
+
+    const checkInValue = newCheckIn ? newCheckIn + ':00' : null
+    const checkOutValue = newCheckOut ? newCheckOut + ':00' : null
+
+    const { error } = await admin
+      .from('attendance_logs')
+      .update({
+        check_in: checkInValue,
+        check_out: checkOutValue,
+        hours_worked: hoursWorked,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', targetUserId)
+      .eq('work_date', workDate)
+
+    const { userId } = await params
+    const sp = await searchParams
+    const month = sp.month ? `&month=${sp.month}` : ''
+    if (error) {
+      redirect(`/team/hours/${userId}?error=${encodeURIComponent(error.message)}${month}`)
+    }
+    redirect(`/team/hours/${userId}?success=1${month}`)
+  }
 
   const { data: employee } = await admin
     .from('users')
@@ -42,7 +89,7 @@ export default async function EmployeeHoursPage({
 
   const { data: logs } = await admin
     .from('attendance_logs')
-    .select('work_date, check_in, check_out, hours_worked, day_status, notes')
+    .select('work_date, check_in, check_out, hours_worked, day_status, notes, user_id')
     .eq('user_id', userId)
     .gte('work_date', monthStart)
     .lte('work_date', monthEnd)
@@ -147,6 +194,8 @@ export default async function EmployeeHoursPage({
         ))}
       </div>
 
+      {sp.success && <SuccessToast message="Attendance time updated successfully" />}
+
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '0.875rem', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -158,12 +207,13 @@ export default async function EmployeeHoursPage({
                 <th style={{ ...th, textAlign: 'right' }}>Check Out</th>
                 <th style={{ ...th, textAlign: 'right' }}>Hours</th>
                 <th style={th}>Notes</th>
+                <th style={th}></th>
               </tr>
             </thead>
             <tbody>
               {(logs ?? []).length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ ...td, textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>
+                  <td colSpan={7} style={{ ...td, textAlign: 'center', color: 'var(--muted)', padding: '2rem' }}>
                     No attendance records for {MONTHS[selectedMonth - 1]} {year}
                   </td>
                 </tr>
@@ -187,6 +237,15 @@ export default async function EmployeeHoursPage({
                     </td>
                     <td style={{ ...td, color: 'var(--muted)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {log.notes ?? '—'}
+                    </td>
+                    <td style={td}>
+                      <EditTimeCell
+                        logDate={log.work_date}
+                        userId={log.user_id}
+                        checkIn={log.check_in}
+                        checkOut={log.check_out}
+                        updateAction={updateAttendanceTime}
+                      />
                     </td>
                   </tr>
                 )
