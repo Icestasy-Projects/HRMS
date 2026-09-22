@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 import SuccessToast from '@/components/SuccessToast'
 import RegularizationForm from '@/components/RegularizationForm'
 import { todayIST } from '@/lib/attendance'
@@ -216,14 +217,19 @@ export default async function RegularizationPage({
                         {r.status === 'pending' && (
                           <form action={retractRequest}>
                             <input type="hidden" name="id" value={r.id} />
-                            <button type="submit" style={{
-                              background: 'transparent', border: '1px solid var(--danger)',
-                              color: 'var(--danger)', borderRadius: '0.5rem',
-                              padding: '0.2rem 0.625rem', fontSize: '0.72rem',
-                              fontWeight: 600, cursor: 'pointer',
-                            }}>
-                              Retract
-                            </button>
+                            <ConfirmSubmitButton
+                              label="Retract"
+                              confirmTitle="Retract Request"
+                              confirmMessage="Are you sure you want to retract this regularization request?"
+                              confirmLabel="Yes, Retract"
+                              variant="danger"
+                              style={{
+                                background: 'transparent', border: '1px solid var(--danger)',
+                                color: 'var(--danger)', borderRadius: '0.5rem',
+                                padding: '0.2rem 0.625rem', fontSize: '0.72rem',
+                                fontWeight: 600, cursor: 'pointer',
+                              }}
+                            />
                           </form>
                         )}
                       </td>

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import { logAudit } from '@/lib/audit'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -319,13 +320,17 @@ export default async function TeamSeparationPage() {
                         />
                       </div>
                     )}
-                    <button type="submit" style={{
-                      background: 'var(--success)', color: '#fff', border: 'none',
-                      borderRadius: '0.5rem', padding: '0.5rem 1.25rem',
-                      fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer',
-                    }}>
-                      Approve
-                    </button>
+                    <ConfirmSubmitButton
+                      label="Approve"
+                      confirmTitle="Approve Request"
+                      confirmMessage="Are you sure you want to approve this separation request?"
+                      confirmLabel="Yes, Approve"
+                      style={{
+                        background: 'var(--success)', color: '#fff', border: 'none',
+                        borderRadius: '0.5rem', padding: '0.5rem 1.25rem',
+                        fontSize: '0.875rem', fontWeight: 700,
+                      }}
+                    />
                   </form>
 
                   {/* Reject form */}
@@ -346,13 +351,18 @@ export default async function TeamSeparationPage() {
                         }}
                       />
                     </div>
-                    <button type="submit" style={{
-                      background: 'transparent', border: '1px solid var(--danger)',
-                      color: 'var(--danger)', borderRadius: '0.5rem', padding: '0.5rem 1.25rem',
-                      fontSize: '0.875rem', fontWeight: 700, cursor: 'pointer',
-                    }}>
-                      Reject
-                    </button>
+                    <ConfirmSubmitButton
+                      label="Reject"
+                      confirmTitle="Reject Request"
+                      confirmMessage="Are you sure you want to reject this separation request?"
+                      confirmLabel="Yes, Reject"
+                      variant="danger"
+                      style={{
+                        background: 'transparent', border: '1px solid var(--danger)',
+                        color: 'var(--danger)', borderRadius: '0.5rem', padding: '0.5rem 1.25rem',
+                        fontSize: '0.875rem', fontWeight: 700,
+                      }}
+                    />
                   </form>
                 </div>
               </div>
@@ -409,14 +419,19 @@ export default async function TeamSeparationPage() {
                     {req.status === 'approved' && (
                       <form action={revokeSeparation}>
                         <input type="hidden" name="id" value={req.id} />
-                        <button type="submit" style={{
-                          background: 'transparent', border: '1px solid var(--muted)',
-                          color: 'var(--muted)', borderRadius: '0.5rem',
-                          padding: '0.2rem 0.625rem', fontSize: '0.72rem',
-                          fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-                        }}>
-                          Revoke
-                        </button>
+                        <ConfirmSubmitButton
+                          label="Revoke"
+                          confirmTitle="Revoke Separation"
+                          confirmMessage="Are you sure you want to revoke this approved separation?"
+                          confirmLabel="Yes, Revoke"
+                          variant="danger"
+                          style={{
+                            background: 'transparent', border: '1px solid var(--muted)',
+                            color: 'var(--muted)', borderRadius: '0.5rem',
+                            padding: '0.2rem 0.625rem', fontSize: '0.72rem',
+                            fontWeight: 600, whiteSpace: 'nowrap',
+                          }}
+                        />
                       </form>
                     )}
                   </div>

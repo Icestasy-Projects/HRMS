@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,13 +90,17 @@ export default async function PolicyPage() {
           </div>
         ))}
 
-        <button type="submit" style={{
-          background: 'var(--primary)', color: '#fff', border: 'none',
-          borderRadius: '0.75rem', padding: '0.875rem',
-          fontWeight: 700, fontSize: '1rem', cursor: 'pointer',
-        }}>
-          Save Policy
-        </button>
+        <ConfirmSubmitButton
+          label="Save Policy"
+          confirmTitle="Save Leave Policy"
+          confirmMessage="Are you sure you want to update the leave policy? This affects all employees."
+          confirmLabel="Yes, Save"
+          style={{
+            background: 'var(--primary)', color: '#fff', border: 'none',
+            borderRadius: '0.75rem', padding: '0.875rem',
+            fontWeight: 700, fontSize: '1rem', width: '100%',
+          }}
+        />
       </form>
     </div>
   )

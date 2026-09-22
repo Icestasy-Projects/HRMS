@@ -1,4 +1,5 @@
 import Breadcrumb from '@/components/Breadcrumb'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
@@ -186,14 +187,19 @@ export default async function LeaveHistoryPage() {
                     return (
                       <form action={retractLeave}>
                         <input type="hidden" name="id" value={req.id} />
-                        <button type="submit" style={{
-                          background: 'transparent', border: '1px solid var(--danger)',
-                          color: 'var(--danger)', borderRadius: '0.5rem',
-                          padding: '0.2rem 0.625rem', fontSize: '0.75rem',
-                          fontWeight: 600, cursor: 'pointer',
-                        }}>
-                          Retract
-                        </button>
+                        <ConfirmSubmitButton
+                          label="Retract"
+                          confirmTitle="Retract Leave"
+                          confirmMessage="Are you sure you want to retract this leave request? This cannot be undone."
+                          confirmLabel="Yes, Retract"
+                          variant="danger"
+                          style={{
+                            background: 'transparent', border: '1px solid var(--danger)',
+                            color: 'var(--danger)', borderRadius: '0.5rem',
+                            padding: '0.2rem 0.625rem', fontSize: '0.75rem',
+                            fontWeight: 600, cursor: 'pointer',
+                          }}
+                        />
                       </form>
                     )
                   })()}

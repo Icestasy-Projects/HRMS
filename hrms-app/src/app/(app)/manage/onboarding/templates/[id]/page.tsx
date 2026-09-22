@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -156,7 +157,14 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
                   </div>
                   <form action={deleteTask}>
                     <input type="hidden" name="task_id" value={task.id} />
-                    <button type="submit" style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' }}>✕</button>
+                    <ConfirmSubmitButton
+                      label="✕"
+                      confirmTitle="Delete Task"
+                      confirmMessage={`Are you sure you want to delete "${task.title}"?`}
+                      confirmLabel="Yes, Delete"
+                      variant="danger"
+                      style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '1rem', padding: '0.25rem' }}
+                    />
                   </form>
                 </div>
               )
@@ -202,13 +210,17 @@ export default async function TemplateDetailPage({ params }: { params: Promise<{
               <input name="due_day_offset" type="number" min="0" placeholder="e.g. 1, 7, 30" style={inputStyle} />
             </div>
           </div>
-          <button type="submit" style={{
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            borderRadius: '0.625rem', padding: '0.75rem',
-            fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
-          }}>
-            + Add Task
-          </button>
+          <ConfirmSubmitButton
+            label="+ Add Task"
+            confirmTitle="Add Task"
+            confirmMessage="Are you sure you want to add this task to the template?"
+            confirmLabel="Yes, Add"
+            style={{
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              borderRadius: '0.625rem', padding: '0.75rem',
+              fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', width: '100%',
+            }}
+          />
         </form>
       </div>
     </div>

@@ -24,6 +24,7 @@ export default function NewEmployeeForm({
   const [role, setRole] = useState('employee')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [confirming, setConfirming] = useState(false)
 
   const superAdmins = managers.filter(m => m.role === 'super_admin')
   const defaultManagerId = superAdmins[0]?.id ?? ''
@@ -33,12 +34,21 @@ export default function NewEmployeeForm({
   const noManager = role === 'super_admin'
   const autoManager = role === 'sub_super_admin'
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const formRef = useState<HTMLFormElement | null>(null)
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    formRef[1](e.currentTarget)
+    setConfirming(true)
+  }
+
+  async function handleConfirm() {
+    setConfirming(false)
     setError('')
     setLoading(true)
 
-    const form = e.currentTarget
+    const form = formRef[0]
+    if (!form) return
     const data = new FormData(form)
 
     if (autoManager) {
@@ -65,6 +75,51 @@ export default function NewEmployeeForm({
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
+      {confirming && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998,
+        }}>
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: '1rem', padding: '2rem 1.75rem',
+            maxWidth: '360px', width: '90%', textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          }}>
+            <p style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)', margin: '0 0 0.5rem' }}>
+              Create Employee
+            </p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: '0 0 1.5rem' }}>
+              Are you sure you want to create this employee?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '0.625rem',
+                  border: '1px solid var(--border)', background: 'var(--surface2)',
+                  color: 'var(--muted)', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '0.625rem',
+                  border: 'none', background: 'var(--primary)',
+                  color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem',
+                }}
+              >
+                Yes, Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid var(--danger)', borderRadius: '0.75rem', padding: '0.75rem 1rem', color: 'var(--danger)', fontSize: '0.875rem', marginBottom: '1rem' }}>
           {error}
