@@ -138,6 +138,11 @@ export default function NewEmployeeForm({
         </div>
 
         <div>
+          <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>Location</label>
+          <input name="location" type="text" placeholder="e.g. Mumbai, Goa" style={inputStyle} />
+        </div>
+
+        <div>
           <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>Employee Type</label>
           <select name="employee_type" required style={inputStyle}>
             <option value="white_collar">White Collar</option>

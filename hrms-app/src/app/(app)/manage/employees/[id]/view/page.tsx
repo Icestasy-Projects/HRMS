@@ -140,6 +140,7 @@ export default async function EmployeeProfilePage({ params }: { params: Promise<
           {row('Employee Type', emp.employee_type?.replace('_', ' '))}
           {row('Role', roleLabel(emp.role))}
           {row('Department', (emp.departments as { name: string } | null)?.name)}
+          {row('Location', emp.location)}
           {row('Status', emp.is_active ? 'Active' : 'Inactive')}
           {row('Must Change Password', emp.must_change_password ? 'Yes' : 'No')}
         </div>

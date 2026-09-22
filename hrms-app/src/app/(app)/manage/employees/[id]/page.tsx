@@ -64,10 +64,11 @@ export default async function EditEmployeePage({
       department_id: (formData.get('department_id') as string) || null,
       employee_type: formData.get('employee_type') as string,
       manager_id: managerId,
+      location: (formData.get('location') as string) || null,
     }).eq('id', id)
     if (error) redirect(`/manage/employees/${id}?error=${encodeURIComponent('Failed to update employee: ' + error.message)}`)
 
-    await logAudit({ actorId: user.id, action: 'employee.update', tableName: 'users', recordId: id, newValue: { name: formData.get('name'), role, employee_type: formData.get('employee_type'), department_id: formData.get('department_id') || null, manager_id: managerId } })
+    await logAudit({ actorId: user.id, action: 'employee.update', tableName: 'users', recordId: id, newValue: { name: formData.get('name'), role, employee_type: formData.get('employee_type'), department_id: formData.get('department_id') || null, manager_id: managerId, location: formData.get('location') || null } })
 
     redirect('/manage/employees')
   }
@@ -133,6 +134,7 @@ export default async function EditEmployeePage({
             { name: 'name', label: 'Full Name', type: 'text', value: emp.name, required: true },
             { name: 'email', label: 'Email', type: 'email', value: emp.email, required: true },
             { name: 'phone', label: 'Phone', type: 'tel', value: emp.phone ?? '', required: false },
+            { name: 'location', label: 'Location', type: 'text', value: emp.location ?? '', required: false },
           ].map(field => (
             <div key={field.name}>
               <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>{field.label}</label>
