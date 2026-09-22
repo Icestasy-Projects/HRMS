@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 const inputStyle = {
   width: '100%', background: 'var(--surface2)',
@@ -57,13 +58,17 @@ export default async function NewTemplatePage() {
               <option value="all">All Roles</option>
             </select>
           </div>
-          <button type="submit" style={{
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 700,
-            fontSize: '1rem', cursor: 'pointer', marginTop: '0.25rem',
-          }}>
-            Create Template
-          </button>
+          <ConfirmSubmitButton
+            label="Create Template"
+            confirmTitle="Create Template"
+            confirmMessage="Are you sure you want to create this onboarding template?"
+            confirmLabel="Yes, Create"
+            style={{
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 700,
+              fontSize: '1rem', cursor: 'pointer', marginTop: '0.25rem', width: '100%',
+            }}
+          />
         </form>
       </div>
     </div>

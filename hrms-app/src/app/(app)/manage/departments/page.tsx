@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,13 +123,17 @@ export default async function DepartmentsPage({
                       <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.8rem', marginBottom: '0.375rem' }}>Description</label>
                       <input name="description" type="text" defaultValue={dept.description ?? ''} style={inputStyle} />
                     </div>
-                    <button type="submit" style={{
-                      background: 'var(--primary)', color: '#fff', border: 'none',
-                      borderRadius: '0.75rem', padding: '0.75rem', fontWeight: 600,
-                      cursor: 'pointer', minHeight: '44px',
-                    }}>
-                      Save Changes
-                    </button>
+                    <ConfirmSubmitButton
+                      label="Save Changes"
+                      confirmTitle="Update Department"
+                      confirmMessage="Are you sure you want to save these changes?"
+                      confirmLabel="Yes, Save"
+                      style={{
+                        background: 'var(--primary)', color: '#fff', border: 'none',
+                        borderRadius: '0.75rem', padding: '0.75rem', fontWeight: 600,
+                        cursor: 'pointer', minHeight: '44px', width: '100%',
+                      }}
+                    />
                   </form>
                 </div>
               )}
@@ -151,13 +156,17 @@ export default async function DepartmentsPage({
             <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '0.375rem' }}>Description</label>
             <input name="description" type="text" style={inputStyle} />
           </div>
-          <button type="submit" style={{
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 600,
-            cursor: 'pointer', minHeight: '44px',
-          }}>
-            Create Department
-          </button>
+          <ConfirmSubmitButton
+            label="Create Department"
+            confirmTitle="Create Department"
+            confirmMessage="Are you sure you want to create this department?"
+            confirmLabel="Yes, Create"
+            style={{
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 600,
+              cursor: 'pointer', minHeight: '44px', width: '100%',
+            }}
+          />
         </form>
       </div>
     </div>

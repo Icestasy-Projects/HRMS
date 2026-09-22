@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,13 +101,17 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
           </select>
           <input name="headcount" type="number" min="1" defaultValue="1" placeholder="Headcount" style={inputStyle} />
           <input name="description" type="text" placeholder="Description (optional)" style={inputStyle} />
-          <button type="submit" style={{
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            borderRadius: '0.625rem', padding: '0.625rem 1rem',
-            fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
-          }}>
-            Add Position
-          </button>
+          <ConfirmSubmitButton
+            label="Add Position"
+            confirmTitle="Add Position"
+            confirmMessage="Are you sure you want to create this position?"
+            confirmLabel="Yes, Add"
+            style={{
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              borderRadius: '0.625rem', padding: '0.625rem 1rem',
+              fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+            }}
+          />
         </form>
       </div>
 
@@ -137,7 +142,13 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
                     <input name="headcount" type="number" min="1" defaultValue={String(headcount)} style={inputStyle} />
                     <input name="description" type="text" defaultValue={pos.description ?? ''} placeholder="Description" style={inputStyle} />
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button type="submit" style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', flex: 1 }}>Save</button>
+                      <ConfirmSubmitButton
+                        label="Save"
+                        confirmTitle="Update Position"
+                        confirmMessage="Are you sure you want to save these changes?"
+                        confirmLabel="Yes, Save"
+                        style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.5rem', padding: '0.5rem 1rem', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', flex: 1 }}
+                      />
                       <a href="/manage/positions" style={{ background: 'var(--surface2)', color: 'var(--muted)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.5rem 1rem', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none', textAlign: 'center', flex: 1 }}>Cancel</a>
                     </div>
                   </form>
@@ -164,9 +175,14 @@ export default async function PositionsPage({ searchParams }: { searchParams: Pr
                       <form action={toggleActive}>
                         <input type="hidden" name="id" value={pos.id} />
                         <input type="hidden" name="is_active" value={String(isActive)} />
-                        <button type="submit" style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>
-                          {isActive ? 'Deactivate' : 'Activate'}
-                        </button>
+                        <ConfirmSubmitButton
+                          label={isActive ? 'Deactivate' : 'Activate'}
+                          confirmTitle={isActive ? 'Deactivate Position' : 'Activate Position'}
+                          confirmMessage={`Are you sure you want to ${isActive ? 'deactivate' : 'activate'} this position?`}
+                          confirmLabel={isActive ? 'Yes, Deactivate' : 'Yes, Activate'}
+                          variant={isActive ? 'warning' : 'primary'}
+                          style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
+                        />
                       </form>
                     </div>
                   </div>

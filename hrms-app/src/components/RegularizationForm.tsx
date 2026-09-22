@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useFormStatus } from 'react-dom'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--muted)',
@@ -15,26 +15,6 @@ const inputStyle: React.CSSProperties = {
   fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
 }
 
-function SubmitButton() {
-  const { pending } = useFormStatus()
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      style={{
-        background: 'var(--primary)', color: '#fff',
-        border: 'none', borderRadius: '0.625rem',
-        padding: '0.875rem', fontWeight: 700, fontSize: '0.95rem',
-        cursor: pending ? 'not-allowed' : 'pointer', minHeight: '44px',
-        opacity: pending ? 0.7 : 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-        width: '100%',
-      }}
-    >
-      {pending ? 'Submitting…' : 'Submit Request'}
-    </button>
-  )
-}
 
 export default function RegularizationForm({
   today,
@@ -97,7 +77,18 @@ export default function RegularizationForm({
         />
       </div>
 
-      <SubmitButton />
+      <ConfirmSubmitButton
+        label="Submit Request"
+        confirmTitle="Submit Regularization"
+        confirmMessage="Are you sure you want to submit this attendance correction request?"
+        confirmLabel="Yes, Submit"
+        style={{
+          background: 'var(--primary)', color: '#fff',
+          border: 'none', borderRadius: '0.625rem',
+          padding: '0.875rem', fontWeight: 700, fontSize: '0.95rem',
+          cursor: 'pointer', minHeight: '44px', width: '100%',
+        }}
+      />
     </form>
   )
 }

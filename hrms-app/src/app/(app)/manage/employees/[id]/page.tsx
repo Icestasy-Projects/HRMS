@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import { logAudit } from '@/lib/audit'
 import SuccessToast from '@/components/SuccessToast'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 const inputStyle = {
   width: '100%', background: 'var(--surface2)',
@@ -190,13 +191,17 @@ export default async function EditEmployeePage({
             </select>
           </div>
 
-          <button type="submit" style={{
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 700,
-            fontSize: '1rem', cursor: 'pointer', marginTop: '0.5rem',
-          }}>
-            Save Changes
-          </button>
+          <ConfirmSubmitButton
+            label="Save Changes"
+            confirmTitle="Save Employee Changes"
+            confirmMessage="Are you sure you want to save these changes?"
+            confirmLabel="Yes, Save"
+            style={{
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 700,
+              fontSize: '1rem', marginTop: '0.5rem', width: '100%',
+            }}
+          />
         </form>
       </div>
 
@@ -222,13 +227,18 @@ export default async function EditEmployeePage({
               style={inputStyle}
             />
           </div>
-          <button type="submit" style={{
-            background: 'var(--warning, #f59e0b)', color: '#fff', border: 'none',
-            borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 700,
-            fontSize: '1rem', cursor: 'pointer',
-          }}>
-            Reset Password
-          </button>
+          <ConfirmSubmitButton
+            label="Reset Password"
+            confirmTitle="Reset Employee Password"
+            confirmMessage={`Are you sure you want to reset the password for ${emp.name}?`}
+            confirmLabel="Yes, Reset"
+            variant="warning"
+            style={{
+              background: 'var(--warning, #f59e0b)', color: '#fff', border: 'none',
+              borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 700,
+              fontSize: '1rem', width: '100%',
+            }}
+          />
         </form>
       </div>
     </div>

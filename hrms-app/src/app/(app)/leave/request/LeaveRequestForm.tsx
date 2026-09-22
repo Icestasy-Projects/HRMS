@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 interface LeaveRequestFormProps {
   scheduledBalance: number
@@ -30,6 +31,9 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [isHalfDay, setIsHalfDay] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
 
   const sameDay = !!startDate && startDate === endDate
   const halfDayDisabled = !sameDay
@@ -145,12 +149,13 @@ export default function LeaveRequestForm({ scheduledBalance, unscheduledBalance,
         </div>
       )}
 
-      <button
-        type="submit"
-        style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', minHeight: '44px' }}
-      >
-        {leaveType === 'UL' ? 'Submit (Auto-approved)' : 'Submit Request'}
-      </button>
+      <ConfirmSubmitButton
+        label={leaveType === 'UL' ? 'Submit (Auto-approved)' : 'Submit Request'}
+        confirmTitle="Submit Leave Request"
+        confirmMessage={`Are you sure you want to submit a ${days} day ${leaveType === 'SL' ? 'scheduled' : 'unscheduled'} leave request?`}
+        confirmLabel="Yes, Submit"
+        style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 600, fontSize: '1rem', minHeight: '44px', width: '100%' }}
+      />
     </form>
   )
 }

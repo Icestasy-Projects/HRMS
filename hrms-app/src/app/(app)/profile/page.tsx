@@ -10,8 +10,9 @@ export default function ProfilePage() {
   const [confirm, setConfirm] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
+  const [confirming, setConfirming] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!current) {
       setStatus('error')
@@ -28,10 +29,14 @@ export default function ProfilePage() {
       setMessage('Password must be at least 8 characters.')
       return
     }
+    setConfirming(true)
+  }
+
+  async function handleConfirm() {
+    setConfirming(false)
     setStatus('loading')
     const supabase = createClient()
 
-    // Verify current password by re-authenticating
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) {
       setStatus('error')
@@ -70,6 +75,51 @@ export default function ProfilePage() {
           Change Password
         </h1>
       </div>
+
+      {confirming && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998,
+        }}>
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: '1rem', padding: '2rem 1.75rem',
+            maxWidth: '360px', width: '90%', textAlign: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          }}>
+            <p style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)', margin: '0 0 0.5rem' }}>
+              Update Password
+            </p>
+            <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: '0 0 1.5rem' }}>
+              Are you sure you want to change your password?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '0.625rem',
+                  border: '1px solid var(--border)', background: 'var(--surface2)',
+                  color: 'var(--muted)', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                style={{
+                  flex: 1, padding: '0.75rem', borderRadius: '0.625rem',
+                  border: 'none', background: 'var(--primary)',
+                  color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem',
+                }}
+              >
+                Yes, Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1.5rem' }}>
         {status === 'success' && (

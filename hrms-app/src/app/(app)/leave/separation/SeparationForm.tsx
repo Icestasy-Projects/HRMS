@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { DoorOpen, Palmtree } from 'lucide-react'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 interface Props {
   submitSeparation: (formData: FormData) => Promise<void>
@@ -74,13 +75,18 @@ export default function SeparationForm({ submitSeparation, withdrawRequest, exis
           {existing.status === 'pending' && (
             <form action={withdrawRequest} style={{ marginTop: '1rem' }}>
               <input type="hidden" name="id" value={existing.id} />
-              <button type="submit" style={{
-                background: 'transparent', border: '1px solid var(--danger)',
-                color: 'var(--danger)', borderRadius: '0.5rem', padding: '0.5rem 1rem',
-                fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-              }}>
-                Withdraw Request
-              </button>
+              <ConfirmSubmitButton
+                label="Withdraw Request"
+                confirmTitle="Withdraw Request"
+                confirmMessage="Are you sure you want to withdraw this separation request?"
+                confirmLabel="Yes, Withdraw"
+                variant="danger"
+                style={{
+                  background: 'transparent', border: '1px solid var(--danger)',
+                  color: 'var(--danger)', borderRadius: '0.5rem', padding: '0.5rem 1rem',
+                  fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+                }}
+              />
             </form>
           )}
         </div>
@@ -149,17 +155,17 @@ export default function SeparationForm({ submitSeparation, withdrawRequest, exis
                 style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: '0.5rem', background: 'var(--bg)', color: 'var(--text)', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }} />
             </div>
 
-            <button
-              type="submit"
-              disabled={!type}
+            <ConfirmSubmitButton
+              label="Submit Request"
+              confirmTitle="Submit Separation Request"
+              confirmMessage={`Are you sure you want to submit a ${type ?? ''} request? This will be sent to HR for review.`}
+              confirmLabel="Yes, Submit"
               style={{
                 background: type ? 'var(--primary)' : 'var(--muted)', color: '#fff', border: 'none',
                 borderRadius: '0.75rem', padding: '0.875rem', fontWeight: 700,
                 fontSize: '0.95rem', cursor: type ? 'pointer' : 'not-allowed', opacity: type ? 1 : 0.6,
               }}
-            >
-              Submit Request
-            </button>
+            />
           </form>
         </div>
       )}

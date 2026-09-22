@@ -1,20 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useFormStatus } from 'react-dom'
-
-function SubmitBtn({ label, pendingLabel, style }: {
-  label: string; pendingLabel: string; style: React.CSSProperties
-}) {
-  const { pending } = useFormStatus()
-  return (
-    <button type="submit" disabled={pending} style={{
-      ...style, opacity: pending ? 0.65 : 1, cursor: pending ? 'not-allowed' : 'pointer',
-    }}>
-      {pending ? pendingLabel : label}
-    </button>
-  )
-}
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 export default function RegularizationActions({
   id,
@@ -54,18 +41,23 @@ export default function RegularizationActions({
         <form action={approveAction}>
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="admin_note" value={note} />
-          <SubmitBtn
+          <ConfirmSubmitButton
             label="✓ Approve"
-            pendingLabel="…"
+            confirmTitle="Approve Request"
+            confirmMessage="Are you sure you want to approve this attendance regularization?"
+            confirmLabel="Yes, Approve"
             style={{ ...btnBase, background: 'var(--success)', color: '#fff' }}
           />
         </form>
         <form action={rejectAction}>
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="admin_note" value={note} />
-          <SubmitBtn
+          <ConfirmSubmitButton
             label="✕ Reject"
-            pendingLabel="…"
+            confirmTitle="Reject Request"
+            confirmMessage="Are you sure you want to reject this attendance regularization?"
+            confirmLabel="Yes, Reject"
+            variant="danger"
             style={{ ...btnBase, background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)' }}
           />
         </form>

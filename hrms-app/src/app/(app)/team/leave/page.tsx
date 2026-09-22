@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { sendLeaveDecisionEmail } from '@/lib/email'
 import { todayIST } from '@/lib/attendance'
 import { logAudit } from '@/lib/audit'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 export default async function TeamLeavePage() {
   const supabase = await createClient()
@@ -309,29 +310,38 @@ export default async function TeamLeavePage() {
                   <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, flexDirection: 'column' }}>
                     <form action={approveLeave}>
                       <input type="hidden" name="request_id" value={req.id} />
-                      <button type="submit" style={{
-                        width: '100%',
-                        background: 'var(--success)', color: '#fff',
-                        border: 'none', borderRadius: '0.625rem',
-                        padding: '0.625rem 1.25rem', cursor: 'pointer',
-                        fontWeight: 700, fontSize: '0.875rem', minHeight: '44px',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        ✓ Approve
-                      </button>
+                      <ConfirmSubmitButton
+                        label="✓ Approve"
+                        confirmTitle="Approve Leave"
+                        confirmMessage={`Approve ${req.employee?.name}'s ${req.days_count} day leave request?`}
+                        confirmLabel="Yes, Approve"
+                        style={{
+                          width: '100%',
+                          background: 'var(--success)', color: '#fff',
+                          border: 'none', borderRadius: '0.625rem',
+                          padding: '0.625rem 1.25rem',
+                          fontWeight: 700, fontSize: '0.875rem', minHeight: '44px',
+                          whiteSpace: 'nowrap',
+                        }}
+                      />
                     </form>
                     <form action={rejectLeave}>
                       <input type="hidden" name="request_id" value={req.id} />
-                      <button type="submit" style={{
-                        width: '100%',
-                        background: 'transparent', border: '1px solid var(--danger)',
-                        color: 'var(--danger)', borderRadius: '0.625rem',
-                        padding: '0.625rem 1.25rem', cursor: 'pointer',
-                        fontWeight: 600, fontSize: '0.875rem', minHeight: '44px',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        ✕ Reject
-                      </button>
+                      <ConfirmSubmitButton
+                        label="✕ Reject"
+                        confirmTitle="Reject Leave"
+                        confirmMessage={`Reject ${req.employee?.name}'s ${req.days_count} day leave request?`}
+                        confirmLabel="Yes, Reject"
+                        variant="danger"
+                        style={{
+                          width: '100%',
+                          background: 'transparent', border: '1px solid var(--danger)',
+                          color: 'var(--danger)', borderRadius: '0.625rem',
+                          padding: '0.625rem 1.25rem',
+                          fontWeight: 600, fontSize: '0.875rem', minHeight: '44px',
+                          whiteSpace: 'nowrap',
+                        }}
+                      />
                     </form>
                   </div>
                 </div>

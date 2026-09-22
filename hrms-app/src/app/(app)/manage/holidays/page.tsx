@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -190,8 +191,12 @@ export default async function HolidaysPage() {
             </div>
             <form action={deleteHoliday}>
               <input type="hidden" name="id" value={h.id} />
-              <button
-                type="submit"
+              <ConfirmSubmitButton
+                label="Delete"
+                confirmTitle="Delete Holiday"
+                confirmMessage={`Are you sure you want to delete "${h.name}"? Leave balances will be adjusted.`}
+                confirmLabel="Yes, Delete"
+                variant="danger"
                 style={{
                   background: 'rgba(239,68,68,0.1)',
                   border: '1px solid var(--danger)',
@@ -202,9 +207,7 @@ export default async function HolidaysPage() {
                   fontSize: '0.8rem',
                   fontWeight: 600,
                 }}
-              >
-                Delete
-              </button>
+              />
             </form>
           </div>
         ))}
@@ -263,8 +266,11 @@ export default async function HolidaysPage() {
               }}
             />
           </div>
-          <button
-            type="submit"
+          <ConfirmSubmitButton
+            label="Add Holiday"
+            confirmTitle="Add Holiday"
+            confirmMessage="Are you sure you want to add this holiday? Leave balances may be adjusted for weekend holidays."
+            confirmLabel="Yes, Add"
             style={{
               background: 'var(--primary)',
               color: '#fff',
@@ -274,10 +280,9 @@ export default async function HolidaysPage() {
               fontWeight: 600,
               cursor: 'pointer',
               minHeight: '44px',
+              width: '100%',
             }}
-          >
-            Add Holiday
-          </button>
+          />
         </form>
       </div>
     </div>
