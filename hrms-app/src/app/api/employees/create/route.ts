@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
   const departmentId = (form.get('department_id') as string) || null
   const employeeType = (form.get('employee_type') as string) || 'white_collar'
   const managerId = (form.get('manager_id') as string) || null
+  const location = (form.get('location') as string) || null
 
   const admin = createAdminClient()
 
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
     department_id: departmentId,
     employee_type: employeeType,
     manager_id: managerId || null,
+    location,
     is_active: true,
     must_change_password: true,
   }, { onConflict: 'id' })

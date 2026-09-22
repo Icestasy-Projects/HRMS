@@ -51,7 +51,7 @@ export default async function ManageEmployeesPage() {
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: '0.75rem', overflow: 'hidden', boxShadow: 'var(--shadow)',
         }}>
-          {employees.map((emp: { id: string; name: string; email: string; role: string; employee_type: string; departments?: { name: string } }, idx: number) => (
+          {employees.map((emp: { id: string; name: string; email: string; role: string; employee_type: string; location?: string; departments?: { name: string } }, idx: number) => (
             <div key={emp.id} style={{
               padding: '0.875rem 1.25rem',
               display: 'flex', alignItems: 'center',
@@ -70,7 +70,7 @@ export default async function ManageEmployeesPage() {
                 <div style={{ minWidth: 0 }}>
                   <p style={{ color: 'var(--text)', fontWeight: 600, margin: 0, fontSize: '0.9rem' }}>{emp.name}</p>
                   <p style={{ color: 'var(--muted)', fontSize: '0.78rem', margin: '0.2rem 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {emp.email} · {emp.departments ? (emp.departments as { name: string }).name : 'No dept'} · {emp.employee_type?.replace('_', ' ')}
+                    {emp.email} · {emp.departments ? (emp.departments as { name: string }).name : 'No dept'}{emp.location ? ` · ${emp.location}` : ''} · {emp.employee_type?.replace('_', ' ')}
                   </p>
                 </div>
               </Link>
