@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
+import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,7 +75,7 @@ export default async function HolidaysPage() {
               .eq('id', bal.id)
           }),
           ...(toInsert.length > 0 ? [admin.from('leave_balances').insert(
-            toInsert.map(u => ({ user_id: u.id, year: holidayYear, sl_total: 1, ul_total: 0 }))
+            toInsert.map(u => ({ user_id: u.id, year: holidayYear, sl_total: DEFAULT_SL_TOTAL + 1, ul_total: DEFAULT_UL_TOTAL }))
           )] : []),
         ])
         const balErr = balResults.find(r => r.error)
