@@ -23,7 +23,6 @@ export default async function RegularizationPage({
   const { data: employee } = await admin.from('users').select('id, name').eq('id', user.id).single()
   if (!employee) redirect('/login')
 
-  // Fetch past requests
   const { data: requests } = await admin
     .from('attendance_regularizations')
     .select('*')
@@ -105,10 +104,30 @@ export default async function RegularizationPage({
 
   const today = todayIST()
 
-  function statusColor(s: string) {
-    if (s === 'approved') return 'var(--success)'
-    if (s === 'rejected') return 'var(--danger)'
-    return 'var(--warning)'
+  function statusBadge(s: string) {
+    const map: Record<string, { bg: string; fg: string }> = {
+      pending: { bg: 'rgba(245,158,11,0.12)', fg: 'var(--warning)' },
+      approved: { bg: 'rgba(34,197,94,0.12)', fg: 'var(--success)' },
+      rejected: { bg: 'rgba(239,68,68,0.12)', fg: 'var(--danger)' },
+    }
+    const c = map[s] ?? map.pending
+    return { background: c.bg, color: c.fg, border: `1px solid ${c.fg}` }
+  }
+
+  function formatDate(d: string) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
+      weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+    })
+  }
+
+  function formatTime(t: string | null) {
+    if (!t) return null
+    const parts = t.split(':')
+    const h = parseInt(parts[0])
+    const m = parts[1]
+    const ampm = h >= 12 ? 'PM' : 'AM'
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+    return `${h12}:${m} ${ampm}`
   }
 
   return (
@@ -119,24 +138,25 @@ export default async function RegularizationPage({
           { label: 'Attendance', href: '/attendance' },
           { label: 'Regularization' },
         ]} />
-        <h1 style={{ fontSize: '1.625rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
           Attendance Regularization
         </h1>
-        <p style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+        <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
           Submit a request to correct your check-in or check-out time
         </p>
       </div>
 
       {params.success && (
         <>
-          <SuccessToast message="✓ Request submitted successfully!" />
-          {/* Inline banner below heading */}
+          <SuccessToast message="Request submitted successfully!" />
           <div style={{
-            background: 'var(--success-l)', border: '1px solid var(--success)',
-            borderRadius: '0.75rem', padding: '0.875rem 1.125rem',
-            color: 'var(--success)', marginBottom: '1.25rem', fontWeight: 600, fontSize: '0.875rem',
+            background: 'rgba(34,197,94,0.1)', border: '1px solid var(--success)',
+            borderRadius: '0.75rem', padding: '0.75rem 1rem',
+            color: 'var(--success)', marginBottom: '1.25rem', fontWeight: 600, fontSize: '0.85rem',
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
           }}>
-            ✓ Request submitted — your admin will review it shortly.
+            <span style={{ fontSize: '1.1rem' }}>✓</span>
+            Request submitted — your admin will review it shortly.
           </div>
         </>
       )}
@@ -144,7 +164,7 @@ export default async function RegularizationPage({
       {/* Submit form */}
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: '0.875rem', padding: '1.5rem', marginBottom: '1.75rem',
+        borderRadius: '1rem', padding: '1.25rem', marginBottom: '2rem',
         boxShadow: 'var(--shadow)',
       }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: '0 0 1.25rem' }}>
@@ -159,85 +179,116 @@ export default async function RegularizationPage({
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: '0 0 0.75rem' }}>
             Past Requests
           </h2>
-          <div style={{
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: '0.875rem', overflow: 'hidden', boxShadow: 'var(--shadow)',
-            overflowX: 'auto',
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '520px' }}>
-              <thead>
-                <tr style={{ background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
-                  {['Date', 'Field', 'From → To', 'Reason', 'Status', ''].map(h => (
-                    <th key={h} style={{
-                      padding: '0.65rem 1rem', textAlign: 'left',
-                      fontSize: '0.7rem', fontWeight: 700, color: 'var(--muted)',
-                      textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap',
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((r, i) => {
-                  const sc = statusColor(r.status)
-                  return (
-                    <tr key={r.id} style={{ borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', fontSize: '0.875rem' }}>
-                        {r.work_date}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', color: 'var(--text)', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                        {r.field === 'check_in' ? 'Check-In' : 'Check-Out'}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                        <span style={{ color: 'var(--danger)' }}>{r.current_value ?? '—'}</span>
-                        {' → '}
-                        <span style={{ color: 'var(--success)' }}>{r.requested_value}</span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', color: 'var(--muted)', fontSize: '0.82rem', maxWidth: '180px' }}>
-                        <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {r.reason ?? '—'}
-                        </span>
-                        {r.admin_note && (
-                          <span style={{ display: 'block', color: 'var(--text)', fontWeight: 600, marginTop: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            Admin: {r.admin_note}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
-                        <span style={{
-                          background: `${sc}18`, color: sc,
-                          border: `1px solid ${sc}`,
-                          borderRadius: '999px', padding: '0.2rem 0.65rem',
-                          fontSize: '0.72rem', fontWeight: 700,
-                          textTransform: 'capitalize',
-                        }}>
-                          {r.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', whiteSpace: 'nowrap' }}>
-                        {r.status === 'pending' && (
-                          <form action={retractRequest}>
-                            <input type="hidden" name="id" value={r.id} />
-                            <ConfirmSubmitButton
-                              label="Retract"
-                              confirmTitle="Retract Request"
-                              confirmMessage="Are you sure you want to retract this regularization request?"
-                              confirmLabel="Yes, Retract"
-                              variant="danger"
-                              style={{
-                                background: 'transparent', border: '1px solid var(--danger)',
-                                color: 'var(--danger)', borderRadius: '0.5rem',
-                                padding: '0.2rem 0.625rem', fontSize: '0.72rem',
-                                fontWeight: 600, cursor: 'pointer',
-                              }}
-                            />
-                          </form>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+            {requests.map(r => {
+              const badge = statusBadge(r.status)
+              const isCheckIn = r.field === 'check_in'
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '1rem',
+                    padding: '0.875rem 1.125rem',
+                    boxShadow: 'var(--shadow)',
+                  }}
+                >
+                  {/* Top row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.875rem' }}>
+                        {formatDate(r.work_date)}
+                      </span>
+                      <span style={{
+                        background: 'var(--surface2)',
+                        borderRadius: '0.375rem',
+                        padding: '0.125rem 0.5rem',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        color: 'var(--muted)',
+                      }}>
+                        {isCheckIn ? 'Check-In' : 'Check-Out'}
+                      </span>
+                    </div>
+                    <span style={{
+                      ...badge,
+                      borderRadius: '999px',
+                      padding: '0.15rem 0.5rem',
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      textTransform: 'capitalize',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}>
+                      {r.status}
+                    </span>
+                  </div>
+
+                  {/* Time change */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    fontFamily: 'monospace', fontSize: '0.9rem', marginBottom: '0.375rem',
+                  }}>
+                    <span style={{ color: r.current_value ? 'var(--danger)' : 'var(--muted)', fontWeight: 600 }}>
+                      {formatTime(r.current_value) ?? '—'}
+                    </span>
+                    <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>→</span>
+                    <span style={{ color: 'var(--success)', fontWeight: 700 }}>
+                      {formatTime(r.requested_value) ?? r.requested_value}
+                    </span>
+                  </div>
+
+                  {/* Reason */}
+                  {r.reason && (
+                    <p style={{
+                      color: 'var(--muted)', fontSize: '0.775rem',
+                      margin: 0, fontStyle: 'italic', lineHeight: 1.4,
+                    }}>
+                      &ldquo;{r.reason}&rdquo;
+                    </p>
+                  )}
+
+                  {/* Admin note */}
+                  {r.admin_note && (
+                    <div style={{
+                      fontSize: '0.775rem',
+                      color: 'var(--text)',
+                      marginTop: '0.5rem',
+                      padding: '0.375rem 0.625rem',
+                      background: 'var(--surface2)',
+                      borderRadius: '0.375rem',
+                      borderLeft: '3px solid var(--primary)',
+                    }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>Admin Note</span>
+                      <p style={{ margin: '0.15rem 0 0' }}>{r.admin_note}</p>
+                    </div>
+                  )}
+
+                  {/* Retract button */}
+                  {r.status === 'pending' && (
+                    <div style={{ marginTop: '0.625rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
+                      <form action={retractRequest}>
+                        <input type="hidden" name="id" value={r.id} />
+                        <ConfirmSubmitButton
+                          label="Retract Request"
+                          confirmTitle="Retract Request"
+                          confirmMessage="Are you sure you want to retract this regularization request?"
+                          confirmLabel="Yes, Retract"
+                          variant="danger"
+                          style={{
+                            background: 'transparent', border: '1px solid var(--danger)',
+                            color: 'var(--danger)', borderRadius: '0.5rem',
+                            padding: '0.375rem 0.75rem', fontSize: '0.75rem',
+                            fontWeight: 600, cursor: 'pointer',
+                          }}
+                        />
+                      </form>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
