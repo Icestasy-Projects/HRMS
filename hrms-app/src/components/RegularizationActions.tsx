@@ -14,51 +14,69 @@ export default function RegularizationActions({
 }) {
   const [note, setNote] = useState('')
 
-  const btnBase: React.CSSProperties = {
-    padding: '0.35rem 0.625rem',
-    borderRadius: '0.375rem',
-    fontWeight: 700,
-    fontSize: '0.75rem',
-    whiteSpace: 'nowrap',
-    border: 'none',
-  }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
       <input
         type="text"
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Note (optional)"
+        placeholder="Add a note (optional)"
         style={{
-          width: '100%', padding: '0.3rem 0.5rem',
-          border: '1px solid var(--border)', borderRadius: '0.375rem',
-          background: 'var(--surface2)', color: 'var(--text)',
-          fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box',
+          width: '100%',
+          padding: '0.5rem 0.75rem',
+          border: '1px solid var(--border)',
+          borderRadius: '0.5rem',
+          background: 'var(--surface2)',
+          color: 'var(--text)',
+          fontSize: '0.825rem',
+          outline: 'none',
+          boxSizing: 'border-box',
         }}
       />
-      <div style={{ display: 'flex', gap: '0.375rem' }}>
-        <form action={approveAction}>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <form action={approveAction} style={{ flex: 1 }}>
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="admin_note" value={note} />
           <ConfirmSubmitButton
-            label="✓ Approve"
+            label="Approve"
             confirmTitle="Approve Request"
             confirmMessage="Are you sure you want to approve this attendance regularization?"
             confirmLabel="Yes, Approve"
-            style={{ ...btnBase, background: 'var(--success)', color: '#fff' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '0.5rem',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              border: 'none',
+              background: 'var(--success)',
+              color: '#fff',
+              cursor: 'pointer',
+              minHeight: '36px',
+            }}
           />
         </form>
-        <form action={rejectAction}>
+        <form action={rejectAction} style={{ flex: 1 }}>
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="admin_note" value={note} />
           <ConfirmSubmitButton
-            label="✕ Reject"
+            label="Reject"
             confirmTitle="Reject Request"
             confirmMessage="Are you sure you want to reject this attendance regularization?"
             confirmLabel="Yes, Reject"
             variant="danger"
-            style={{ ...btnBase, background: 'transparent', color: 'var(--danger)', border: '1px solid var(--danger)' }}
+            style={{
+              width: '100%',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '0.5rem',
+              fontWeight: 700,
+              fontSize: '0.8rem',
+              background: 'transparent',
+              color: 'var(--danger)',
+              border: '1.5px solid var(--danger)',
+              cursor: 'pointer',
+              minHeight: '36px',
+            }}
           />
         </form>
       </div>
