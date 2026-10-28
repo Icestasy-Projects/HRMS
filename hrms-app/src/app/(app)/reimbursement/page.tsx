@@ -32,42 +32,39 @@ export default async function ReimbursementPage() {
   const isAdmin = ['super_admin', 'sub_super_admin', 'admin'].includes(employee.role)
 
   // Run own reimbursements + admin pending queries in parallel
-  const myReimbursementsPromise = supabase
-    .from('reimbursements')
-    .select('*')
-    .eq('employee_id', employee.id)
-    .order('created_at', { ascending: false })
-
-  let pendingReviewPromise: Promise<{ data: unknown[] | null }> = Promise.resolve({ data: [] })
-  if (isAdmin) {
+  async function fetchPendingReview() {
+    if (!isAdmin) return [] as never[]
     const admin = createAdminClient()
-    if (employee.role === 'admin') {
-      pendingReviewPromise = supabase.from('users').select('id').eq('manager_id', employee.id).then(({ data: team }) => {
-        const teamIds = team?.map(t => t.id) ?? []
-        if (teamIds.length === 0) return { data: [] }
-        return admin
-          .from('reimbursements')
-          .select('*, users!reimbursements_employee_id_fkey(name)')
-          .eq('status', 'pending')
-          .neq('employee_id', employee.id)
-          .in('employee_id', teamIds)
-          .order('created_at', { ascending: false })
-      })
-    } else {
-      pendingReviewPromise = admin
+    if (employee!.role === 'admin') {
+      const { data: team } = await supabase.from('users').select('id').eq('manager_id', employee!.id)
+      const teamIds = team?.map(t => t.id) ?? []
+      if (teamIds.length === 0) return []
+      const { data } = await admin
         .from('reimbursements')
         .select('*, users!reimbursements_employee_id_fkey(name)')
         .eq('status', 'pending')
-        .neq('employee_id', employee.id)
+        .neq('employee_id', employee!.id)
+        .in('employee_id', teamIds)
         .order('created_at', { ascending: false })
+      return data ?? []
     }
+    const { data } = await admin
+      .from('reimbursements')
+      .select('*, users!reimbursements_employee_id_fkey(name)')
+      .eq('status', 'pending')
+      .neq('employee_id', employee!.id)
+      .order('created_at', { ascending: false })
+    return data ?? []
   }
 
-  const [{ data: myReimbursements }, { data: pendingReviewData }] = await Promise.all([
-    myReimbursementsPromise,
-    pendingReviewPromise,
+  const [{ data: myReimbursements }, pendingReview] = await Promise.all([
+    supabase
+      .from('reimbursements')
+      .select('*')
+      .eq('employee_id', employee!.id)
+      .order('created_at', { ascending: false }),
+    fetchPendingReview(),
   ])
-  const pendingReview = (pendingReviewData ?? []) as typeof myReimbursements
 
   // Group own reimbursements by batch_id
   const batchMap = new Map<string, typeof myReimbursements>()
