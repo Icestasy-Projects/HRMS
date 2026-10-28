@@ -390,14 +390,15 @@ export default function ReimbursementList({
       {/* All Claims Tab */}
       {tab === 'all' && isAdmin && (
         <div>
-          {/* Status filter */}
-          <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          {/* Status filter + Export */}
+          <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             {[
               { key: 'all', label: 'All' },
               { key: 'pending', label: 'Pending' },
               { key: 'approved', label: 'Approved' },
               { key: 'rejected', label: 'Rejected' },
             ].map(f => (
+
               <button
                 key={f.key}
                 type="button"
@@ -418,6 +419,28 @@ export default function ReimbursementList({
                 })()}
               </button>
             ))}
+          </div>
+
+          {/* Export button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+            <a
+              href="/api/reimbursement/export"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+                padding: '0.5rem 1rem', borderRadius: '0.5rem',
+                border: '1px solid var(--border)', background: 'var(--surface)',
+                color: 'var(--text)', fontSize: '0.82rem', fontWeight: 600,
+                textDecoration: 'none', cursor: 'pointer',
+                boxShadow: 'var(--shadow)',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export Excel
+            </a>
           </div>
 
           {filteredAll.length === 0
