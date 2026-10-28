@@ -5,7 +5,7 @@ import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import NavProgress from '@/components/NavProgress'
-import { Home, Clock, Leaf, Users, Bell, Settings } from 'lucide-react'
+import { Home, Clock, Leaf, Users, Bell, Settings, Receipt } from 'lucide-react'
 import { LOGO_DATA_URI } from '@/lib/logo'
 
 type NavItem = { label: string; href: string; badge?: number }
@@ -13,6 +13,7 @@ type NavItem = { label: string; href: string; badge?: number }
 function getNavItems(role: string): NavItem[] {
   if (role === 'super_admin') return [
     { label: 'Home', href: '/dashboard' },
+    { label: 'Reimbursement', href: '/reimbursement' },
     { label: 'Team', href: '/team' },
     { label: 'Manage', href: '/manage' },
   ]
@@ -20,6 +21,7 @@ function getNavItems(role: string): NavItem[] {
     { label: 'Home', href: '/dashboard' },
     { label: 'Attendance', href: '/attendance' },
     { label: 'Leave', href: '/leave' },
+    { label: 'Reimbursement', href: '/reimbursement' },
     { label: 'Team', href: '/team' },
     { label: 'Manage', href: '/manage' },
   ]
@@ -27,12 +29,14 @@ function getNavItems(role: string): NavItem[] {
     { label: 'Home', href: '/dashboard' },
     { label: 'Attendance', href: '/attendance' },
     { label: 'Leave', href: '/leave' },
+    { label: 'Reimbursement', href: '/reimbursement' },
     { label: 'Team', href: '/team' },
   ]
   return [
     { label: 'Home', href: '/dashboard' },
     { label: 'Attendance', href: '/attendance' },
     { label: 'Leave', href: '/leave' },
+    { label: 'Reimbursement', href: '/reimbursement' },
     { label: 'Team Calendar', href: '/team/calendar' },
   ]
 }
@@ -109,6 +113,7 @@ const BOTTOM_NAV_ICONS: Record<string, React.ReactNode> = {
   '/dashboard':   <Home size={22} strokeWidth={1.75} />,
   '/attendance':  <Clock size={22} strokeWidth={1.75} />,
   '/leave':       <Leaf size={22} strokeWidth={1.75} />,
+  '/reimbursement': <Receipt size={22} strokeWidth={1.75} />,
   '/team':        <Users size={22} strokeWidth={1.75} />,
   '/team/calendar': <Users size={22} strokeWidth={1.75} />,
   '/manage':      <Settings size={22} strokeWidth={1.75} />,
