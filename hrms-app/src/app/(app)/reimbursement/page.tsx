@@ -31,7 +31,6 @@ export default async function ReimbursementPage() {
 
   const isAdmin = ['super_admin', 'sub_super_admin', 'admin'].includes(employee.role)
 
-  // Run own reimbursements + admin pending queries in parallel
   async function fetchPendingReview() {
     if (!isAdmin) return [] as never[]
     const admin = createAdminClient()
@@ -57,48 +56,75 @@ export default async function ReimbursementPage() {
     return data ?? []
   }
 
-  const [{ data: myReimbursements }, pendingReview] = await Promise.all([
+  async function fetchAllReimbursements() {
+    if (!isAdmin) return [] as never[]
+    const admin = createAdminClient()
+    if (employee!.role === 'admin') {
+      const { data: team } = await supabase.from('users').select('id').eq('manager_id', employee!.id)
+      const teamIds = team?.map(t => t.id) ?? []
+      if (teamIds.length === 0) return []
+      const { data } = await admin
+        .from('reimbursements')
+        .select('*, users!reimbursements_employee_id_fkey(name)')
+        .in('employee_id', [...teamIds, employee!.id])
+        .order('created_at', { ascending: false })
+      return data ?? []
+    }
+    const { data } = await admin
+      .from('reimbursements')
+      .select('*, users!reimbursements_employee_id_fkey(name)')
+      .order('created_at', { ascending: false })
+    return data ?? []
+  }
+
+  const [{ data: myReimbursements }, pendingReview, allReimbursements] = await Promise.all([
     supabase
       .from('reimbursements')
       .select('*')
       .eq('employee_id', employee!.id)
       .order('created_at', { ascending: false }),
     fetchPendingReview(),
+    fetchAllReimbursements(),
   ])
 
-  // Group own reimbursements by batch_id
-  const batchMap = new Map<string, typeof myReimbursements>()
-  for (const r of myReimbursements ?? []) {
-    const list = batchMap.get(r.batch_id) ?? []
-    list.push(r)
-    batchMap.set(r.batch_id, list)
+  function groupIntoBatches(rows: Record<string, unknown>[], includeName: boolean) {
+    const map = new Map<string, Record<string, unknown>[]>()
+    for (const r of rows) {
+      const bid = r.batch_id as string
+      const list = map.get(bid) ?? []
+      list.push(r)
+      map.set(bid, list)
+    }
+    return Array.from(map.entries()).map(([batchId, items]) => ({
+      batchId,
+      items: items as { id: string; expense_date: string; category: string; purpose: string; amount: number; status: string; created_at: string }[],
+      total: items.reduce((s, i) => s + Number(i.amount as number), 0),
+      status: items[0].status as string,
+      createdAt: items[0].created_at as string,
+      ...(includeName ? {
+        employeeName: (items[0].users as { name: string } | null)?.name ?? 'Unknown',
+      } : {}),
+    }))
   }
-  const batches = Array.from(batchMap.entries()).map(([batchId, items]) => ({
-    batchId,
-    items: items!,
-    total: items!.reduce((s, i) => s + Number(i.amount), 0),
-    status: items![0].status,
-    createdAt: items![0].created_at,
-  }))
 
-  // Group pending review by batch_id
-  const pendingBatchMap = new Map<string, typeof pendingReview>()
-  for (const r of pendingReview ?? []) {
-    const list = pendingBatchMap.get(r.batch_id) ?? []
-    list.push(r)
-    pendingBatchMap.set(r.batch_id, list)
+  function computeStats(batchList: { total: number; status: string }[]) {
+    let totalClaimed = 0, totalApproved = 0, totalPending = 0, totalRejected = 0
+    for (const b of batchList) {
+      totalClaimed += b.total
+      if (b.status === 'approved') totalApproved += b.total
+      else if (b.status === 'pending') totalPending += b.total
+      else if (b.status === 'rejected') totalRejected += b.total
+    }
+    return { totalClaimed, totalApproved, totalPending, totalRejected, claimCount: batchList.length }
   }
-  const pendingBatches = Array.from(pendingBatchMap.entries()).map(([batchId, items]) => ({
-    batchId,
-    items: items!,
-    total: items!.reduce((s, i) => s + Number(i.amount), 0),
-    employeeName: (items![0] as Record<string, unknown>).users
-      ? ((items![0] as Record<string, unknown>).users as { name: string }).name
-      : 'Unknown',
-    createdAt: items![0].created_at,
-  }))
 
-  // Server actions for approve/reject
+  const batches = groupIntoBatches(myReimbursements ?? [], false)
+  const pendingBatches = groupIntoBatches(pendingReview ?? [], true)
+  const allBatches = groupIntoBatches(allReimbursements ?? [], true)
+
+  const myStats = computeStats(batches)
+  const allStats = isAdmin ? computeStats(allBatches) : null
+
   async function approveReimbursement(formData: FormData) {
     'use server'
     const supabase = await createClient()
@@ -151,7 +177,6 @@ export default async function ReimbursementPage() {
         </h1>
       </div>
 
-      {/* New Claim Button */}
       <div style={{ marginBottom: '1.75rem' }}>
         <Link href="/reimbursement/new" style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
@@ -167,8 +192,11 @@ export default async function ReimbursementPage() {
       <ReimbursementList
         batches={batches}
         pendingBatches={pendingBatches}
+        allBatches={allBatches}
         isAdmin={isAdmin}
         categoryLabels={CATEGORY_LABELS}
+        myStats={myStats}
+        allStats={allStats}
         approveAction={approveReimbursement}
         rejectAction={rejectReimbursement}
       />
