@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
+import AnalyticsView from './AnalyticsView'
 
 interface ReimbursementItem {
   id: string
@@ -30,14 +31,26 @@ interface SummaryStats {
   claimCount: number
 }
 
+interface EmployeeAnalytics {
+  employeeId: string
+  name: string
+  monthly: Record<string, number>
+  categoryByYear: Record<string, Record<string, number>>
+  yearlyTotals: Record<string, number>
+  statusByYear: Record<string, { approved: number; pending: number; rejected: number }>
+}
+
 interface Props {
   batches: Batch[]
   pendingBatches: Batch[]
   allBatches: Batch[]
   isAdmin: boolean
+  isSuperAdmin: boolean
   categoryLabels: Record<string, string>
   myStats: SummaryStats
   allStats: SummaryStats | null
+  employeeAnalytics: EmployeeAnalytics[]
+  availableYears: string[]
   approveAction: (formData: FormData) => Promise<void>
   rejectAction: (formData: FormData) => Promise<void>
 }
@@ -295,11 +308,11 @@ function BatchList({ batches, categoryLabels, showActions, showName, approveActi
   )
 }
 
-type TabKey = 'my' | 'review' | 'all'
+type TabKey = 'my' | 'review' | 'all' | 'analytics'
 
 export default function ReimbursementList({
-  batches, pendingBatches, allBatches, isAdmin, categoryLabels,
-  myStats, allStats, approveAction, rejectAction,
+  batches, pendingBatches, allBatches, isAdmin, isSuperAdmin, categoryLabels,
+  myStats, allStats, employeeAnalytics, availableYears, approveAction, rejectAction,
 }: Props) {
   const defaultTab: TabKey = isAdmin && pendingBatches.length > 0 ? 'review' : 'my'
   const [tab, setTab] = useState<TabKey>(defaultTab)
@@ -309,6 +322,7 @@ export default function ReimbursementList({
     ? allBatches
     : allBatches.filter(b => b.status === statusFilter)
 
+  const showStats = tab !== 'analytics'
   const stats = tab === 'all' && allStats ? allStats : myStats
 
   const tabs: { key: TabKey; label: string; badge?: number }[] = [
@@ -318,22 +332,27 @@ export default function ReimbursementList({
     tabs.push({ key: 'review', label: 'Review', badge: pendingBatches.length || undefined })
     tabs.push({ key: 'all', label: 'All Claims' })
   }
+  if (isSuperAdmin) {
+    tabs.push({ key: 'analytics', label: 'Analytics' })
+  }
 
   return (
     <div>
       {/* Summary stats */}
-      <div style={{ display: 'flex', gap: '0.625rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-        <StatCard
-          label="Total Claimed"
-          amount={stats.totalClaimed}
-          count={stats.claimCount}
-          color="var(--primary)"
-          gradient="linear-gradient(135deg, var(--primary-l), var(--surface))"
-        />
-        <StatCard label="Approved" amount={stats.totalApproved} color="var(--success, #059669)" />
-        <StatCard label="Pending" amount={stats.totalPending} color="var(--warning, #d97706)" />
-        <StatCard label="Rejected" amount={stats.totalRejected} color="var(--danger, #dc2626)" />
-      </div>
+      {showStats && (
+        <div style={{ display: 'flex', gap: '0.625rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+          <StatCard
+            label="Total Claimed"
+            amount={stats.totalClaimed}
+            count={stats.claimCount}
+            color="var(--primary)"
+            gradient="linear-gradient(135deg, var(--primary-l), var(--surface))"
+          />
+          <StatCard label="Approved" amount={stats.totalApproved} color="var(--success, #059669)" />
+          <StatCard label="Pending" amount={stats.totalPending} color="var(--warning, #d97706)" />
+          <StatCard label="Rejected" amount={stats.totalRejected} color="var(--danger, #dc2626)" />
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{
@@ -398,7 +417,6 @@ export default function ReimbursementList({
               { key: 'approved', label: 'Approved' },
               { key: 'rejected', label: 'Rejected' },
             ].map(f => (
-
               <button
                 key={f.key}
                 type="button"
@@ -448,6 +466,15 @@ export default function ReimbursementList({
             : <BatchList batches={filteredAll} categoryLabels={categoryLabels} showActions={statusFilter === 'pending'} showName={true} approveAction={approveAction} rejectAction={rejectAction} />
           }
         </div>
+      )}
+
+      {/* Analytics Tab */}
+      {tab === 'analytics' && isSuperAdmin && (
+        <AnalyticsView
+          analytics={employeeAnalytics}
+          categoryLabels={categoryLabels}
+          availableYears={availableYears}
+        />
       )}
     </div>
   )
