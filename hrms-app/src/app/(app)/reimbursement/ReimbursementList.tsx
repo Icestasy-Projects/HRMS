@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
+import AnalyticsView from './AnalyticsView'
 
 interface ReimbursementItem {
   id: string
@@ -30,14 +31,26 @@ interface SummaryStats {
   claimCount: number
 }
 
+interface EmployeeAnalytics {
+  employeeId: string
+  name: string
+  monthly: Record<string, number>
+  categoryByYear: Record<string, Record<string, number>>
+  yearlyTotals: Record<string, number>
+  statusByYear: Record<string, { approved: number; pending: number; rejected: number }>
+}
+
 interface Props {
   batches: Batch[]
   pendingBatches: Batch[]
   allBatches: Batch[]
   isAdmin: boolean
+  isSuperAdmin: boolean
   categoryLabels: Record<string, string>
   myStats: SummaryStats
   allStats: SummaryStats | null
+  employeeAnalytics: EmployeeAnalytics[]
+  availableYears: string[]
   approveAction: (formData: FormData) => Promise<void>
   rejectAction: (formData: FormData) => Promise<void>
 }
@@ -295,11 +308,11 @@ function BatchList({ batches, categoryLabels, showActions, showName, approveActi
   )
 }
 
-type TabKey = 'my' | 'review' | 'all'
+type TabKey = 'my' | 'review' | 'all' | 'analytics'
 
 export default function ReimbursementList({
-  batches, pendingBatches, allBatches, isAdmin, categoryLabels,
-  myStats, allStats, approveAction, rejectAction,
+  batches, pendingBatches, allBatches, isAdmin, isSuperAdmin, categoryLabels,
+  myStats, allStats, employeeAnalytics, availableYears, approveAction, rejectAction,
 }: Props) {
   const defaultTab: TabKey = isAdmin && pendingBatches.length > 0 ? 'review' : 'my'
   const [tab, setTab] = useState<TabKey>(defaultTab)
@@ -309,6 +322,7 @@ export default function ReimbursementList({
     ? allBatches
     : allBatches.filter(b => b.status === statusFilter)
 
+  const showStats = tab !== 'analytics'
   const stats = tab === 'all' && allStats ? allStats : myStats
 
   const tabs: { key: TabKey; label: string; badge?: number }[] = [
@@ -318,22 +332,27 @@ export default function ReimbursementList({
     tabs.push({ key: 'review', label: 'Review', badge: pendingBatches.length || undefined })
     tabs.push({ key: 'all', label: 'All Claims' })
   }
+  if (isSuperAdmin) {
+    tabs.push({ key: 'analytics', label: 'Analytics' })
+  }
 
   return (
     <div>
       {/* Summary stats */}
-      <div style={{ display: 'flex', gap: '0.625rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-        <StatCard
-          label="Total Claimed"
-          amount={stats.totalClaimed}
-          count={stats.claimCount}
-          color="var(--primary)"
-          gradient="linear-gradient(135deg, var(--primary-l), var(--surface))"
-        />
-        <StatCard label="Approved" amount={stats.totalApproved} color="var(--success, #059669)" />
-        <StatCard label="Pending" amount={stats.totalPending} color="var(--warning, #d97706)" />
-        <StatCard label="Rejected" amount={stats.totalRejected} color="var(--danger, #dc2626)" />
-      </div>
+      {showStats && (
+        <div style={{ display: 'flex', gap: '0.625rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+          <StatCard
+            label="Total Claimed"
+            amount={stats.totalClaimed}
+            count={stats.claimCount}
+            color="var(--primary)"
+            gradient="linear-gradient(135deg, var(--primary-l), var(--surface))"
+          />
+          <StatCard label="Approved" amount={stats.totalApproved} color="var(--success, #059669)" />
+          <StatCard label="Pending" amount={stats.totalPending} color="var(--warning, #d97706)" />
+          <StatCard label="Rejected" amount={stats.totalRejected} color="var(--danger, #dc2626)" />
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{
@@ -390,8 +409,8 @@ export default function ReimbursementList({
       {/* All Claims Tab */}
       {tab === 'all' && isAdmin && (
         <div>
-          {/* Status filter */}
-          <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          {/* Status filter + Export */}
+          <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             {[
               { key: 'all', label: 'All' },
               { key: 'pending', label: 'Pending' },
@@ -420,11 +439,42 @@ export default function ReimbursementList({
             ))}
           </div>
 
+          {/* Export button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+            <a
+              href="/api/reimbursement/export"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+                padding: '0.5rem 1rem', borderRadius: '0.5rem',
+                border: '1px solid var(--border)', background: 'var(--surface)',
+                color: 'var(--text)', fontSize: '0.82rem', fontWeight: 600,
+                textDecoration: 'none', cursor: 'pointer',
+                boxShadow: 'var(--shadow)',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export Excel
+            </a>
+          </div>
+
           {filteredAll.length === 0
             ? <EmptyState icon="📂" title="No claims found" subtitle={statusFilter === 'all' ? 'No reimbursement claims submitted yet.' : `No ${statusFilter} claims.`} />
             : <BatchList batches={filteredAll} categoryLabels={categoryLabels} showActions={statusFilter === 'pending'} showName={true} approveAction={approveAction} rejectAction={rejectAction} />
           }
         </div>
+      )}
+
+      {/* Analytics Tab */}
+      {tab === 'analytics' && isSuperAdmin && (
+        <AnalyticsView
+          analytics={employeeAnalytics}
+          categoryLabels={categoryLabels}
+          availableYears={availableYears}
+        />
       )}
     </div>
   )

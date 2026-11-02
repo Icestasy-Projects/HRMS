@@ -30,39 +30,21 @@ export default async function ReimbursementPage() {
   if (!employee) redirect('/login')
 
   const isAdmin = ['super_admin', 'sub_super_admin', 'admin'].includes(employee.role)
+  const isSuperAdmin = ['super_admin', 'sub_super_admin'].includes(employee.role)
 
-  async function fetchPendingReview() {
-    if (!isAdmin) return [] as never[]
-    const admin = createAdminClient()
-    if (employee!.role === 'admin') {
-      const { data: team } = await supabase.from('users').select('id').eq('manager_id', employee!.id)
-      const teamIds = team?.map(t => t.id) ?? []
-      if (teamIds.length === 0) return []
-      const { data } = await admin
-        .from('reimbursements')
-        .select('*, users!reimbursements_employee_id_fkey(name)')
-        .eq('status', 'pending')
-        .neq('employee_id', employee!.id)
-        .in('employee_id', teamIds)
-        .order('created_at', { ascending: false })
-      return data ?? []
-    }
-    const { data } = await admin
-      .from('reimbursements')
-      .select('*, users!reimbursements_employee_id_fkey(name)')
-      .eq('status', 'pending')
-      .neq('employee_id', employee!.id)
-      .order('created_at', { ascending: false })
-    return data ?? []
+  // Fetch team IDs once for admin role (reused everywhere)
+  let teamIds: string[] | null = null
+  if (employee.role === 'admin') {
+    const { data: team } = await supabase.from('users').select('id').eq('manager_id', employee.id)
+    teamIds = team?.map(t => t.id) ?? []
   }
 
+  // Single query replaces both fetchPending + fetchAll
   async function fetchAllReimbursements() {
-    if (!isAdmin) return [] as never[]
+    if (!isAdmin) return []
     const admin = createAdminClient()
     if (employee!.role === 'admin') {
-      const { data: team } = await supabase.from('users').select('id').eq('manager_id', employee!.id)
-      const teamIds = team?.map(t => t.id) ?? []
-      if (teamIds.length === 0) return []
+      if (!teamIds || teamIds.length === 0) return []
       const { data } = await admin
         .from('reimbursements')
         .select('*, users!reimbursements_employee_id_fkey(name)')
@@ -77,15 +59,22 @@ export default async function ReimbursementPage() {
     return data ?? []
   }
 
-  const [{ data: myReimbursements }, pendingReview, allReimbursements] = await Promise.all([
+  // 2 parallel queries (down from 3)
+  const [{ data: myReimbursements }, allReimbursements] = await Promise.all([
     supabase
       .from('reimbursements')
       .select('*')
-      .eq('employee_id', employee!.id)
+      .eq('employee_id', employee.id)
       .order('created_at', { ascending: false }),
-    fetchPendingReview(),
     fetchAllReimbursements(),
   ])
+
+  // Derive pending from all — no extra round trip
+  const pendingReview = isAdmin
+    ? (allReimbursements as Record<string, unknown>[]).filter(
+        r => r.status === 'pending' && r.employee_id !== employee.id
+      )
+    : []
 
   function groupIntoBatches(rows: Record<string, unknown>[], includeName: boolean) {
     const map = new Map<string, Record<string, unknown>[]>()
@@ -119,21 +108,73 @@ export default async function ReimbursementPage() {
   }
 
   const batches = groupIntoBatches(myReimbursements ?? [], false)
-  const pendingBatches = groupIntoBatches(pendingReview ?? [], true)
-  const allBatches = groupIntoBatches(allReimbursements ?? [], true)
+  const pendingBatches = groupIntoBatches(pendingReview, true)
+  const allBatches = groupIntoBatches(allReimbursements as Record<string, unknown>[], true)
 
   const myStats = computeStats(batches)
   const allStats = isAdmin ? computeStats(allBatches) : null
+
+  // Build per-employee analytics for super admins
+  type EmpAnalytics = {
+    employeeId: string
+    name: string
+    monthly: Record<string, number>
+    categoryByYear: Record<string, Record<string, number>>
+    yearlyTotals: Record<string, number>
+    statusByYear: Record<string, { approved: number; pending: number; rejected: number }>
+  }
+
+  let employeeAnalytics: EmpAnalytics[] = []
+  let availableYears: string[] = []
+
+  if (isSuperAdmin && allReimbursements.length > 0) {
+    const empMap = new Map<string, EmpAnalytics>()
+    const yearSet = new Set<string>()
+
+    for (const r of allReimbursements as Record<string, unknown>[]) {
+      const eid = r.employee_id as string
+      const ename = (r.users as { name: string } | null)?.name ?? 'Unknown'
+      if (!empMap.has(eid)) {
+        empMap.set(eid, {
+          employeeId: eid, name: ename,
+          monthly: {}, categoryByYear: {}, yearlyTotals: {}, statusByYear: {},
+        })
+      }
+      const ea = empMap.get(eid)!
+      const amt = Number(r.amount)
+      const status = r.status as string
+      const expDate = r.expense_date as string
+      const monthKey = expDate.slice(0, 7)
+      const yearKey = expDate.slice(0, 4)
+      yearSet.add(yearKey)
+
+      ea.monthly[monthKey] = (ea.monthly[monthKey] ?? 0) + amt
+      ea.yearlyTotals[yearKey] = (ea.yearlyTotals[yearKey] ?? 0) + amt
+
+      if (!ea.categoryByYear[yearKey]) ea.categoryByYear[yearKey] = {}
+      ea.categoryByYear[yearKey][r.category as string] = (ea.categoryByYear[yearKey][r.category as string] ?? 0) + amt
+
+      if (!ea.statusByYear[yearKey]) ea.statusByYear[yearKey] = { approved: 0, pending: 0, rejected: 0 }
+      if (status === 'approved') ea.statusByYear[yearKey].approved += amt
+      else if (status === 'pending') ea.statusByYear[yearKey].pending += amt
+      else if (status === 'rejected') ea.statusByYear[yearKey].rejected += amt
+    }
+
+    employeeAnalytics = Array.from(empMap.values()).sort((a, b) => {
+      const totalA = Object.values(a.yearlyTotals).reduce((s, v) => s + v, 0)
+      const totalB = Object.values(b.yearlyTotals).reduce((s, v) => s + v, 0)
+      return totalB - totalA
+    })
+    availableYears = Array.from(yearSet).sort().reverse()
+  }
 
   async function approveReimbursement(formData: FormData) {
     'use server'
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-
     const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
     if (!me || !['super_admin', 'sub_super_admin', 'admin'].includes(me.role)) return
-
     const batchId = formData.get('batch_id') as string
     const admin = createAdminClient()
     await admin
@@ -141,7 +182,6 @@ export default async function ReimbursementPage() {
       .update({ status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString() })
       .eq('batch_id', batchId)
       .eq('status', 'pending')
-
     redirect('/reimbursement')
   }
 
@@ -150,10 +190,8 @@ export default async function ReimbursementPage() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-
     const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
     if (!me || !['super_admin', 'sub_super_admin', 'admin'].includes(me.role)) return
-
     const batchId = formData.get('batch_id') as string
     const admin = createAdminClient()
     await admin
@@ -161,12 +199,11 @@ export default async function ReimbursementPage() {
       .update({ status: 'rejected', reviewed_by: user.id, reviewed_at: new Date().toISOString() })
       .eq('batch_id', batchId)
       .eq('status', 'pending')
-
     redirect('/reimbursement')
   }
 
   return (
-    <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '960px', margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <Breadcrumb crumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Reimbursement' }]} />
         <h1 style={{
@@ -194,9 +231,12 @@ export default async function ReimbursementPage() {
         pendingBatches={pendingBatches}
         allBatches={allBatches}
         isAdmin={isAdmin}
+        isSuperAdmin={isSuperAdmin}
         categoryLabels={CATEGORY_LABELS}
         myStats={myStats}
         allStats={allStats}
+        employeeAnalytics={employeeAnalytics}
+        availableYears={availableYears}
         approveAction={approveReimbursement}
         rejectAction={rejectReimbursement}
       />
