@@ -5,7 +5,7 @@ import {
   Clock, Leaf, ClipboardList, CalendarDays, Bell,
   CalendarCheck, CalendarRange, Users, Network,
   CheckSquare, Settings, LogOut, Calculator, BarChart2,
-  FilePenLine, ShieldCheck, Timer,
+  FilePenLine, ShieldCheck, Timer, Receipt,
 } from 'lucide-react'
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -27,6 +27,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   '/team/hours':                   <Timer size={26} strokeWidth={1.75} />,
   '/manage':                       <Settings size={26} strokeWidth={1.75} />,
   '/manage/salary-calculator':     <Calculator size={26} strokeWidth={1.75} />,
+  '/reimbursement':                <Receipt size={26} strokeWidth={1.75} />,
 }
 
 interface Worklet {

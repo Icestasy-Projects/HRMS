@@ -123,6 +123,7 @@ export default async function DashboardPage() {
     { label: 'Regularization Requests', href: '/team/regularization', show: isSuperAdmin || isSubSuperAdmin },
     { label: 'Hours Tracker', href: '/team/hours', show: isSuperAdmin || isSubSuperAdmin },
     { label: 'Salary Calculator', href: '/manage/salary-calculator', show: isSuperAdmin || isSubSuperAdmin || isAdmin },
+    { label: 'Reimbursement', href: '/reimbursement', show: true },
     { label: 'Manage', href: '/manage', show: isSuperAdmin || isSubSuperAdmin },
   ].filter(w => w.show)
 
