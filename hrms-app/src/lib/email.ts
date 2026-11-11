@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { env } from '@/lib/env'
+import { log } from '@/lib/logger'
 
 const FROM = env.EMAIL_FROM
 
@@ -45,12 +46,12 @@ export async function sendLeaveAppliedEmail({
     </div>`
 
   if (!env.RESEND_API_KEY) {
-    console.error('[email] RESEND_API_KEY is not set — skipping sendLeaveAppliedEmail')
+    log.email.warn('RESEND_API_KEY is not set — skipping sendLeaveAppliedEmail', { to: managerEmail })
     return
   }
   const resend = new Resend(env.RESEND_API_KEY)
   const { error } = await resend.emails.send({ from: FROM, to: managerEmail, subject, html })
-  if (error) console.error('[email] sendLeaveAppliedEmail failed:', error)
+  if (error) log.email.error('sendLeaveAppliedEmail failed', error, { to: managerEmail, employeeName })
 }
 
 export async function sendLeaveDecisionEmail({
@@ -94,12 +95,12 @@ export async function sendLeaveDecisionEmail({
     </div>`
 
   if (!env.RESEND_API_KEY) {
-    console.error('[email] RESEND_API_KEY is not set — skipping sendLeaveDecisionEmail')
+    log.email.warn('RESEND_API_KEY is not set — skipping sendLeaveDecisionEmail', { to: employeeEmail })
     return
   }
   const resend = new Resend(env.RESEND_API_KEY)
   const { error } = await resend.emails.send({ from: FROM, to: employeeEmail, subject, html })
-  if (error) console.error('[email] sendLeaveDecisionEmail failed:', error)
+  if (error) log.email.error('sendLeaveDecisionEmail failed', error, { to: employeeEmail, employeeName, approved })
 }
 
 function row(label: string, value: string) {

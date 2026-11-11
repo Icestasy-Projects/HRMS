@@ -1,7 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { log } from '@/lib/logger'
 
 export async function middleware(request: NextRequest) {
+  const start = Date.now()
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -29,9 +31,23 @@ export async function middleware(request: NextRequest) {
   const isPublic = publicRoutes.some(r => request.nextUrl.pathname.startsWith(r))
 
   if (!user && !isPublic) {
+    log.auth.warn('Unauthenticated access attempt', {
+      path: request.nextUrl.pathname,
+      ip: request.headers.get('x-forwarded-for') ?? 'unknown',
+    })
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  const duration = Date.now() - start
+  if (duration > 2000) {
+    log.request.warn('Slow request', {
+      path: request.nextUrl.pathname,
+      method: request.method,
+      duration_ms: duration,
+      user_id: user?.id,
+    })
   }
 
   return supabaseResponse

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Breadcrumb from '@/components/Breadcrumb'
 import { todayIST } from '@/lib/attendance'
+import { log } from '@/lib/logger'
 import SeparationForm from './SeparationForm'
 
 export const dynamic = 'force-dynamic'
@@ -95,7 +96,7 @@ export default async function SeparationPage({
           related_id: newReq?.id ?? null,
         }))
       )
-      if (notifErr) console.error('Failed to send separation notifications:', notifErr.message)
+      if (notifErr) log.separation.error('Failed to send separation notifications', notifErr)
     }
 
     redirect('/leave/separation')

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton'
 import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
+import { log } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,7 +80,7 @@ export default async function HolidaysPage() {
           )] : []),
         ])
         const balErr = balResults.find(r => r.error)
-        if (balErr?.error) console.error('Failed to update leave balances for holiday:', balErr.error.message)
+        if (balErr?.error) log.holiday.error('Failed to update leave balances for holiday', balErr.error)
       }
     }
 
@@ -139,7 +140,7 @@ export default async function HolidaysPage() {
             )
           )
           const delBalErr = delBalResults.find(r => r.error)
-          if (delBalErr?.error) console.error('Failed to reverse leave balance for holiday deletion:', delBalErr.error.message)
+          if (delBalErr?.error) log.holiday.error('Failed to reverse leave balance for holiday deletion', delBalErr.error)
         }
       }
     }

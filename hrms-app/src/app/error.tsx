@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
+import { reportError } from '@/lib/error-reporting'
+
 export default function GlobalError({
   error,
   reset,
@@ -7,6 +10,10 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    reportError(error, { boundary: 'global' })
+  }, [error])
+
   return (
     <div style={{
       minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -30,6 +37,14 @@ export default function GlobalError({
         }}>
           An unexpected error occurred. Please try again or contact support if the problem persists.
         </p>
+        {error.digest && (
+          <p style={{
+            color: 'var(--muted, #6b7280)', fontSize: '0.75rem',
+            margin: '0 0 1rem', fontFamily: 'monospace',
+          }}>
+            Reference: {error.digest}
+          </p>
+        )}
         <button
           onClick={reset}
           style={{
