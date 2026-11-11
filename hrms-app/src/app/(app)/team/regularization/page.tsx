@@ -5,6 +5,7 @@ import Breadcrumb from '@/components/Breadcrumb'
 import RegularizationActions from '@/components/RegularizationActions'
 import { computeAttendanceStatus } from '@/lib/attendance'
 import { logAudit } from '@/lib/audit'
+import { log } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,26 +55,26 @@ export default async function TeamRegularizationPage({
 
     if (!req) return
 
-    const { data: log } = await admin
+    const { data: attLog } = await admin
       .from('attendance_logs')
       .select('*')
       .eq('user_id', req.employee_id)
       .eq('work_date', req.work_date)
       .maybeSingle()
 
-    const newCheckIn = req.field === 'check_in' ? req.requested_value : log?.check_in
-    const newCheckOut = req.field === 'check_out' ? req.requested_value : log?.check_out
+    const newCheckIn = req.field === 'check_in' ? req.requested_value : attLog?.check_in
+    const newCheckOut = req.field === 'check_out' ? req.requested_value : attLog?.check_out
 
     const { dayStatus } = computeAttendanceStatus(newCheckIn ?? null, newCheckOut ?? null, false)
 
-    if (log) {
+    if (attLog) {
       const { error: logErr } = await admin
         .from('attendance_logs')
         .update({
           [req.field]: req.requested_value,
           day_status: dayStatus,
         })
-        .eq('id', log.id)
+        .eq('id', attLog.id)
       if (logErr) redirect(`/team/regularization?tab=pending&error=${encodeURIComponent('Failed to update attendance log: ' + logErr.message)}`)
     } else {
       const { error: logErr } = await admin.from('attendance_logs').insert({
@@ -94,7 +95,7 @@ export default async function TeamRegularizationPage({
         .eq('end_date', req.work_date)
         .eq('status', 'approved')
         .like('reason', 'Auto%')
-      if (delErr) console.error('Failed to clean up auto-leave:', delErr.message)
+      if (delErr) log.regularization.error('Failed to clean up auto-leave', delErr, { employeeId: req.employee_id, date: req.work_date })
     } else if (!dayStatus.includes('half_day')) {
       const { error: delErr } = await admin
         .from('leave_requests')
@@ -105,7 +106,7 @@ export default async function TeamRegularizationPage({
         .eq('status', 'approved')
         .eq('is_half_day', true)
         .like('reason', 'Auto%')
-      if (delErr) console.error('Failed to clean up auto-leave:', delErr.message)
+      if (delErr) log.regularization.error('Failed to clean up auto-leave (half-day)', delErr, { employeeId: req.employee_id, date: req.work_date })
     }
 
     const { error: regErr } = await admin

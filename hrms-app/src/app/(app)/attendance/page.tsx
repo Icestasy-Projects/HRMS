@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { formatTime, HALF_DAY_LATE_CUTOFF, HALF_DAY_EARLY_CUTOFF, SCHEDULE, computeAttendanceStatus, todayIST, timeIST, nowIST } from '@/lib/attendance'
 import { DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
+import { log } from '@/lib/logger'
 import Link from 'next/link'
 import Breadcrumb from '@/components/Breadcrumb'
 import ClockButton from '@/components/ClockButton'
@@ -177,7 +178,7 @@ export default async function AttendancePage({
         reason: 'Auto: unscheduled half day (attendance)',
         status: 'approved',
       })
-      if (ulErr) console.error('Failed to auto-deduct UL half day:', ulErr.message)
+      if (ulErr) log.attendance.error('Failed to auto-deduct UL half day', ulErr, { employeeId, date })
     }
     if (slDeduct > 0) {
       const { error: slErr } = await admin.from('leave_requests').insert({
@@ -187,7 +188,7 @@ export default async function AttendancePage({
         reason: 'Auto: unscheduled half day (UL exhausted)',
         status: 'approved',
       })
-      if (slErr) console.error('Failed to auto-deduct SL half day:', slErr.message)
+      if (slErr) log.attendance.error('Failed to auto-deduct SL half day', slErr, { employeeId, date })
     }
     // salaryDeduct > 0 means both UL and SL are exhausted — to be handled in payroll
   }

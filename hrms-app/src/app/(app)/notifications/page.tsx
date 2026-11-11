@@ -2,6 +2,7 @@ import Breadcrumb from '@/components/Breadcrumb'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { log } from '@/lib/logger'
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
@@ -36,7 +37,7 @@ export default async function NotificationsPage() {
       .update({ is_read: true })
       .eq('recipient_id', emp.id)
       .eq('is_read', false)
-    if (error) console.error('Failed to mark notifications as read:', error.message)
+    if (error) log.notification.error('Failed to mark notifications as read', error, { userId: emp.id })
 
     redirect('/notifications')
   }

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { countWorkdays, DEFAULT_SL_TOTAL, DEFAULT_UL_TOTAL } from '@/lib/leave'
+import { log } from '@/lib/logger'
 import LeaveRequestForm from './LeaveRequestForm'
 import { sendLeaveAppliedEmail } from '@/lib/email'
 
@@ -184,7 +185,7 @@ export default async function LeaveRequestPage({
           message: `${emp.name} has taken ${daysCount} day(s) of unscheduled leave from ${startDate} to ${endDate}.`,
           related_id: newRequest.id,
         })
-        if (notifErr) console.error('Failed to send leave notification:', notifErr.message)
+        if (notifErr) log.notification.error('Failed to send leave notification', notifErr, { recipient: mid, type: 'fyi' })
       }
       for (const mgr of managerUsers ?? []) {
         await sendLeaveAppliedEmail({
@@ -200,7 +201,7 @@ export default async function LeaveRequestPage({
           message: `${emp.name} has requested ${daysCount} day(s) of scheduled leave from ${startDate} to ${endDate}. Please review and approve or reject.`,
           related_id: newRequest.id,
         })
-        if (notifErr) console.error('Failed to send leave notification:', notifErr.message)
+        if (notifErr) log.notification.error('Failed to send leave notification', notifErr, { recipient: mid, type: 'action_needed' })
       }
       for (const mgr of managerUsers ?? []) {
         await sendLeaveAppliedEmail({

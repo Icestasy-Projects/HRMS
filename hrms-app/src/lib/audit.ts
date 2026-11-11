@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { log } from '@/lib/logger'
 
 export async function logAudit({
   actorId,
@@ -24,5 +25,5 @@ export async function logAudit({
     old_value: oldValue ?? null,
     new_value: newValue ?? null,
   })
-  if (error) console.error('Audit log failed:', error.message)
+  if (error) log.audit.error('Audit log insert failed', error, { actorId, action, tableName, recordId })
 }
